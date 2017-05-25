@@ -19,27 +19,35 @@
 # In applying this license, CERN does not waive the privileges and immunities
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
+"""REANA REST API client."""
 
-"""Pytest configuration for REANA client."""
+import requests
 
-from __future__ import absolute_import, print_function
-
-import os
-
-import httpretty
-import pytest
+from .. import config
 
 
-@pytest.yield_fixture()
-def reana_server():
-    """File pointer to YAML configuration file."""
-    httpretty.enable()
-    os.environ['REANA_SERVER_URL'] = 'http://reana.cern.ch'
-    httpretty.register_uri(httpretty.GET, "http://reana.cern.ch/api/ping",
-                           body='{"status": "200", "message": "OK"}',
-                           content_type="application/json",
-                           status=200)
-    yield
-    del os.environ['REANA_SERVER_URL']
-    httpretty.disable()
-    httpretty.reset()
+class Client(object):
+    """REANA API client code."""
+
+    def __init__(self, server_url, apipath=config.API_PATH):
+        """Initialize REST API client."""
+        self.server_url = server_url
+        self.apipath = apipath
+
+    def ping(self):
+        """Health check REANA Server."""
+        endpoint = '{server_url}{apipath}/ping'.format(
+            server_url=self.server_url,
+            apipath=self.apipath)
+        try:
+            response = requests.get(endpoint)
+            if response.status_code == 200:
+                return response.text
+            else:
+                raise Exception(
+                    "Expected status code 200 but {endpoint} replied with "
+                    "{status_code}".format(
+                        status_code=response.status_code, endpoint=endpoint))
+
+        except Exception:
+            raise

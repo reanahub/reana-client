@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # This file is part of REANA.
 # Copyright (C) 2017 CERN.
 #
@@ -17,16 +19,7 @@
 # In applying this license, CERN does not waive the privileges and immunities
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
- 
-include COPYING
-include *.rst
-include *.sh
-include *.txt
-include *.yaml
-include pytest.ini
-prune docs/_build
-recursive-include reana_client *.py
-recursive-include docs *.py
-recursive-include docs *.png
-recursive-include docs *.rst
-recursive-include tests *.py
+"""REANA client configuration."""
+
+API_PATH = '/api'
+"""REANA server api path."""

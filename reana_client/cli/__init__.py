@@ -19,27 +19,45 @@
 # In applying this license, CERN does not waive the privileges and immunities
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
+"""REANA command line interface client."""
 
-"""Pytest configuration for REANA client."""
-
-from __future__ import absolute_import, print_function
-
+import logging
 import os
+import sys
 
-import httpretty
-import pytest
+import click
+
+from . import ping
+from ..api import Client
 
 
-@pytest.yield_fixture()
-def reana_server():
-    """File pointer to YAML configuration file."""
-    httpretty.enable()
-    os.environ['REANA_SERVER_URL'] = 'http://reana.cern.ch'
-    httpretty.register_uri(httpretty.GET, "http://reana.cern.ch/api/ping",
-                           body='{"status": "200", "message": "OK"}',
-                           content_type="application/json",
-                           status=200)
-    yield
-    del os.environ['REANA_SERVER_URL']
-    httpretty.disable()
-    httpretty.reset()
+class Config(object):
+    """Configuration object to share across commands."""
+
+    def __init__(self):
+        """Initialize config variables."""
+        server = os.environ.get('REANA_SERVER_URL', 'http://reana.cern.ch')
+
+        logging.info('REANA Server URL set to: {}'.format(server))
+
+        self.client = Client(server)
+
+
+@click.group()
+@click.option(
+    '--loglevel',
+    '-l',
+    help='Sets log level',
+    type=click.Choice(['debug', 'info']),
+    default='info')
+@click.pass_context
+def cli(ctx, loglevel):
+    """REANA Client for interacting with REANA Server."""
+    logging.basicConfig(
+        format='[%(levelname)s] %(message)s',
+        stream=sys.stderr,
+        level=logging.DEBUG if loglevel == 'debug' else logging.INFO)
+    ctx.obj = Config()
+
+
+cli.add_command(ping.ping)

@@ -35,6 +35,7 @@ history = open('CHANGES.rst').read()
 tests_require = [
     'check-manifest>=0.25',
     'coverage>=4.0',
+    'httpretty>=0.8',
     'isort>=4.2.2',
     'pydocstyle>=1.0.0',
     'pytest-cache>=1.0',
@@ -61,6 +62,10 @@ setup_requires = [
     'pytest-runner>=2.7',
 ]
 
+install_requires = [
+    'click>=6.7',
+]
+
 packages = find_packages()
 
 
@@ -81,7 +86,13 @@ setup(
     url='https://github.com/reanahub/reana-client',
     packages=['reana_client', ],
     zip_safe=False,
+    entry_points={
+        'console_scripts': [
+            'reana-client = reana_client.cli:cli',
+        ],
+    },
     extras_require=extras_require,
+    install_requires=install_requires,
     setup_requires=setup_requires,
     tests_require=tests_require,
     classifiers=[

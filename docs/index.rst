@@ -4,6 +4,7 @@
    :numbered:
    :maxdepth: 2
 
+   installation
    gettingstarted
    contributing
    changes

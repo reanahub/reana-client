@@ -21,33 +21,87 @@
 # submit itself to any jurisdiction.
 """REANA REST API client."""
 
-import requests
+import json
+import os
 
-from .. import config
+import pkg_resources
+
+from bravado.client import SwaggerClient
 
 
 class Client(object):
     """REANA API client code."""
 
-    def __init__(self, server_url, apipath=config.API_PATH):
-        """Initialize REST API client."""
+    def __init__(self, server_url):
+        """Create a OpenAPI client for REANA Server."""
+        json_spec = self._get_spec('reana_server.json')
+        self._client = SwaggerClient.from_spec(
+            json_spec,
+            config={'also_return_response': True})
+        self._client.swagger_spec.api_url = server_url
         self.server_url = server_url
-        self.apipath = apipath
+
+    def _get_spec(self, spec_file):
+        """Get json specification from package data."""
+        spec_file_path = os.path.join(
+            pkg_resources.resource_filename('reana_client',
+                                            'openapi_connections'),
+            spec_file)
+        with open(spec_file_path) as f:
+            json_spec = json.load(f)
+        return json_spec
 
     def ping(self):
         """Health check REANA Server."""
-        endpoint = '{server_url}{apipath}/ping'.format(
-            server_url=self.server_url,
-            apipath=self.apipath)
         try:
-            response = requests.get(endpoint)
-            if response.status_code == 200:
-                return response.text
+            response, http_response = self._client.api.get_api_ping().result()
+            if http_response.status_code == 200:
+                return response['message']
             else:
                 raise Exception(
-                    "Expected status code 200 but {endpoint} replied with "
+                    "Expected status code 200 but replied with "
                     "{status_code}".format(
-                        status_code=response.status_code, endpoint=endpoint))
+                        status_code=http_response.status_code))
 
         except Exception:
+            raise
+
+    def get_all_analyses(self):
+        """List all existing analyses."""
+        try:
+            response, http_response = self._client.api.\
+                                      get_api_analyses().result()
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except Exception:
+            raise
+
+    def create_analysis(self, user, organization, workflow_engine,
+                        analysis_payload):
+        """Create an analysis."""
+        try:
+            (response,
+             http_response) = self._client.api.\
+                              create_yadage_workflow(
+                                  user=user,
+                                  organization=organization,
+                                  workflow_engine=workflow_engine,
+                                  analysis_payload=analysis_payload).result()
+
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except Exception:
+
             raise

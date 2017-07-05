@@ -64,6 +64,7 @@ setup_requires = [
 
 install_requires = [
     'click>=6.7',
+    'bravado>=9.0.6',
 ]
 
 packages = find_packages()
@@ -86,6 +87,7 @@ setup(
     url='https://github.com/reanahub/reana-client',
     packages=['reana_client', ],
     zip_safe=False,
+    include_package_data=True,
     entry_points={
         'console_scripts': [
             'reana-client = reana_client.cli:cli',

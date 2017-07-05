@@ -1,0 +1,180 @@
+{
+  "definitions": {},
+  "info": {
+    "description": "Submit workflows to be run on REANA Cloud",
+    "title": "REANA Server",
+    "version": "0.1"
+  },
+  "parameters": {},
+  "paths": {
+    "/api/analyses": {
+      "get": {
+        "description": "This resource return all analyses in JSON format.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request succeeded. The response contains the list of all analyses.",
+            "examples": {
+              "application/json": [
+                {
+                  "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                  "organization": "default_org",
+                  "status": "running",
+                  "user": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                  "id": "3c9b117c-d40a-49e3-a6de-5f89fcada5a3",
+                  "organization": "default_org",
+                  "status": "finished",
+                  "user": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                  "id": "72e3ee4f-9cd3-4dc7-906c-24511d9f5ee3",
+                  "organization": "default_org",
+                  "status": "waiting",
+                  "user": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                  "id": "c4c0a1a6-beef-46c7-be04-bf4b3beca5a1",
+                  "organization": "default_org",
+                  "status": "waiting",
+                  "user": "00000000-0000-0000-0000-000000000000"
+                }
+              ]
+            },
+            "schema": {
+              "items": {
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "organization": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "user": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "500": {
+            "description": "Request failed. Internal controller error.",
+            "examples": {
+              "application/json": {
+                "message": "Either organization or user doesn't exist."
+              }
+            }
+          }
+        },
+        "summary": "Returns list of all analyses."
+      },
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "This resource is expecting JSON data with all the necessary informations to instantiate a yadage workflow.",
+        "operationId": "create_yadage_workflow",
+        "parameters": [
+          {
+            "description": "Required. Organization which the worklow belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of workflow owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. Name of the workflow engine to be used.",
+            "in": "query",
+            "name": "workflow_engine",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Specification with necessary data to instantiate an analysis for the given workflow engine.",
+            "in": "formData",
+            "name": "analysis_payload",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request succeeded. The workflow has been instantiated.",
+            "examples": {
+              "application/json": {
+                "message": "Analysis successfully launched",
+                "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac"
+              }
+            },
+            "schema": {
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "workflow_id": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming data specification seems malformed"
+          }
+        },
+        "summary": "Creates a new yadage workflow."
+      }
+    },
+    "/api/ping": {
+      "get": {
+        "description": "Ping the server.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Ping succeeded. Service is running and accessible.",
+            "examples": {
+              "application/json": {
+                "message": "OK",
+                "status": 200
+              }
+            },
+            "schema": {
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          }
+        },
+        "summary": "Ping the server (healthcheck)"
+      }
+    }
+  },
+  "swagger": "2.0",
+  "tags": []
+}

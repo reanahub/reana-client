@@ -27,7 +27,7 @@ import sys
 
 import click
 
-from . import ping
+from . import analyses, ping
 from ..api import Client
 
 
@@ -61,3 +61,5 @@ def cli(ctx, loglevel):
 
 
 cli.add_command(ping.ping)
+cli.add_command(analyses.list_)
+cli.add_command(analyses.create)

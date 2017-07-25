@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "definitions": {},
+  "id": "reana_spec",
+  "type": "object",
+  "title": "REANA analysis specification",
+  "description": "Full analysis specification including data, sofware, environment and workflow enabling reproducibility on a REANA cluster.",
+  "required": ["workflow", "environment"],
+  "properties": {
+    "code": {
+      "id": "/properties/code",
+      "type": "object",
+      "title": "Analysis code.",
+      "description": "All source code files used by the analysis.",
+      "properties": {
+        "files": {
+          "id": "/properties/code/properties/files",
+          "type": "array",
+          "title": "Source code files list.",
+          "description": "List of source code files used by the analyses.",
+          "items": {
+            "id": "/properties/code/properties/files/items",
+            "type": "string",
+            "title": "Relative path to the file."
+          }
+        }
+      }
+    },
+    "environment": {
+      "id": "/properties/environment",
+      "type": "array",
+      "title": "Set of analysis' environments.",
+      "description": "All container images needed to reproduce the analysis.",
+      "items": {
+        "id": "/properties/environment/items",
+        "type": "object",
+        "title": "Analysis environment.",
+        "description": "Analysis environment represented by container technology and image name.",
+        "properties": {
+          "image": {
+            "id": "/properties/environment/items/properties/image",
+            "type": "string",
+            "title": "Environment image id.",
+            "description": "String which represents an image used as environment for one or more steps of an analysis.",
+            "default": "busybox"
+          },
+          "type": {
+            "id": "/properties/environment/items/properties/type",
+            "type": "string",
+            "title": "Container technology.",
+            "description": "Name which represents a supported container technology to provide as a REANA environment.",
+            "default": "docker"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "id": "/properties/metadata",
+      "type": "object",
+      "title": "Analysis metadata.",
+      "properties": {
+        "author": {
+          "id": "/properties/metadata/properties/author",
+          "type": "string",
+          "title": "Analysis author.",
+          "description": "User or group who created the analysis.",
+          "default": "@reanahub/developers"
+        },
+        "title": {
+          "id": "/properties/metadata/properties/title",
+          "type": "string",
+          "title": "Analysis title",
+          "default": "REANA analysis example"
+        }
+      }
+    },
+    "output": {
+      "id": "/properties/output",
+      "type": "object",
+      "title": "Analysis output.",
+      "properties": {
+        "files": {
+          "id": "/properties/output/properties/files",
+          "type": "array",
+          "title": "Analysis results.",
+          "description": "Expected output from analysis represented by a set of files.",
+          "items": {
+            "id": "/properties/output/properties/files/items",
+            "type": "string",
+            "title": "Relative path to the file."
+          }
+        }
+      }
+    },
+    "parameters": {
+      "id": "/properties/parameters",
+      "type": "object",
+      "title": "Analysis parameters.",
+      "description": "Key value data structure which represents the analysis parameters."
+    },
+    "workflow": {
+      "id": "/properties/workflow",
+      "type": "object",
+      "title": "Analysis workflow.",
+      "description": "Workflow which represents the steps that need to be run to reproduce an analysis.",
+      "properties": {
+        "file": {
+          "id": "/properties/workflow/properties/file",
+          "type": "string",
+          "title": "Workflow file name.",
+          "default": "workflow.yml"
+        },
+        "type": {
+          "id": "/properties/workflow/properties/type",
+          "type": "string",
+          "title": "Workflow engine.",
+          "description": "Name which represents a supported workflow engine to be used to reproduce the analysis."
+        }
+      }
+    }
+  }
+}

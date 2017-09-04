@@ -78,10 +78,10 @@
       },
       "post": {
         "consumes": [
-          "multipart/form-data"
+          "application/json"
         ],
         "description": "This resource is expecting JSON data with all the necessary informations to instantiate a yadage workflow.",
-        "operationId": "create_yadage_workflow",
+        "operationId": "create_analysis",
         "parameters": [
           {
             "description": "Required. Organization which the worklow belongs to.",
@@ -98,18 +98,20 @@
             "type": "string"
           },
           {
-            "description": "Required. Name of the workflow engine to be used.",
+            "description": "Remote repository which contains a valid REANA specification.",
             "in": "query",
-            "name": "workflow_engine",
-            "required": true,
+            "name": "spec",
+            "required": false,
             "type": "string"
           },
           {
-            "description": "Specification with necessary data to instantiate an analysis for the given workflow engine.",
-            "in": "formData",
-            "name": "analysis_payload",
-            "required": true,
-            "type": "file"
+            "description": "REANA specification with necessary data to instantiate an analysis.",
+            "in": "body",
+            "name": "reana_spec",
+            "required": false,
+            "schema": {
+              "type": "object"
+            }
           }
         ],
         "produces": [

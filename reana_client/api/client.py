@@ -82,17 +82,15 @@ class Client(object):
         except Exception:
             raise
 
-    def create_analysis(self, user, organization, workflow_engine,
-                        analysis_payload):
+    def run_analysis(self, user, organization, reana_spec):
         """Create an analysis."""
         try:
             (response,
-             http_response) = self._client.api.\
-                              create_yadage_workflow(
+             http_response) = self._client.api.create_analysis(
                                   user=user,
                                   organization=organization,
-                                  workflow_engine=workflow_engine,
-                                  analysis_payload=analysis_payload).result()
+                                  reana_spec=json.loads(json.dumps(
+                                      reana_spec, sort_keys=True))).result()
 
             if http_response.status_code == 200:
                 return response
@@ -103,5 +101,4 @@ class Client(object):
                         status_code=http_response.status_code))
 
         except Exception:
-
             raise

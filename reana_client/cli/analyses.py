@@ -21,16 +21,32 @@
 # submit itself to any jurisdiction.
 """REANA client analysis related commands."""
 
-import json
 import logging
 
 import click
+import yaml
+
+from ..utils import load_workflow_spec
+
+
+def load_reana_spec():
+    """Load reana specification file."""
+    # TODO extract `.reana.yaml` to config variable
+    try:
+        with open('.reana.yaml') as f:
+            reana_yaml = yaml.load(f.read())
+        return reana_yaml
+    except IOError as e:
+        logging.info(
+            'Something went wrong when reading .reana.yaml: {0}'.format(
+                e.strerror))
+        raise e
 
 
 @click.command('list')
 @click.pass_context
 def list_(ctx):
-    """Health check REANA Server."""
+    """List all available analyses."""
     try:
         response = ctx.obj.client.get_all_analyses()
         for analysis in response:
@@ -47,19 +63,20 @@ def list_(ctx):
               help='User who submits the analysis.')
 @click.option('-o', '--organization', default='default',
               help='Organization which resources will be used.')
-@click.option('-w', '--workflow-engine', default='yadage',
-              help='Workflow engine used.')
-@click.argument('analysis_payload')
 @click.pass_context
-def create(ctx, user, organization, workflow_engine,
-           analysis_payload):
-    """Health check REANA Server."""
+def run(ctx, user, organization):
+    """Run a REANA compatible analysis using `.reana.yaml` spec."""
     try:
-        json.loads(analysis_payload)
+        # exchange analysis_payload for reading .reana.yaml
+        # validating + parsing .reana.yaml
+        reana_spec = load_reana_spec()
+        reana_spec['workflow']['spec'] = load_workflow_spec(
+            reana_spec['workflow']['type'],
+            reana_spec['workflow']['file'],
+        )
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-        response = ctx.obj.client.create_analysis(user, organization,
-                                                  workflow_engine,
-                                                  analysis_payload)
+        response = ctx.obj.client.run_analysis(user, organization,
+                                               reana_spec)
         click.echo(response)
 
     except Exception as e:

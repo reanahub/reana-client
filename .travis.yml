@@ -29,7 +29,7 @@ cache:
   - pip
 
 python:
-  - "3.5"
+  - "2.7"
 
 before_install:
   - travis_retry pip install --upgrade pip setuptools py

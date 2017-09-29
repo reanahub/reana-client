@@ -24,23 +24,8 @@
 import logging
 
 import click
-import yaml
 
-from ..utils import load_workflow_spec
-
-
-def load_reana_spec():
-    """Load reana specification file."""
-    # TODO extract `.reana.yaml` to config variable
-    try:
-        with open('.reana.yaml') as f:
-            reana_yaml = yaml.load(f.read())
-        return reana_yaml
-    except IOError as e:
-        logging.info(
-            'Something went wrong when reading .reana.yaml: {0}'.format(
-                e.strerror))
-        raise e
+from ..utils import load_reana_spec, load_workflow_spec
 
 
 @click.command('list')
@@ -67,8 +52,6 @@ def list_(ctx):
 def run(ctx, user, organization):
     """Run a REANA compatible analysis using `.reana.yaml` spec."""
     try:
-        # exchange analysis_payload for reading .reana.yaml
-        # validating + parsing .reana.yaml
         reana_spec = load_reana_spec()
         reana_spec['workflow']['spec'] = load_workflow_spec(
             reana_spec['workflow']['type'],
@@ -80,6 +63,4 @@ def run(ctx, user, organization):
         click.echo(response)
 
     except Exception as e:
-        logging.info('Something went wrong when trying to connect to {0}'
-                     .format(ctx.obj.client.server_url))
         logging.debug(str(e))

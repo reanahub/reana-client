@@ -20,3 +20,13 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 """REANA client configuration."""
+
+import pkg_resources
+
+reana_yaml_file_path = '.reana.yaml'
+"""REANA specification file location.."""
+
+reana_yaml_schema_file_path = pkg_resources.resource_filename(
+        __name__,
+        'schemas/reana_analysis_schema.json')
+"""REANA specification schema location."""

@@ -65,7 +65,7 @@ setup_requires = [
 install_requires = [
     'bravado>=9.0.6',
     'click>=6.7',
-    'yadage-schemas==0.6.0',
+    'yadage-schemas==0.7.4',
 ]
 
 packages = find_packages()

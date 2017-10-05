@@ -66,6 +66,7 @@ install_requires = [
     'bravado>=9.0.6',
     'click>=6.7',
     'yadage-schemas==0.6.0',
+    'cwltool'
 ]
 
 packages = find_packages()

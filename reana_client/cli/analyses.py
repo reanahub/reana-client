@@ -24,6 +24,7 @@
 import logging
 
 import click
+import yaml
 
 from ..utils import load_reana_spec, load_workflow_spec
 
@@ -57,10 +58,24 @@ def run(ctx, user, organization):
             reana_spec['workflow']['type'],
             reana_spec['workflow']['file'],
         )
+        if reana_spec['workflow']['type'] == 'cwl':
+            with open(reana_spec['parameters']['input']) as f:
+                reana_spec['parameters']['input'] = yaml.load(f)
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.run_analysis(user, organization,
                                                reana_spec)
         click.echo(response)
+
+    except Exception as e:
+        logging.error(str(e))
+
+
+# @click.command()
+# @click.pass_context
+def seed(ctx, file):
+    """Send file to a workflow controller"""
+    try:
+        pass
 
     except Exception as e:
         logging.debug(str(e))

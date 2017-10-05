@@ -27,8 +27,8 @@ import sys
 
 import click
 
-from . import analyses, ping
-from ..api import Client
+from reana_client.cli import analyses, ping
+from reana_client.api import Client
 
 
 class Config(object):
@@ -63,3 +63,6 @@ def cli(ctx, loglevel):
 cli.add_command(ping.ping)
 cli.add_command(analyses.list_)
 cli.add_command(analyses.run)
+
+if __name__ == "__main__":
+    cli()

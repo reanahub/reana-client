@@ -43,9 +43,12 @@ class Client(object):
     def _get_spec(self, spec_file):
         """Get json specification from package data."""
         spec_file_path = os.path.join(
-            pkg_resources.resource_filename('reana_client',
-                                            'openapi_connections'),
+            pkg_resources.
+            resource_filename(
+                'reana_client',
+                'openapi_connections'),
             spec_file)
+
         with open(spec_file_path) as f:
             json_spec = json.load(f)
         return json_spec
@@ -90,6 +93,28 @@ class Client(object):
                                   organization=organization,
                                   reana_spec=json.loads(json.dumps(
                                       reana_spec, sort_keys=True))).result()
+
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except Exception:
+            raise
+
+    def seed_analysis(self, user, organization, analysis_id, file_, file_name):
+        """Seed analysis with file."""
+        try:
+            (response,
+             http_response) = self._client.api.seed_analysis(
+                 user=user,
+                 organization=organization,
+                 analysis_id=analysis_id,
+                 file_content=file_,
+                 file_name=file_name).result()
 
             if http_response.status_code == 200:
                 return response

@@ -100,3 +100,27 @@ def run(ctx, file, user, organization, skip_validation):
 
     except Exception as e:
         logging.debug(str(e))
+
+
+@click.command()
+@click.option('-u', '--user', default='00000000-0000-0000-0000-000000000000',
+              help='User who submits the analysis.')
+@click.option('-o', '--organization', default='default',
+              help='Organization which resources will be used.')
+@click.option('-a', '--analysis',
+              help='UUID which identifies the analysis to be seeded.')
+@click.argument('file_', type=click.File('rb'))
+@click.pass_context
+def seed(ctx, user, organization, analysis, file_):
+    """Seed files to analysis workspace."""
+    try:
+        response = ctx.obj.client.seed_analysis(
+            user,
+            organization,
+            analysis,
+            file_,
+            file_.name)
+        click.echo(response)
+
+    except Exception as e:
+        logging.debug(str(e))

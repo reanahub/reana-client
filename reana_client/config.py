@@ -23,10 +23,16 @@
 
 import pkg_resources
 
-reana_yaml_file_path = '.reana.yaml'
-"""REANA specification file location.."""
+reana_yaml_default_file_path = './.reana.yaml'  # e.g. `./.reana.yaml`
+"""REANA specification file default location."""
 
 reana_yaml_schema_file_path = pkg_resources.resource_filename(
         __name__,
         'schemas/reana_analysis_schema.json')
 """REANA specification schema location."""
+
+default_user = '00000000-0000-0000-0000-000000000000'
+"""Default user to use when submitting workflows to Reana Server."""
+
+default_organisation = 'default'
+"""Default organisation to use when submitting workflows to Reana Server."""

@@ -36,11 +36,12 @@ class Config(object):
 
     def __init__(self):
         """Initialize config variables."""
-        server = os.environ.get('REANA_SERVER_URL', 'http://reana.cern.ch')
+        server_url = os.environ.get('REANA_SERVER_URL', 'http://reana.cern.ch')
 
-        logging.info('REANA Server URL set to: {}'.format(server))
+        logging.info('REANA Server URL ($REANA_SERVER_URL) is: {}'
+                     .format(server_url))
 
-        self.client = Client(server)
+        self.client = Client(server_url)
 
 
 @click.group()

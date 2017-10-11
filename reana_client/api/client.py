@@ -25,7 +25,6 @@ import json
 import os
 
 import pkg_resources
-
 from bravado.client import SwaggerClient
 
 

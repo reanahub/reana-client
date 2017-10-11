@@ -25,6 +25,8 @@ import logging
 
 import click
 
+from ..config import (default_organisation, default_user,
+                      reana_yaml_default_file_path)
 from ..utils import load_reana_spec, load_workflow_spec
 
 
@@ -44,19 +46,31 @@ def list_(ctx):
 
 
 @click.command()
-@click.option('-u', '--user', default='00000000-0000-0000-0000-000000000000',
+@click.option('-f',
+              '--file',
+              type=click.Path(exists=True, resolve_path=True),
+              default=reana_yaml_default_file_path,
+              help='REANA specifications file describing the workflow and '
+                   'context which REANA should execute.')
+@click.option('-u', '--user', default=default_user,
               help='User who submits the analysis.')
-@click.option('-o', '--organization', default='default',
-              help='Organization which resources will be used.')
+@click.option('-o', '--organization', default=default_organisation,
+              help='Organization whose resources will be used.')
+@click.option('--skip-validation', is_flag=True,
+              help='If set, specifications file is not validated before '
+                   'submitting it\'s contents to REANA Server.')
 @click.pass_context
-def run(ctx, user, organization):
-    """Run a REANA compatible analysis using `.reana.yaml` spec."""
+def run(ctx, file, user, organization, skip_validation):
+    """Run a REANA compatible analysis using REANA spec file as input."""
     try:
-        reana_spec = load_reana_spec()
+        reana_spec = load_reana_spec(click.format_filename(file),
+                                     skip_validation)
+
         reana_spec['workflow']['spec'] = load_workflow_spec(
             reana_spec['workflow']['type'],
             reana_spec['workflow']['file'],
         )
+
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.run_analysis(user, organization,
                                                reana_spec)

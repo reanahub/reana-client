@@ -64,3 +64,4 @@ def cli(ctx, loglevel):
 cli.add_command(ping.ping)
 cli.add_command(analyses.list_)
 cli.add_command(analyses.run)
+cli.add_command(analyses.validate)

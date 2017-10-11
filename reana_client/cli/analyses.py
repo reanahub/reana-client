@@ -30,6 +30,28 @@ from ..config import (default_organisation, default_user,
 from ..utils import load_reana_spec, load_workflow_spec
 
 
+@click.command()
+@click.option('-f',
+              '--file',
+              type=click.Path(exists=True, resolve_path=True),
+              default=reana_yaml_default_file_path,
+              help='REANA specifications file describing the workflow and '
+                   'context which REANA should execute.')
+@click.pass_context
+def validate(ctx, file):
+    """Validate given REANA specification file."""
+    try:
+        load_reana_spec(click.format_filename(file))
+
+        click.echo('File {filename} is a valid REANA specification file.'
+                   .format(filename=click.format_filename(file)))
+
+    except Exception as e:
+        logging.info('Something went wrong when trying to validate {0}'
+                     .format(click.format_filename(file)))
+        logging.debug(str(e))
+
+
 @click.command('list')
 @click.pass_context
 def list_(ctx):

@@ -28,10 +28,10 @@ from io import StringIO
 
 import yadageschemas
 import yaml
-from cwltool.main import main
 from jsonschema import ValidationError, validate
 
 from config import reana_yaml_schema_file_path
+from cwltool.main import main
 
 
 def yadage_load(workflow_file, toplevel='.'):

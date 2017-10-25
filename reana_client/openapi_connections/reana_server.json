@@ -9,7 +9,7 @@
   "paths": {
     "/api/analyses": {
       "get": {
-        "description": "This resource return all analyses in JSON format.",
+        "description": "This resource return all current analyses in JSON format.",
         "produces": [
           "application/json"
         ],
@@ -74,13 +74,13 @@
             }
           }
         },
-        "summary": "Returns list of all analyses."
+        "summary": "Returns list of all current analyses in REANA."
       },
       "post": {
         "consumes": [
           "application/json"
         ],
-        "description": "This resource is expecting JSON data with all the necessary informations to instantiate a yadage workflow.",
+        "description": "This resource is expecting JSON data with all the necessary information to instantiate a yadage workflow.",
         "operationId": "create_analysis",
         "parameters": [
           {
@@ -143,6 +143,77 @@
           }
         },
         "summary": "Creates a new yadage workflow."
+      }
+    },
+    "/api/analyses/{analysis_id}/workspace": {
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "This resource expects a file which will be placed in the analysis workspace identified by the UUID `analysis_id`.",
+        "operationId": "seed_analysis",
+        "parameters": [
+          {
+            "description": "Required. Organization which the analysis belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of analysis owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. Analysis UUID.",
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. File to be transferred to the analysis workspace.",
+            "in": "formData",
+            "name": "file_content",
+            "required": true,
+            "type": "file"
+          },
+          {
+            "description": "Required. File name.",
+            "in": "query",
+            "name": "file_name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request succeeded. File successfully trasferred.",
+            "examples": {
+              "application/json": {
+                "message": "File successfully transferred"
+              }
+            },
+            "schema": {
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming data specification seems malformed"
+          }
+        },
+        "summary": "Seeds the analysis workspace with the provided file."
       }
     },
     "/api/ping": {

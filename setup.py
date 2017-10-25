@@ -65,8 +65,12 @@ setup_requires = [
 install_requires = [
     'bravado>=9.0.6',
     'click>=6.7',
-    'yadage-schemas==0.6.0',
     'cwltool'
+    'yadage-schemas==0.7.4',
+    'pyOpenSSL==17.3.0',  # FIXME remove once yadage-schemas solves deps.
+    'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
+    'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
+    'webcolors==1.7',  # FIXME remove once yadage-schemas solves deps.
 ]
 
 packages = find_packages()
@@ -107,6 +111,8 @@ setup(
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
         'Development Status :: 3 - Alpha',
     ],
 )

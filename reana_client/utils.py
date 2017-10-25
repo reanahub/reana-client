@@ -31,7 +31,7 @@ import yaml
 from cwltool.main import main
 from jsonschema import ValidationError, validate
 
-from reana_client.config import reana_yaml_file_path, reana_yaml_schema_file_path
+from config import reana_yaml_schema_file_path
 
 
 def yadage_load(workflow_file, toplevel='.'):
@@ -78,23 +78,28 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
     return workflow_load[workflow_type](workflow_file, **kwargs)
 
 
-def load_reana_spec():
+def load_reana_spec(filepath, skip_validation=False):
     """Load and validate reana specification file.
 
-    :raises IOError: Error while reading `reana_yaml_file_path`.
-    :raises ValidationError:g `reana_yaml_file_path` does not validate against
+    :raises IOError: Error while reading REANA spec file from given filepath`.
+    :raises ValidationError: Given REANA spec file does not validate against
         REANA specification.
     """
     try:
-        with open(reana_yaml_file_path) as f:
+        with open(filepath) as f:
             reana_yaml = yaml.load(f.read())
 
-        _validate_reana_yaml(reana_yaml)
+        if not (skip_validation):
+            logging.info('Validating REANA specification file: {filepath}'
+                         .format(filepath=filepath))
+            _validate_reana_yaml(reana_yaml)
+
         return reana_yaml
     except IOError as e:
         logging.info(
-            'Something went wrong when reading .reana.yaml: {0}'.format(
-                e.strerror))
+            'Something went wrong when reading specifications file from '
+            '{filepath} : \n'
+            '{error}'.format(filepath=filepath, error=e.strerror))
         raise e
     except Exception as e:
         raise e
@@ -103,9 +108,9 @@ def load_reana_spec():
 def _validate_reana_yaml(reana_yaml):
     """Validate REANA specification file according to jsonschema.
 
-    :param reana_yaml: Dictionary which represents `.reana.yaml`.
-    :raises ValidationError: `reana_yaml` does not validate against REANA
-        specification.
+    :param reana_yaml: Dictionary which represents REANA specifications file.
+    :raises ValidationError: Given REANA spec file does not validate against
+        REANA specification schema.
     """
     try:
         with open(reana_yaml_schema_file_path, 'r') as f:
@@ -115,10 +120,12 @@ def _validate_reana_yaml(reana_yaml):
 
     except IOError as e:
         logging.info(
-            'Something went wrong when reading {0}: {1}'.format(
-                reana_yaml_schema_file_path, e.strerror))
+            'Something went wrong when reading REANA validation schema from '
+            '{filepath} : \n'
+            '{error}'.format(filepath=reana_yaml_schema_file_path,
+                             error=e.strerror))
         raise e
     except ValidationError as e:
-        logging.info('Invalid `.reana.yaml` specification: {0}'.format(
-            e.message))
+        logging.info('Invalid REANA specification: {error}'
+                     .format(error=e.message))
         raise e

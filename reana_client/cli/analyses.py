@@ -26,7 +26,31 @@ import logging
 import click
 import yaml
 
+from ..config import (default_organisation, default_user,
+                      reana_yaml_default_file_path)
 from ..utils import load_reana_spec, load_workflow_spec
+
+
+@click.command()
+@click.option('-f',
+              '--file',
+              type=click.Path(exists=True, resolve_path=True),
+              default=reana_yaml_default_file_path,
+              help='REANA specifications file describing the workflow and '
+                   'context which REANA should execute.')
+@click.pass_context
+def validate(ctx, file):
+    """Validate given REANA specification file."""
+    try:
+        load_reana_spec(click.format_filename(file))
+
+        click.echo('File {filename} is a valid REANA specification file.'
+                   .format(filename=click.format_filename(file)))
+
+    except Exception as e:
+        logging.info('Something went wrong when trying to validate {0}'
+                     .format(click.format_filename(file)))
+        logging.debug(str(e))
 
 
 @click.command('list')
@@ -45,15 +69,26 @@ def list_(ctx):
 
 
 @click.command()
-@click.option('-u', '--user', default='00000000-0000-0000-0000-000000000000',
+@click.option('-f',
+              '--file',
+              type=click.Path(exists=True, resolve_path=True),
+              default=reana_yaml_default_file_path,
+              help='REANA specifications file describing the workflow and '
+                   'context which REANA should execute.')
+@click.option('-u', '--user', default=default_user,
               help='User who submits the analysis.')
-@click.option('-o', '--organization', default='default',
-              help='Organization which resources will be used.')
+@click.option('-o', '--organization', default=default_organisation,
+              help='Organization whose resources will be used.')
+@click.option('--skip-validation', is_flag=True,
+              help='If set, specifications file is not validated before '
+                   'submitting it\'s contents to REANA Server.')
 @click.pass_context
-def run(ctx, user, organization):
-    """Run a REANA compatible analysis using `.reana.yaml` spec."""
+def run(ctx, file, user, organization, skip_validation):
+    """Run a REANA compatible analysis using REANA spec file as input."""
     try:
-        reana_spec = load_reana_spec()
+        reana_spec = load_reana_spec(click.format_filename(file),
+                                     skip_validation)
+
         reana_spec['workflow']['spec'] = load_workflow_spec(
             reana_spec['workflow']['type'],
             reana_spec['workflow']['file'],
@@ -67,5 +102,28 @@ def run(ctx, user, organization):
         click.echo(response)
 
     except Exception as e:
-        logging.error(str(e))
+        logging.debug(str(e))
 
+
+@click.command()
+@click.option('-u', '--user', default='00000000-0000-0000-0000-000000000000',
+              help='User who submits the analysis.')
+@click.option('-o', '--organization', default='default',
+              help='Organization which resources will be used.')
+@click.option('-a', '--analysis',
+              help='UUID which identifies the analysis to be seeded.')
+@click.argument('file_', type=click.File('rb'))
+@click.pass_context
+def seed(ctx, user, organization, analysis, file_):
+    """Seed files to analysis workspace."""
+    try:
+        response = ctx.obj.client.seed_analysis(
+            user,
+            organization,
+            analysis,
+            file_,
+            file_.name)
+        click.echo(response)
+
+    except Exception as e:
+        logging.debug(str(e))

@@ -69,13 +69,3 @@ def run(ctx, user, organization):
     except Exception as e:
         logging.error(str(e))
 
-
-# @click.command()
-# @click.pass_context
-def seed(ctx, file):
-    """Send file to a workflow controller"""
-    try:
-        pass
-
-    except Exception as e:
-        logging.debug(str(e))

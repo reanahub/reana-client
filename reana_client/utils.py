@@ -23,11 +23,15 @@
 
 import json
 import logging
-from reana_client.config import reana_yaml_file_path, reana_yaml_schema_file_path
+import sys
+from io import StringIO
 
 import yadageschemas
 import yaml
+from cwltool.main import main
 from jsonschema import ValidationError, validate
+
+from reana_client.config import reana_yaml_file_path, reana_yaml_schema_file_path
 
 
 def yadage_load(workflow_file, toplevel='.'):
@@ -48,40 +52,12 @@ def cwl_load(workflow_file):
         `cwl` workflow specification.
     :returns: A dictionary which represents the valid `cwl` workflow.
     """
-    from cStringIO import StringIO
-    import sys
-    from cwltool.main import main
-
-    # class Capturing(list):
-    #     def __enter__(self):
-    #         self._stdout = sys.stdout
-    #         sys.stdout = self._stringio = StringIO()
-    #         return self
-    #
-    #     def __exit__(self, *args):
-    #         self.extend(self._stringio.getvalue().splitlines())
-    #         del self._stringio  # free up some memory
-    #         sys.stdout = self._stdout
-
-
-    from cStringIO import StringIO
-    import sys
-
     old_stdout = sys.stdout
     sys.stdout = mystdout = StringIO()
-
-    # blah blah lots of code ...
     main(["--pack", workflow_file], stdout=mystdout)
-
     sys.stdout = old_stdout
-
     value = mystdout.getvalue()
-
-    # with open("result.json", "w") as f:
-    #     json.dump(value, )
-    #     new_value = json.dumps(value)
-    # with Capturing() as output:
-    return value
+    return json.loads(value)
 
 
 workflow_load = {

@@ -27,8 +27,14 @@ import sys
 
 import click
 
-from . import analyses, ping
+from . import analyses, workflow, inputs, ping
 from ..api import Client
+
+DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \
+                   '{%(pathname)s:%(lineno)d} ' \
+                   '%(levelname)s - %(message)s'
+
+LOG_FORMAT = '[%(levelname)s] %(message)s'
 
 
 class Config(object):
@@ -55,14 +61,13 @@ class Config(object):
 def cli(ctx, loglevel):
     """REANA Client for interacting with REANA Server."""
     logging.basicConfig(
-        format='[%(levelname)s] %(message)s',
+        format=DEBUG_LOG_FORMAT if loglevel == 'debug' else LOG_FORMAT,
         stream=sys.stderr,
         level=logging.DEBUG if loglevel == 'debug' else logging.INFO)
     ctx.obj = Config()
 
 
 cli.add_command(ping.ping)
-cli.add_command(analyses.list_)
-cli.add_command(analyses.run)
-cli.add_command(analyses.validate)
-cli.add_command(analyses.seed)
+cli.add_command(analyses.analyses)
+cli.add_command(workflow.workflow)
+cli.add_command(inputs.inputs)

@@ -41,8 +41,7 @@ tests_require = [
     'pytest-cache>=1.0',
     'pytest-cov>=1.8.0',
     'pytest-pep8>=1.0.6',
-    'pytest>=2.8.0',
-    'tablib>=0.12.1'
+    'pytest>=2.8.0'
 ]
 
 extras_require = {
@@ -70,6 +69,7 @@ install_requires = [
     'pyOpenSSL==17.3.0',  # FIXME remove once yadage-schemas solves deps.
     'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
     'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
+    'tablib>=0.12.1',
     'webcolors==1.7',  # FIXME remove once yadage-schemas solves deps.
 ]
 

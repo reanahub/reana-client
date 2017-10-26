@@ -36,3 +36,6 @@ default_user = '00000000-0000-0000-0000-000000000000'
 
 default_organisation = 'default'
 """Default organisation to use when submitting workflows to Reana Server."""
+
+default_download_path = './outputs/'
+"""Default path where files outputted by a workflow will be downloaded."""

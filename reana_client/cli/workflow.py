@@ -55,6 +55,16 @@ def workflow(ctx):
     'list',
     help='List all available workflows.')
 @click.option(
+    '-u',
+    '--user',
+    default=default_user,
+    help='User who created the analysis.')
+@click.option(
+    '-o',
+    '--organization',
+    default=default_organisation,
+    help='Organization whose resources will be used.')
+@click.option(
     '--filter',
     multiple=True,
     help='Filter output according to column titles (case-sensitive).')
@@ -64,16 +74,20 @@ def workflow(ctx):
     type=click.Choice(['json', 'yaml']),
     help='Set output format.')
 @click.pass_context
-def workflow_list(ctx, filter, output_format):
-    """List all available workflows."""
+def workflow_list(ctx, user, organization, filter, output_format):
+    """List all workflows user has."""
     logging.debug('workflow.list')
+    logging.debug('user: {}'.format(user))
+    logging.debug('organization: {}'.format(organization))
+    logging.debug('filter: {}'.format(filter))
+    logging.debug('output_format: {}'.format(output_format))
 
     data = tablib.Dataset()
     data.headers = ['Name', 'UUID', 'Status']
 
     for i in range(1, 10):
         data.append([get_random_name(),
-                     uuid.uuid1(),
+                     str(uuid.uuid4()),
                      random.choice(list(_WorkflowStatus)).name])
 
     if filter:
@@ -178,7 +192,7 @@ def workflow_start(ctx, user, organization, workflow):
     workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
 
     if workflow_name:
-        logging.info('Workflow "{}" selected'.format(workflow_name))
+        logging.info('Workflow `{}` selected'.format(workflow_name))
         click.echo('Workflow `{}` has been started.'.format(workflow_name))
     else:
         click.echo(
@@ -199,6 +213,70 @@ def workflow_start(ctx, user, organization, workflow):
     #     logging.debug(str(e))
 
 
+@click.command(
+    'status',
+    help='Get status of a previously created analysis workflow.')
+@click.option(
+    '-u',
+    '--user',
+    default=default_user,
+    help='User who has created the workflow.')
+@click.option(
+    '-o',
+    '--organization',
+    default=default_organisation,
+    help='Organization whose resources will be used.')
+@click.option(
+    '--workflow',
+    help='Name of the workflow whose status should be resolved. '
+         'Overrides value of $REANA_WORKON.')
+@click.option(
+    '--filter',
+    multiple=True,
+    help='Filter output according to column titles (case-sensitive).')
+@click.option(
+    '-of',
+    '--output-format',
+    type=click.Choice(['json', 'yaml']),
+    help='Set output format.')
+@click.pass_context
+def workflow_status(ctx, user, organization, workflow, filter, output_format):
+    """Get status of previously created analysis workflow."""
+    logging.debug('workflow.start')
+    logging.debug('user: {}'.format(user))
+    logging.debug('organization: {}'.format(organization))
+    logging.debug('workflow: {}'.format(workflow))
+
+    workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
+
+    if workflow_name:
+        logging.info('Workflow "{}" selected'.format(workflow_name))
+
+        data = tablib.Dataset()
+        data.headers = ['Name', 'UUID', 'Status']
+
+        data.append([workflow_name,
+                     str(uuid.uuid4()),
+                     random.choice(list(_WorkflowStatus)).name])
+
+        if filter:
+            data = data.subset(rows=None, cols=list(filter))
+
+        if output_format:
+            click.echo(data.export(output_format))
+        else:
+            click.echo(data)
+
+    else:
+        click.echo(
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with `$REANA_WORKON` '
+                        'environment variable',
+                        fg='red'),
+            err=True)
+
+
 workflow.add_command(workflow_list)
 workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)
+workflow.add_command(workflow_status)

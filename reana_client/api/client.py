@@ -84,8 +84,8 @@ class Client(object):
         except Exception:
             raise
 
-    def run_analysis(self, user, organization, reana_spec):
-        """Create an analysis."""
+    def create_workflow(self, user, organization, reana_spec):
+        """Create a workflow."""
         try:
             (response,
              http_response) = self._client.api.create_analysis(
@@ -93,17 +93,16 @@ class Client(object):
                                   organization=organization,
                                   reana_spec=json.loads(json.dumps(
                                       reana_spec, sort_keys=True))).result()
-
-            if http_response.status_code == 200:
+            if http_response.status_code == 201:
                 return response
             else:
                 raise Exception(
-                    "Expected status code 200 but replied with "
+                    "Expected status code 201 but replied with "
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
-        except Exception:
-            raise
+        except Exception as e:
+            raise e
 
     def seed_analysis(self, user, organization, analysis_id, file_, file_name):
         """Seed analysis with file."""

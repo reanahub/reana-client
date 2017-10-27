@@ -144,24 +144,22 @@ def workflow_create(ctx, file, user, organization, skip_validation):
     logging.debug('organization: {}'.format(organization))
     logging.debug('skip_validation: {}'.format(skip_validation))
 
-    click.echo('Workflow `{}` has been created.'.format(get_random_name()))
+    try:
+        reana_spec = load_reana_spec(click.format_filename(file),
+                                     skip_validation)
 
-    # try:
-    #     reana_spec = load_reana_spec(click.format_filename(file),
-    #                                  skip_validation)
-    #
-    #     reana_spec['workflow']['spec'] = load_workflow_spec(
-    #         reana_spec['workflow']['type'],
-    #         reana_spec['workflow']['file'],
-    #     )
-    #
-    #     logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-    #     response = ctx.obj.client.run_analysis(user, organization,
-    #                                            reana_spec)
-    #     click.echo(response)
-    #
-    # except Exception as e:
-    #     logging.debug(str(e))
+        reana_spec['workflow']['spec'] = load_workflow_spec(
+            reana_spec['workflow']['type'],
+            reana_spec['workflow']['file'],
+        )
+
+        logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
+        response = ctx.obj.client.create_workflow(user, organization,
+                                                  reana_spec)
+        click.echo(response)
+
+    except Exception as e:
+        logging.debug(str(e))
 
 
 @click.command(

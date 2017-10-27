@@ -39,7 +39,9 @@ def analyses(ctx):
     logging.debug('analysis')
 
 
-@click.command()
+@click.command(
+    'validate',
+    help='Validate REANA specification file.')
 @click.option(
     '-f',
     '--file',
@@ -48,9 +50,9 @@ def analyses(ctx):
     help='REANA specifications file describing the workflow and '
          'context which REANA should execute.')
 @click.pass_context
-def analysis_validate(ctx, file):
+def validate(ctx, file):
     """Validate given REANA specification file."""
-    logging.debug('analysis.validate')
+    logging.debug('analyses.validate')
     logging.debug('file: {}'.format(file))
 
     try:
@@ -65,4 +67,4 @@ def analysis_validate(ctx, file):
         logging.error(traceback.format_exc())
 
 
-analyses.add_command(analysis_validate)
+analyses.add_command(validate)

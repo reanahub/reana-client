@@ -127,12 +127,27 @@ def inputs_upload(ctx, user, organization, workflow, file_):
     if workflow_name:
         logging.info('Workflow "{}" selected'.format(workflow_name))
         for f in file_:
-            click.echo('Uploading {} ...'.format(f))
+            click.echo('Uploading {} ...'.format(f.name))
+            try:
+                response = ctx.obj.client.seed_analysis(
+                    user,
+                    organization,
+                    workflow,
+                    f,
+                    f.name)
+                if response:
+                    click.echo('File {} was successfully uploaded.'.
+                               format(f.name))
 
-            response = True
+            except Exception as e:
+                logging.debug(str(e))
+                click.echo(
+                    click.style(
+                        'Something went wrong while uploading {0}'.
+                        format(f.name),
+                        fg='red'),
+                    err=True)
 
-            if response:
-                click.echo('File {} was successfully uploaded.'.format(f))
     else:
         click.echo(
             click.style('Workflow name must be provided either with '
@@ -141,17 +156,6 @@ def inputs_upload(ctx, user, organization, workflow, file_):
                         fg='red'),
             err=True)
 
-    # try:
-    #     response = ctx.obj.client.seed_analysis(
-    #         user,
-    #         organization,
-    #         workflow,
-    #         file_,
-    #         file_.name)
-    #     click.echo(response)
-
-    # except Exception as e:
-    #     logging.debug(str(e))
 
 inputs.add_command(inputs_list)
 inputs.add_command(inputs_upload)

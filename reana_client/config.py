@@ -34,5 +34,5 @@ reana_yaml_schema_file_path = pkg_resources.resource_filename(
 default_user = '00000000-0000-0000-0000-000000000000'
 """Default user to use when submitting workflows to Reana Server."""
 
-default_organisation = 'default'
+default_organization = 'default'
 """Default organisation to use when submitting workflows to Reana Server."""

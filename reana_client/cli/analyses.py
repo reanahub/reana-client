@@ -26,7 +26,7 @@ import logging
 import click
 import yaml
 
-from ..config import (default_organisation, default_user,
+from ..config import (default_organization, default_user,
                       reana_yaml_default_file_path)
 from ..utils import load_reana_spec, load_workflow_spec
 
@@ -77,7 +77,7 @@ def list_(ctx):
                    'context which REANA should execute.')
 @click.option('-u', '--user', default=default_user,
               help='User who submits the analysis.')
-@click.option('-o', '--organization', default=default_organisation,
+@click.option('-o', '--organization', default=default_organization,
               help='Organization whose resources will be used.')
 @click.option('--skip-validation', is_flag=True,
               help='If set, specifications file is not validated before '

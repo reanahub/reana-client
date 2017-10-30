@@ -29,6 +29,7 @@ import click
 
 from reana_client.cli import analyses, ping
 from reana_client.api import Client
+from reana_client.config import default_user, default_organization
 
 
 class Config(object):
@@ -66,6 +67,43 @@ cli.add_command(analyses.list_)
 cli.add_command(analyses.run)
 cli.add_command(analyses.validate)
 cli.add_command(analyses.seed)
+
+@click.command()
+@click.option('--quiet', default=False,
+              help='No diagnostic output')
+@click.option('--outdir', default='default',
+              help='Output directory, defaults to the current directory')
+@click.argument('processfile', type=click.File('rb'), required=False)
+@click.argument('jobfile', type=click.File('rb'))
+@click.pass_context
+def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
+    """Run CWL files in a standard format <workflow.cwl> <job.json>"""
+    logging.basicConfig(
+        format='[%(levelname)s] %(message)s',
+        stream=sys.stderr,
+        level=logging.INFO if quiet else logging.DEBUG)
+    ctx.obj = Config()
+    try:
+        reana_spec = load_reana_spec(click.format_filename(file),
+                                     skip_validation)
+
+        reana_spec['workflow']['spec'] = load_workflow_spec(
+            reana_spec['workflow']['type'],
+            reana_spec['workflow']['file'],
+        )
+        if reana_spec['workflow']['type'] == 'cwl':
+            with open(reana_spec['parameters']['input']) as f:
+                reana_spec['parameters']['input'] = yaml.load(f)
+        logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
+        response = ctx.obj.client.run_analysis(default_user, default_organization,
+                                               reana_spec)
+        click.echo(response)
+        click.echo(response)
+
+    except Exception as e:
+        logging.debug(str(e))
+
+
 
 if __name__ == "__main__":
     cli()

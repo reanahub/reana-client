@@ -71,7 +71,7 @@ cli.add_command(analyses.validate)
 cli.add_command(analyses.seed)
 
 @click.command()
-@click.option('--quiet', default=False,
+@click.option('--quiet', is_flag=True,
               help='No diagnostic output')
 @click.option('--outdir', type=click.Path(),
               help='Output directory, defaults to the current directory')

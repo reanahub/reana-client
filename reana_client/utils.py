@@ -24,10 +24,11 @@
 import json
 import logging
 import sys
-from io import StringIO
+from io import BytesIO
 
 import yadageschemas
 import yaml
+# from StringIO import BytesIO
 from jsonschema import ValidationError, validate
 
 from config import reana_yaml_schema_file_path
@@ -53,8 +54,8 @@ def cwl_load(workflow_file):
     :returns: A dictionary which represents the valid `cwl` workflow.
     """
     old_stdout = sys.stdout
-    sys.stdout = mystdout = StringIO()
-    main(["--pack", workflow_file], stdout=mystdout)
+    sys.stdout = mystdout = BytesIO()
+    main(["--debug", "--pack", workflow_file], stdout=mystdout)
     sys.stdout = old_stdout
     value = mystdout.getvalue()
     return json.loads(value)

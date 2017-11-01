@@ -406,6 +406,10 @@ right = [
     # https://en.wikipedia.org/wiki/Jaroslav_Heyrovsk%C3%BD
     'heyrovsky',
 
+    # Harri Hirvonsalo - a developer
+    # https://phonebook.cern.ch/phonebook/#search/?query=Harri+Hirvonsalo+IT-CDA-DR
+    'hirvonsalo',
+
     # Dorothy Hodgkin was a British biochemist, credited with the
     # development of protein crystallography. She was awarded the Nobel
     # Prize in Chemistry in 1964.
@@ -725,6 +729,10 @@ right = [
     # https://en.wikipedia.org/wiki/Dennis_Ritchie
     'ritchie',
 
+    # Diego Rodriguez Rodriguez - a developer
+    # https://phonebook.cern.ch/phonebook/#search/?query=Diego+Rodriguez+Rodriguez+IT-CDA-DR
+    'rodriguez',
+
     # Wilhelm Conrad Röntgen - German physicist who was awarded the first
     # Nobel Prize in Physics in 1901 for the discovery of X-rays (Röntgen
     # rays). https://en.wikipedia.org/wiki/Wilhelm_R%C3%B6ntgen
@@ -758,6 +766,10 @@ right = [
     # William Shockley co-invented the transistor -
     # https://en.wikipedia.org/wiki/William_Shockley
     'shockley',
+
+    # Tibor Simko - the Developer
+    # https://phonebook.cern.ch/phonebook/#search/?query=Tibor+Simko+IT-CDA-DR
+    'simko',
 
     # Françoise Barré-Sinoussi - French virologist and Nobel Prize Laureate
     # in Physiology or Medicine; her work was fundamental in identifying HIV

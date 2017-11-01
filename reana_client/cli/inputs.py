@@ -27,7 +27,7 @@ import os
 import click
 import tablib
 
-from ..config import default_organisation, default_user
+from ..config import default_organization, default_user
 from .namesgenerator import get_random_name
 
 
@@ -50,7 +50,7 @@ def inputs(ctx):
 @click.option(
     '-o',
     '--organization',
-    default=default_organisation,
+    default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
@@ -107,7 +107,7 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
 @click.option(
     '-o',
     '--organization',
-    default=default_organisation,
+    default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',

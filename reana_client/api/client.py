@@ -68,11 +68,14 @@ class Client(object):
         except Exception:
             raise
 
-    def get_all_analyses(self):
+    def get_all_analyses(self, user, organization):
         """List all existing analyses."""
         try:
+
             response, http_response = self._client.api.\
-                                      get_api_analyses().result()
+                                      get_analyses(user=user,
+                                                   organization=organization)\
+                                      .result()
             if http_response.status_code == 200:
                 return response
             else:

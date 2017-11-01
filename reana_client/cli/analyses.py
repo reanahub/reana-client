@@ -25,7 +25,7 @@ import logging
 
 import click
 
-from ..config import (default_organisation, default_user,
+from ..config import (default_organization, default_user,
                       reana_yaml_default_file_path)
 from ..utils import load_reana_spec, load_workflow_spec
 

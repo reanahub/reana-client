@@ -30,7 +30,7 @@ from enum import Enum
 import click
 import tablib
 
-from ..config import (default_organisation, default_user,
+from ..config import (default_organization, default_user,
                       reana_yaml_default_file_path)
 from ..utils import load_reana_spec, load_workflow_spec
 from .namesgenerator import get_random_name
@@ -62,7 +62,7 @@ def workflow(ctx):
 @click.option(
     '-o',
     '--organization',
-    default=default_organisation,
+    default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
     '--filter',
@@ -83,30 +83,27 @@ def workflow_list(ctx, user, organization, filter, output_format):
     logging.debug('output_format: {}'.format(output_format))
 
     data = tablib.Dataset()
-    data.headers = ['Name', 'UUID', 'Status']
+    data.headers = ['Name', 'UUID', 'User', 'Organization', 'Status']
 
-    for i in range(1, 10):
-        data.append([get_random_name(),
-                     str(uuid.uuid4()),
-                     random.choice(list(_WorkflowStatus)).name])
+    try:
+        response = ctx.obj.client.get_all_analyses(user, organization)
+        for analysis in response:
+            data.append([get_random_name(),
+                        analysis['id'],
+                        analysis['user'],
+                        analysis['organization'],
+                        analysis['status']])
 
-    if filter:
-        data = data.subset(rows=None, cols=list(filter))
+        if filter:
+            data = data.subset(rows=None, cols=list(filter))
 
-    if output_format:
-        click.echo(data.export(output_format))
-    else:
-        click.echo(data)
+        if output_format:
+            click.echo(data.export(output_format))
+        else:
+            click.echo(data)
 
-    # try:
-    #     response = ctx.obj.client.get_all_analyses()
-    #     for analysis in response:
-    #         click.echo(analysis)
-    #
-    # except Exception as e:
-    #     logging.info('Something went wrong when trying to connect to {0}'
-    #                  .format(ctx.obj.client.server_url))
-    #     logging.debug(str(e))
+    except Exception as e:
+        logging.debug(str(e))
 
 
 @click.command(
@@ -128,7 +125,7 @@ def workflow_list(ctx, user, organization, filter, output_format):
 @click.option(
     '-o',
     '--organization',
-    default=default_organisation,
+    default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
     '--skip-validation',
@@ -154,7 +151,8 @@ def workflow_create(ctx, file, user, organization, skip_validation):
         )
 
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-        response = ctx.obj.client.create_workflow(user, organization,
+        response = ctx.obj.client.create_workflow(user,
+                                                  organization,
                                                   reana_spec)
         click.echo(response)
 
@@ -173,7 +171,7 @@ def workflow_create(ctx, file, user, organization, skip_validation):
 @click.option(
     '-o',
     '--organization',
-    default=default_organisation,
+    default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
@@ -222,7 +220,7 @@ def workflow_start(ctx, user, organization, workflow):
 @click.option(
     '-o',
     '--organization',
-    default=default_organisation,
+    default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',

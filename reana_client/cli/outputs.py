@@ -29,7 +29,7 @@ import tablib
 
 from reana_client.cli.namesgenerator import get_random_name
 
-from ..config import default_download_path, default_organisation, default_user
+from ..config import default_download_path, default_organization, default_user
 
 
 @click.group(
@@ -51,7 +51,7 @@ def outputs(ctx):
 @click.option(
     '-o',
     '--organization',
-    default=default_organisation,
+    default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
@@ -122,7 +122,7 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
 @click.option(
     '-o',
     '--organization',
-    default=default_organisation,
+    default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',

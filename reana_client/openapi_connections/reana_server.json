@@ -10,6 +10,23 @@
     "/api/analyses": {
       "get": {
         "description": "This resource return all current analyses in JSON format.",
+        "operationId": "get_analyses",
+        "parameters": [
+          {
+            "description": "Required. Organization which the analysis belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of analysis owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          }
+        ],
         "produces": [
           "application/json"
         ],

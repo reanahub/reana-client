@@ -245,23 +245,40 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
 
     workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
 
+    data = tablib.Dataset()
+    data.headers = ['Name', 'UUID', 'User', 'Organization', 'Status']
+
     if workflow_name:
         logging.info('Workflow "{}" selected'.format(workflow_name))
 
-        data = tablib.Dataset()
-        data.headers = ['Name', 'UUID', 'Status']
+        try:
+            response = ctx.obj.client.get_analysis_status(user,
+                                                          organization,
+                                                          workflow)
+            if isinstance(response, list):
+                for analysis in response:
+                    data.append([get_random_name(),
+                                analysis['id'],
+                                analysis['user'],
+                                analysis['organization'],
+                                analysis['status']])
+            else:
+                data.append([get_random_name(),
+                             response['id'],
+                             response['user'],
+                             response['organization'],
+                             response['status']])
 
-        data.append([workflow_name,
-                     str(uuid.uuid4()),
-                     random.choice(list(_WorkflowStatus)).name])
+            if filter:
+                data = data.subset(rows=None, cols=list(filter))
 
-        if filter:
-            data = data.subset(rows=None, cols=list(filter))
+            if output_format:
+                click.echo(data.export(output_format))
+            else:
+                click.echo(data)
 
-        if output_format:
-            click.echo(data.export(output_format))
-        else:
-            click.echo(data)
+        except Exception as e:
+            logging.debug(str(e))
 
     else:
         click.echo(

@@ -22,6 +22,7 @@
 """REANA client workflow related commands."""
 
 import logging
+import traceback
 
 import click
 
@@ -61,7 +62,7 @@ def analysis_validate(ctx, file):
     except Exception as e:
         logging.info('Something went wrong when trying to validate {0}'
                      .format(click.format_filename(file)))
-        logging.debug(str(e))
+        logging.error(traceback.format_exc())
 
 
 analyses.add_command(analysis_validate)

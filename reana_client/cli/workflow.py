@@ -24,6 +24,7 @@
 import logging
 import os
 import random
+import traceback
 import uuid
 from enum import Enum
 
@@ -103,7 +104,7 @@ def workflow_list(ctx, user, organization, filter, output_format):
             click.echo(data)
 
     except Exception as e:
-        logging.debug(str(e))
+        logging.error(traceback.format_exc())
 
 
 @click.command(
@@ -157,7 +158,7 @@ def workflow_create(ctx, file, user, organization, skip_validation):
         click.echo(response)
 
     except Exception as e:
-        logging.debug(str(e))
+        logging.error(traceback.format_exc())
 
 
 @click.command(

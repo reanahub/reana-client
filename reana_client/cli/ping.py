@@ -22,6 +22,7 @@
 """REANA client debugging commands."""
 
 import logging
+import traceback
 
 import click
 
@@ -39,4 +40,4 @@ def ping(ctx):
     except Exception as e:
         logging.info('Something went wrong when trying to connect to {0}'
                      .format(ctx.obj.client.server_url))
-        logging.debug(str(e))
+        logging.error(traceback.format_exc())

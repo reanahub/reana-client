@@ -10,6 +10,23 @@
     "/api/analyses": {
       "get": {
         "description": "This resource return all current analyses in JSON format.",
+        "operationId": "get_analyses",
+        "parameters": [
+          {
+            "description": "Required. Organization which the analysis belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of analysis owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          }
+        ],
         "produces": [
           "application/json"
         ],
@@ -80,7 +97,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "This resource is expecting JSON data with all the necessary information to instantiate a yadage workflow.",
+        "description": "This resource is expecting a REANA specification in JSON format with all the necessary information to instantiate a workflow.",
         "operationId": "create_analysis",
         "parameters": [
           {
@@ -118,11 +135,11 @@
           "application/json"
         ],
         "responses": {
-          "200": {
-            "description": "Request succeeded. The workflow has been instantiated.",
+          "201": {
+            "description": "Request succeeded. The workflow has been created.",
             "examples": {
               "application/json": {
-                "message": "Analysis successfully launched",
+                "message": "The workflow has been successfully created.",
                 "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac"
               }
             },
@@ -140,9 +157,97 @@
           },
           "400": {
             "description": "Request failed. The incoming data specification seems malformed"
+          },
+          "500": {
+            "description": "Request failed. Internal controller error."
+          },
+          "501": {
+            "description": "Request failed. Not implemented."
           }
         },
-        "summary": "Creates a new yadage workflow."
+        "summary": "Creates a new workflow based on a REANA specification file."
+      }
+    },
+    "/api/analyses/{analysis_id}/status": {
+      "get": {
+        "description": "This resource reports the status of an analysis. Resource is expecting a analysis UUID.",
+        "operationId": "get_analysis_status",
+        "parameters": [
+          {
+            "description": "Required. Organization which the worklow belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of workflow owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. Analysis UUID.",
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request succeeded. Info about an analysis, including the status is returned.",
+            "examples": {
+              "application/json": {
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "organization": "default_org",
+                "status": "created",
+                "user": "00000000-0000-0000-0000-000000000000"
+              }
+            },
+            "schema": {
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "organization": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "user": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming data specification seems malformed.",
+            "examples": {
+              "application/json": {
+                "message": "Malformed request."
+              }
+            }
+          },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
+          },
+          "500": {
+            "description": "Request failed. Internal controller error."
+          }
+        },
+        "summary": "Get status of an analysis."
       }
     },
     "/api/analyses/{analysis_id}/workspace": {

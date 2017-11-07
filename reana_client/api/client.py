@@ -68,11 +68,14 @@ class Client(object):
         except Exception:
             raise
 
-    def get_all_analyses(self):
+    def get_all_analyses(self, user, organization):
         """List all existing analyses."""
         try:
+
             response, http_response = self._client.api.\
-                                      get_api_analyses().result()
+                                      get_analyses(user=user,
+                                                   organization=organization)\
+                                      .result()
             if http_response.status_code == 200:
                 return response
             else:
@@ -84,8 +87,28 @@ class Client(object):
         except Exception:
             raise
 
-    def run_analysis(self, user, organization, reana_spec):
-        """Create an analysis."""
+    def get_analysis_status(self, user, organization, workflow):
+        """Get status of previously created analysis."""
+        try:
+
+            response, http_response = self.\
+                _client.api.get_analysis_status(user=user,
+                                                organization=organization,
+                                                analysis_id=workflow,
+                                                ).result()
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except Exception as e:
+            raise
+
+    def create_workflow(self, user, organization, reana_spec):
+        """Create a workflow."""
         try:
             (response,
              http_response) = self._client.api.create_analysis(
@@ -93,17 +116,16 @@ class Client(object):
                                   organization=organization,
                                   reana_spec=json.loads(json.dumps(
                                       reana_spec, sort_keys=True))).result()
-
-            if http_response.status_code == 200:
+            if http_response.status_code == 201:
                 return response
             else:
                 raise Exception(
-                    "Expected status code 200 but replied with "
+                    "Expected status code 201 but replied with "
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
-        except Exception:
-            raise
+        except Exception as e:
+            raise e
 
     def seed_analysis(self, user, organization, analysis_id, file_, file_name):
         """Seed analysis with file."""

@@ -198,15 +198,16 @@ def workflow_start(ctx, user, organization, workflow):
                         fg='red'),
             err=True)
 
-    # try:
-    #     logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-    #     response = ctx.obj.client.start_analysis(user,
-    #                                              organization,
-    #                                              workflow)
-    #     click.echo(response)
-    #
-    # except Exception as e:
-    #     logging.debug(str(e))
+    try:
+        logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
+        response = ctx.obj.client.start_analysis(user,
+                                                 organization,
+                                                 workflow)
+        click.echo(response)
+        click.echo('Workflow `{}` has been started.'.format(workflow_name))
+
+    except Exception as e:
+        logging.error(str(e))
 
 
 @click.command(

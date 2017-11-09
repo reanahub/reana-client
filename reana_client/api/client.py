@@ -127,6 +127,26 @@ class Client(object):
         except Exception as e:
             raise e
 
+    def start_analysis(self, user, organization, workflow):
+        """Start a workflow."""
+        try:
+            (response,
+             http_response) = self._client.api.set_analysis_status(
+                                  user=user,
+                                  organization=organization,
+                                  analysis_id=workflow,
+                                  status='start').result()
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except Exception as e:
+            raise e
+
     def seed_analysis(self, user, organization, analysis_id, file_, file_name):
         """Seed analysis with file."""
         try:

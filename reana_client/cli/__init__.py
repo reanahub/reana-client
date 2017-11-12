@@ -73,6 +73,3 @@ cli.add_command(analyses.analyses)
 cli.add_command(workflow.workflow)
 cli.add_command(inputs.inputs)
 cli.add_command(outputs.outputs)
-
-if __name__ == "__main__":
-    cli()

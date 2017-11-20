@@ -18,6 +18,8 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
  
+exclude reana.yaml
+exclude pycharm_click_debug.py
 include COPYING
 include *.rst
 include *.sh

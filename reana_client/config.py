@@ -23,7 +23,7 @@
 
 import pkg_resources
 
-reana_yaml_default_file_path = './.reana.yaml'  # e.g. `./.reana.yaml`
+reana_yaml_default_file_path = './reana.yaml'  # e.g. `./.reana.yaml`
 """REANA specification file default location."""
 
 reana_yaml_schema_file_path = pkg_resources.resource_filename(
@@ -36,3 +36,6 @@ default_user = '00000000-0000-0000-0000-000000000000'
 
 default_organization = 'default'
 """Default organisation to use when submitting workflows to Reana Server."""
+
+default_download_path = './outputs/'
+"""Default path where files outputted by a workflow will be downloaded."""

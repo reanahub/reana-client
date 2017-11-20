@@ -28,8 +28,8 @@ import sys
 import click
 from reana_client.cli import outputs
 
-from . import analyses, workflow, inputs, ping
-from ..api import Client
+from reana_client.cli import analyses, workflow, inputs, ping
+from reana_client.api import Client
 
 DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \
                    '{%(pathname)s:%(lineno)d} ' \
@@ -73,6 +73,3 @@ cli.add_command(analyses.analyses)
 cli.add_command(workflow.workflow)
 cli.add_command(inputs.inputs)
 cli.add_command(outputs.outputs)
-
-if __name__ == "__main__":
-    cli()

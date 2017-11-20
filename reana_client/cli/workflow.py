@@ -25,6 +25,8 @@ import logging
 import os
 import random
 import uuid
+
+import yaml
 from enum import Enum
 
 import click
@@ -149,6 +151,9 @@ def workflow_create(ctx, file, user, organization, skip_validation):
             reana_spec['workflow']['type'],
             reana_spec['workflow']['file'],
         )
+        if reana_spec['workflow']['type'] == 'cwl':
+            with open(reana_spec['parameters']['input']) as f:
+                reana_spec['parameters']['input'] = yaml.load(f)
 
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.create_workflow(user,
@@ -189,7 +194,6 @@ def workflow_start(ctx, user, organization, workflow):
 
     if workflow_name:
         logging.info('Workflow `{}` selected'.format(workflow_name))
-        click.echo('Workflow `{}` has been started.'.format(workflow_name))
     else:
         click.echo(
             click.style('Workflow name must be provided either with '

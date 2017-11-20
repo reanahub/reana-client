@@ -23,11 +23,16 @@
 
 import json
 import logging
-from config import reana_yaml_schema_file_path
+import sys
+from io import StringIO
 
 import yadageschemas
 import yaml
+# from StringIO import BytesIO
 from jsonschema import ValidationError, validate
+
+from reana_client.config import reana_yaml_schema_file_path
+from cwltool.main import main
 
 
 def yadage_load(workflow_file, toplevel='.'):
@@ -42,8 +47,24 @@ def yadage_load(workflow_file, toplevel='.'):
                               schemadir=None, validate=True)
 
 
+def cwl_load(workflow_file):
+    """Validate and return cwl workflow specification.
+
+    :param workflow_file: A specification file compliant with
+        `cwl` workflow specification.
+    :returns: A dictionary which represents the valid `cwl` workflow.
+    """
+    old_stdout = sys.stdout
+    sys.stdout = mystdout = StringIO()
+    main(["--debug", "--pack", workflow_file], stdout=mystdout)
+    sys.stdout = old_stdout
+    value = mystdout.getvalue()
+    return json.loads(value)
+
+
 workflow_load = {
     'yadage': yadage_load,
+    'cwl': cwl_load
 }
 """Dictionary to extend with new workflow specification loaders."""
 

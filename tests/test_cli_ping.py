@@ -23,7 +23,6 @@
 """REANA client ping tests."""
 
 from click.testing import CliRunner
-
 from reana_client.cli import cli
 
 

@@ -24,6 +24,7 @@
 import logging
 
 import click
+import yaml
 
 from ..config import (default_organization, default_user,
                       reana_yaml_default_file_path)

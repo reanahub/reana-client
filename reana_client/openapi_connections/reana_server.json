@@ -283,6 +283,7 @@
             "name": "status",
             "required": true,
             "schema": {
+              "description": "Required. New status.",
               "type": "string"
             }
           }
@@ -303,7 +304,7 @@
             },
             "schema": {
               "properties": {
-                "id": {
+                "message": {
                   "type": "string"
                 },
                 "organization": {
@@ -313,6 +314,9 @@
                   "type": "string"
                 },
                 "user": {
+                  "type": "string"
+                },
+                "workflow_id": {
                   "type": "string"
                 }
               },

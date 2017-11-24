@@ -294,7 +294,54 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
             err=True)
 
 
+@click.option(
+    '-u',
+    '--user',
+    default=default_user,
+    help='User who has created the workflow.')
+@click.option(
+    '-o',
+    '--organization',
+    default=default_organization,
+    help='Organization whose resources will be used.')
+@click.option(
+    '--workflow',
+    help='Name of the workflow whose status should be resolved. '
+         'Overrides value of $REANA_WORKON.')
+@click.pass_context
+def workflow_logs(ctx, user, organization, workflow):
+    """Get status of previously created analysis workflow."""
+    logging.debug('workflow.start')
+    logging.debug('user: {}'.format(user))
+    logging.debug('organization: {}'.format(organization))
+    logging.debug('workflow: {}'.format(workflow))
+
+    workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
+
+
+    if workflow_name:
+        logging.info('Workflow "{}" selected'.format(workflow_name))
+
+        try:
+            response = ctx.obj.client.get_workflow_logs(user,
+                                                        organization,
+                                                        workflow)
+            click.echo(response)
+        except Exception as e:
+            logging.debug(str(e))
+
+    else:
+        click.echo(
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with `$REANA_WORKON` '
+                        'environment variable',
+                        fg='red'),
+            err=True)
+
+
 workflow.add_command(workflow_list)
 workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)
 workflow.add_command(workflow_status)
+# workflow.add_command(workflow_logs)
+

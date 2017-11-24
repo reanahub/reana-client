@@ -24,9 +24,12 @@
 import logging
 import os
 import sys
-
+import traceback
+from time import sleep
+import re
 import click
 import yaml
+from bravado.exception import HTTPServerError
 
 from reana_client.cli import analyses, workflow, inputs, outputs, ping
 from reana_client.api import Client
@@ -109,19 +112,61 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
             reana_spec['parameters']['input'] = job
 
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-        response = ctx.obj.client.run_analysis(default_user, default_organization,
-                                               reana_spec)
-        click.echo(response)
+        response = ctx.obj.client.create_workflow(default_user, default_organization,
+                                                  reana_spec)
         click.echo(response)
 
+        workflow_id = response['workflow_id']
+        if reana_spec['parameters']['input']:
+            for parameter, value in reana_spec['parameters']['input'].items():
+                if type(value) is dict and value.get('class', None) == 'File':
+                    with open(os.path.join(os.path.dirname(jobfile), value['location'])) as f:
+                        response = ctx.obj.client.seed_analysis(
+                            default_user,
+                            default_organization,
+                            workflow_id,
+                            f,
+                            f.name)
+                        click.echo(response)
+
+        response = ctx.obj.client.start_analysis(default_user,
+                                                 default_organization,
+                                                 workflow_id)
+        click.echo(response)
+
+        first_logs = ""
+        while True:
+            sleep(1)
+            logging.info('Polling workflow logs')
+            response = ctx.obj.client.get_workflow_logs(default_user,
+                                                        default_organization,
+                                                        workflow_id)
+            logs = response['logs']
+            if logs != first_logs:
+                
+                click.echo(logs[len(first_logs):])
+                first_logs = logs
+
+            if "Final process status" in logs:
+                # click.echo(response['status'])
+                break
+        sys.stdout.write(re.search("success[\S\s]*", logs).group().replace("success", ""))
+        pass
+    except HTTPServerError as e:
+        logging.error(traceback.print_exc())
+        logging.error(e)
     except Exception as e:
-        logging.error(str(e))
+        logging.error(traceback.print_exc())
+
+
+
 
 cli.add_command(ping.ping)
 cli.add_command(analyses.analyses)
 cli.add_command(workflow.workflow)
 cli.add_command(inputs.inputs)
 cli.add_command(outputs.outputs)
+cli.add_command(cwl_runner)
 
 if __name__ == "__main__":
-    cli()
+    cwl_runner()

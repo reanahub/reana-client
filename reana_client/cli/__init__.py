@@ -118,16 +118,7 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
 
         workflow_id = response['workflow_id']
         if reana_spec['parameters']['input']:
-            for parameter, value in reana_spec['parameters']['input'].items():
-                if type(value) is dict and value.get('class', None) == 'File':
-                    with open(os.path.join(os.path.dirname(jobfile), value['location'])) as f:
-                        response = ctx.obj.client.seed_analysis(
-                            default_user,
-                            default_organization,
-                            workflow_id,
-                            f,
-                            f.name)
-                        click.echo(response)
+            upload_files(ctx, reana_spec['parameters']['input'], jobfile, workflow_id)
 
         response = ctx.obj.client.start_analysis(default_user,
                                                  default_organization,
@@ -159,7 +150,35 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
         logging.error(traceback.print_exc())
 
 
-
+def upload_files(ctx, input_structure, jobfile, workflow_id):
+    if type(input_structure) is dict:
+        if type(input_structure) is dict and input_structure.get('class', None) == 'File':
+            with open(os.path.join(os.path.dirname(jobfile), input_structure['location'])) as f:
+                response = ctx.obj.client.seed_analysis(
+                    default_user,
+                    default_organization,
+                    workflow_id,
+                    f,
+                    f.name)
+                click.echo(response)
+                click.echo("Transferred file: {0}".format(f.name))
+        else:
+            for parameter, value in input_structure.items():
+                if type(value) is dict and value.get('class', None) == 'File':
+                    with open(os.path.join(os.path.dirname(jobfile), value['location'])) as f:
+                        response = ctx.obj.client.seed_analysis(
+                            default_user,
+                            default_organization,
+                            workflow_id,
+                            f,
+                            f.name)
+                        click.echo(response)
+                        click.echo("Transferred file: {0}".format(f.name))
+                elif type(value) is list:
+                    upload_files(ctx, value, jobfile, workflow_id)
+    elif type(input_structure) is list:
+        for item in input_structure:
+            upload_files(ctx, item, jobfile, workflow_id)
 
 cli.add_command(ping.ping)
 cli.add_command(analyses.analyses)

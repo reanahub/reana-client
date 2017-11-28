@@ -20,11 +20,12 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 """REANA command line interface client."""
-
+import json
 import logging
 import os
 import sys
 import traceback
+import urllib
 from time import sleep
 import re
 import click
@@ -110,39 +111,51 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
             )
             del job['cwl:tool']
             reana_spec['parameters']['input'] = job
-
+        reana_spec['workflow']['spec'] = replace_location_in_cwl_spec(reana_spec['workflow']['spec'])
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.create_workflow(default_user, default_organization,
                                                   reana_spec)
-        click.echo(response)
+        logging.error(response)
 
         workflow_id = response['workflow_id']
+        upload_files_from_cwl_spec(ctx, reana_spec['workflow']['spec'], processfile, workflow_id)
         if reana_spec['parameters']['input']:
             upload_files(ctx, reana_spec['parameters']['input'], jobfile, workflow_id)
 
-        response = ctx.obj.client.start_analysis(default_user,
+            response = ctx.obj.client.start_analysis(default_user,
                                                  default_organization,
                                                  workflow_id)
-        click.echo(response)
+        logging.error(response)
 
         first_logs = ""
         while True:
             sleep(1)
-            logging.info('Polling workflow logs')
+            logging.error('Polling workflow logs')
             response = ctx.obj.client.get_workflow_logs(default_user,
                                                         default_organization,
                                                         workflow_id)
             logs = response['logs']
             if logs != first_logs:
                 
-                click.echo(logs[len(first_logs):])
+                logging.error(logs[len(first_logs):])
                 first_logs = logs
 
-            if "Final process status" in logs:
+            if "Final process status" in logs or "Traceback (most recent call last)" in logs:
                 # click.echo(response['status'])
                 break
-        sys.stdout.write(re.search("success[\S\s]*", logs).group().replace("success", ""))
-        pass
+        try:
+            out = re.search("success[\S\s]*", logs).group().replace("success", "")
+        except AttributeError:
+            logging.error("Workflow execution failed")
+            sys.exit(1)
+        stdout = sys.stdout
+        if isinstance(out, str):
+            stdout.write(out)
+        else:
+            stdout.write(json.dumps(out, indent=4))
+        stdout.write("\n")
+        stdout.flush()
+
     except HTTPServerError as e:
         logging.error(traceback.print_exc())
         logging.error(e)
@@ -159,26 +172,65 @@ def upload_files(ctx, input_structure, jobfile, workflow_id):
                     default_organization,
                     workflow_id,
                     f,
-                    f.name)
-                click.echo(response)
-                click.echo("Transferred file: {0}".format(f.name))
+                    input_structure['location'])
+                logging.error(response)
+                logging.error("Transferred file: {0}".format(f.name))
         else:
             for parameter, value in input_structure.items():
                 if type(value) is dict and value.get('class', None) == 'File':
-                    with open(os.path.join(os.path.dirname(jobfile), value['location'])) as f:
+                    with open(os.path.join(os.path.abspath(os.path.dirname(jobfile)), value['location'])) as f:
                         response = ctx.obj.client.seed_analysis(
                             default_user,
                             default_organization,
                             workflow_id,
                             f,
-                            f.name)
-                        click.echo(response)
-                        click.echo("Transferred file: {0}".format(f.name))
+                            value['location'])
+                        logging.error(response)
+                        logging.error("Transferred file: {0}".format(f.name))
                 elif type(value) is list:
                     upload_files(ctx, value, jobfile, workflow_id)
     elif type(input_structure) is list:
         for item in input_structure:
             upload_files(ctx, item, jobfile, workflow_id)
+
+def upload_files_from_cwl_spec(ctx, spec, spec_file, workflow_id):
+    if spec['inputs']:
+        for param in spec['inputs']:
+            if param['type'] == "File":
+                if param.get('default', ''):
+                    upload_file(ctx, param, spec_file, workflow_id)
+
+
+def replace_location_in_cwl_spec(spec):
+    if spec['inputs']:
+        params = []
+        for param in spec['inputs']:
+            if param['type'] == "File":
+                if param.get('default', ''):
+                    param['default']['location'] = param['default']['location'].split('/')[-1]
+            params.append(param)
+        spec['inputs'] = params
+    return spec
+
+
+def upload_file(ctx, param, spec_file, workflow_id):
+    location = param['default']['location']
+    if os.path.isabs(location):
+        path = location
+    else:
+        path = os.path.join(os.path.dirname(spec_file), location)
+    if path.startswith("file:///"):
+        path = urllib.parse.unquote(path)[7:]
+    with open(path) as f:
+        response = ctx.obj.client.seed_analysis(
+            default_user,
+            default_organization,
+            workflow_id,
+            f,
+            location.split("/")[-1])
+        logging.error(response)
+        logging.error("Transferred file: {0}".format(f.name))
+
 
 cli.add_command(ping.ping)
 cli.add_command(analyses.analyses)

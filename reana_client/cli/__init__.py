@@ -122,7 +122,7 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
         if reana_spec['parameters']['input']:
             upload_files(ctx, reana_spec['parameters']['input'], jobfile, workflow_id)
 
-            response = ctx.obj.client.start_analysis(default_user,
+        response = ctx.obj.client.start_analysis(default_user,
                                                  default_organization,
                                                  workflow_id)
         logging.error(response)
@@ -194,6 +194,15 @@ def upload_files(ctx, input_structure, jobfile, workflow_id):
             upload_files(ctx, item, jobfile, workflow_id)
 
 def upload_files_from_cwl_spec(ctx, spec, spec_file, workflow_id):
+    if spec.get('$graph'):
+        for tool in spec['$graph']:
+            upload_files_from_cwl_tool(ctx, tool, spec_file, workflow_id)
+    elif spec.get('inputs'):
+        upload_files_from_cwl_tool(ctx, spec, spec_file, workflow_id)
+    else:
+        raise
+
+def upload_files_from_cwl_tool(ctx, spec, spec_file, workflow_id):
     if spec['inputs']:
         for param in spec['inputs']:
             if param['type'] == "File":
@@ -202,16 +211,25 @@ def upload_files_from_cwl_spec(ctx, spec, spec_file, workflow_id):
 
 
 def replace_location_in_cwl_spec(spec):
-    if spec['inputs']:
-        params = []
-        for param in spec['inputs']:
-            if param['type'] == "File":
-                if param.get('default', ''):
-                    param['default']['location'] = param['default']['location'].split('/')[-1]
-            params.append(param)
-        spec['inputs'] = params
-    return spec
+    if spec.get('$graph'):
+        result = {'$graph': []}
+        for tool in spec['$graph']:
+            result['$graph'].append(replace_location_in_cwl_tool(tool))
+        return result
+    elif spec.get('inputs'):
+        return replace_location_in_cwl_tool(spec)
+    else:
+        raise
 
+def replace_location_in_cwl_tool(spec):
+    params = []
+    for param in spec['inputs']:
+        if param['type'] == "File":
+            if param.get('default', ''):
+                param['default']['location'] = param['default']['location'].split('/')[-1]
+        params.append(param)
+    spec['inputs'] = params
+    return spec
 
 def upload_file(ctx, param, spec_file, workflow_id):
     location = param['default']['location']

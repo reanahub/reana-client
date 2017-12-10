@@ -144,7 +144,7 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
                 # click.echo(response['status'])
                 break
         try:
-            out = re.search("success[\S\s]*", logs).group().replace("success", "")
+            out = re.search("success{[\S\s]*", logs).group().replace("success", "")
         except AttributeError:
             logging.error("Workflow execution failed")
             sys.exit(1)
@@ -166,32 +166,55 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
 def upload_files(ctx, input_structure, jobfile, workflow_id):
     if type(input_structure) is dict:
         if type(input_structure) is dict and input_structure.get('class', None) == 'File':
-            with open(os.path.join(os.path.dirname(jobfile), input_structure['location'])) as f:
-                response = ctx.obj.client.seed_analysis(
-                    default_user,
-                    default_organization,
-                    workflow_id,
-                    f,
-                    input_structure['location'])
-                logging.error(response)
-                logging.error("Transferred file: {0}".format(f.name))
+            transfer_file(ctx, input_structure, jobfile, workflow_id)
+        elif type(input_structure) is dict and input_structure.get('class', None) == 'Directory':
+            upload_directory(ctx, jobfile, workflow_id, input_structure.get("location"))
         else:
             for parameter, value in input_structure.items():
                 if type(value) is dict and value.get('class', None) == 'File':
-                    with open(os.path.join(os.path.abspath(os.path.dirname(jobfile)), value['location'])) as f:
-                        response = ctx.obj.client.seed_analysis(
-                            default_user,
-                            default_organization,
-                            workflow_id,
-                            f,
-                            value['location'])
-                        logging.error(response)
-                        logging.error("Transferred file: {0}".format(f.name))
+                    transfer_file(ctx, value, jobfile, workflow_id)
+                elif type(value) is dict:
+                    upload_files(ctx, value, jobfile, workflow_id)
                 elif type(value) is list:
                     upload_files(ctx, value, jobfile, workflow_id)
     elif type(input_structure) is list:
         for item in input_structure:
             upload_files(ctx, item, jobfile, workflow_id)
+
+
+def transfer_file(ctx, file_dict, jobfile, workflow_id):
+    if file_dict.get("contents"):
+        pass
+    else:
+        path = file_dict.get('location', file_dict.get('path'))
+        with open(os.path.join(os.path.abspath(os.path.dirname(jobfile)),
+                               path)) as f:
+            response = ctx.obj.client.seed_analysis(
+                default_user,
+                default_organization,
+                workflow_id,
+                f,
+                path)
+            logging.error(response)
+            logging.error("Transferred file: {0}".format(f.name))
+    """
+    inf:
+      class: File
+      location: hello.tar
+      secondaryFiles:
+        - class: File
+          location: index.py
+        - class: Directory
+          basename: xtestdir
+          location: testdir
+    """
+    if file_dict.get("secondaryFiles"):
+        for f in file_dict["secondaryFiles"]:
+            if f['class'] == 'File':
+                transfer_file(ctx, f, jobfile, workflow_id)
+            elif f['class'] == 'Directory':
+                upload_directory(ctx, jobfile, workflow_id, f.get("location"), f.get("basename", None))
+
 
 def upload_files_from_cwl_spec(ctx, spec, spec_file, workflow_id):
     if spec.get('$graph'):
@@ -200,7 +223,9 @@ def upload_files_from_cwl_spec(ctx, spec, spec_file, workflow_id):
     elif spec.get('inputs'):
         upload_files_from_cwl_tool(ctx, spec, spec_file, workflow_id)
     else:
-        raise
+        logging.error("No file input sources detected")
+        pass
+
 
 def upload_files_from_cwl_tool(ctx, spec, spec_file, workflow_id):
     if spec['inputs']:
@@ -209,30 +234,84 @@ def upload_files_from_cwl_tool(ctx, spec, spec_file, workflow_id):
                 if param.get('default', ''):
                     upload_file(ctx, param, spec_file, workflow_id)
 
+    if spec.get("steps"):
+        for tool in spec['steps']:
+            for param in tool['in']:
+                if param.get('type', param.get('class')) == "File":
+                    if param.get('default', ''):
+                        upload_file(ctx, param, spec_file, workflow_id)
+                elif param.get('default', ''):
+                    if param['default'].get("type", param['default'].get("class")) == "File":
+                        upload_file(ctx, param, spec_file, workflow_id)
+
 
 def replace_location_in_cwl_spec(spec):
     if spec.get('$graph'):
-        result = {'$graph': []}
+        result = spec.copy()
+        result['$graph'] = []
         for tool in spec['$graph']:
-            result['$graph'].append(replace_location_in_cwl_tool(tool))
+             result['$graph'].append(replace_location_in_cwl_tool(tool))
         return result
     elif spec.get('inputs'):
         return replace_location_in_cwl_tool(spec)
     else:
-        raise
+        return spec
+
+
+def upload_directory(ctx, spec_file, workflow_id, location, basename=None, disk_directory_name=None):
+    if not os.path.isabs(location):
+        disk_directory_name = location
+        location = os.path.join(os.path.abspath(os.path.dirname(spec_file)), location)
+    else:
+        disk_directory_name = disk_directory_name
+    for f in os.listdir(location):
+        filename = os.path.abspath(os.path.join(location, f))
+        if os.path.isdir(filename):
+            upload_directory(ctx, spec_file, workflow_id, os.path.abspath(filename),
+                             basename=basename, disk_directory_name=disk_directory_name)
+        elif os.path.isfile(filename):
+            with open(filename) as file_:
+                directory_name = filename.replace(os.path.abspath(os.path.dirname(spec_file)) + "/", "")
+                if basename:
+                    directory_name = directory_name.replace(disk_directory_name, basename)
+                response = ctx.obj.client.seed_analysis(
+                    default_user,
+                    default_organization,
+                    workflow_id,
+                    file_,
+                    directory_name)
+                logging.error(response)
+                logging.error("Transferred file: {0}".format(file_.name))
+
 
 def replace_location_in_cwl_tool(spec):
-    params = []
+    # tools
+    inputs_parameters = []
     for param in spec['inputs']:
         if param['type'] == "File":
             if param.get('default', ''):
-                param['default']['location'] = param['default']['location'].split('/')[-1]
-        params.append(param)
-    spec['inputs'] = params
+                location = "location" if param['default'].get("location") else "path"
+                param['default'][location] = param['default'][location].split('/')[-1]
+        inputs_parameters.append(param)
+    spec['inputs'] = inputs_parameters
+    # workflows
+    if spec.get("steps"):
+        steps = []
+        for tool in spec['steps']:
+            tool_inputs = []
+            for param in tool['in']:
+                if param.get('default', ''):
+                    location = "location" if param.get("location") else "path"
+                    param['default'][location] = param['default'][location].split('/')[-1]
+                tool_inputs.append(param)
+            tool['in'] = tool_inputs
+            steps.append(tool)
+        spec['steps'] = steps
     return spec
 
-def upload_file(ctx, param, spec_file, workflow_id):
-    location = param['default']['location']
+
+def upload_file(ctx, param, spec_file, workflow_id, directory_name=None):
+    location = param['default'].get("location", param['default'].get("path"))
     if os.path.isabs(location):
         path = location
     else:
@@ -240,12 +319,20 @@ def upload_file(ctx, param, spec_file, workflow_id):
     if path.startswith("file:///"):
         path = urllib.parse.unquote(path)[7:]
     with open(path) as f:
-        response = ctx.obj.client.seed_analysis(
-            default_user,
-            default_organization,
-            workflow_id,
-            f,
-            location.split("/")[-1])
+        if directory_name:
+            response = ctx.obj.client.seed_analysis(
+                default_user,
+                default_organization,
+                workflow_id,
+                f,
+                directory_name)
+        else:
+            response = ctx.obj.client.seed_analysis(
+                default_user,
+                default_organization,
+                workflow_id,
+                f,
+                f.name)
         logging.error(response)
         logging.error("Transferred file: {0}".format(f.name))
 

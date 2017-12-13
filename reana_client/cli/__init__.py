@@ -233,6 +233,13 @@ def upload_files_from_cwl_tool(ctx, spec, spec_file, workflow_id):
             if param['type'] == "File":
                 if param.get('default', ''):
                     upload_file(ctx, param, spec_file, workflow_id)
+            elif param.get('secondaryFiles'):
+                extensions = {ext for ext in param['secondaryFiles']}
+                directory = os.path.abspath(os.path.dirname(spec_file))
+                for file in os.listdir(directory):
+                    if any(file.endswith(ext) for ext in extensions):
+                        transfer_file(ctx, {"location": os.path.join(directory, file)}, spec_file, workflow_id)
+
 
     if spec.get("steps"):
         for tool in spec['steps']:
@@ -310,12 +317,13 @@ def replace_location_in_cwl_tool(spec):
     return spec
 
 
+# TODO: join with transfer_file()
 def upload_file(ctx, param, spec_file, workflow_id, directory_name=None):
     location = param['default'].get("location", param['default'].get("path"))
     if os.path.isabs(location):
         path = location
     else:
-        path = os.path.join(os.path.dirname(spec_file), location)
+        path = os.path.join(os.path.abspath(os.path.dirname(spec_file)), location)
     if path.startswith("file:///"):
         path = urllib.parse.unquote(path)[7:]
     with open(path) as f:
@@ -327,12 +335,13 @@ def upload_file(ctx, param, spec_file, workflow_id, directory_name=None):
                 f,
                 directory_name)
         else:
+            filename = path.replace(os.path.abspath(os.path.dirname(spec_file)) + "/", "")
             response = ctx.obj.client.seed_analysis(
                 default_user,
                 default_organization,
                 workflow_id,
                 f,
-                f.name)
+                filename)
         logging.error(response)
         logging.error("Transferred file: {0}".format(f.name))
 

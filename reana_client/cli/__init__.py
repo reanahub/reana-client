@@ -326,24 +326,25 @@ def upload_file(ctx, param, spec_file, workflow_id, directory_name=None):
         path = os.path.join(os.path.abspath(os.path.dirname(spec_file)), location)
     if path.startswith("file:///"):
         path = urllib.parse.unquote(path)[7:]
-    with open(path) as f:
-        if directory_name:
-            response = ctx.obj.client.seed_analysis(
-                default_user,
-                default_organization,
-                workflow_id,
-                f,
-                directory_name)
-        else:
-            filename = path.replace(os.path.abspath(os.path.dirname(spec_file)) + "/", "")
-            response = ctx.obj.client.seed_analysis(
-                default_user,
-                default_organization,
-                workflow_id,
-                f,
-                filename)
-        logging.error(response)
-        logging.error("Transferred file: {0}".format(f.name))
+    if os.path.exists(path):
+        with open(path) as f:
+            if directory_name:
+                response = ctx.obj.client.seed_analysis(
+                    default_user,
+                    default_organization,
+                    workflow_id,
+                    f,
+                    directory_name)
+            else:
+                filename = path.replace(os.path.abspath(os.path.dirname(spec_file)) + "/", "")
+                response = ctx.obj.client.seed_analysis(
+                    default_user,
+                    default_organization,
+                    workflow_id,
+                    f,
+                    filename)
+            logging.error(response)
+            logging.error("Transferred file: {0}".format(f.name))
 
 
 cli.add_command(ping.ping)

@@ -308,8 +308,9 @@ def replace_location_in_cwl_tool(spec):
             tool_inputs = []
             for param in tool['in']:
                 if param.get('default', ''):
-                    location = "location" if param.get("location") else "path"
-                    param['default'][location] = param['default'][location].split('/')[-1]
+                    if param['default'].get('class', param['default'].get('type')) == 'File':
+                        location = "location" if param['default'].get("location") else "path"
+                        param['default'][location] = param['default'][location].split('/')[-1]
                 tool_inputs.append(param)
             tool['in'] = tool_inputs
             steps.append(tool)

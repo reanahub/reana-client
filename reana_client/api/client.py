@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -26,6 +26,7 @@ import os
 
 import pkg_resources
 from bravado.client import SwaggerClient
+from bravado.exception import HTTPError
 
 
 class Client(object):
@@ -65,8 +66,8 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
-        except Exception:
-            raise
+        except Exception as e:
+            raise e
 
     def get_all_analyses(self, user, organization):
         """List all existing analyses."""
@@ -84,8 +85,8 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
-        except Exception:
-            raise
+        except Exception as e:
+            raise e
 
     def get_analysis_status(self, user, organization, workflow):
         """Get status of previously created analysis."""
@@ -105,7 +106,7 @@ class Client(object):
                         status_code=http_response.status_code))
 
         except Exception as e:
-            raise
+            raise e
 
     def create_workflow(self, user, organization, reana_spec):
         """Create a workflow."""
@@ -166,5 +167,36 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
-        except Exception:
-            raise
+        except Exception as e:
+            raise e
+
+    def download_analysis_output_file(self, user, organization, analysis_id,
+                                      file_name):
+        """Downdloads the requested file if it exists.
+
+        :param user: UUID of the analysis owner.
+        :param organization: Organization which the user belongs to.
+        :param analysis_id: UUID which identifies the analysis.
+        :param file_name: File name or path to the file requested.
+        :returns: .
+        """
+        try:
+            (response,
+             http_response) = self._client.api.get_analysis_outputs_file(
+                 user=user,
+                 organization=organization,
+                 analysis_id=analysis_id,
+                 file_name=file_name).result()
+
+            if http_response.status_code == 200:
+                return http_response.raw_bytes
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e

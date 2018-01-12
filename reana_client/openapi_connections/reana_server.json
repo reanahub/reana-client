@@ -417,6 +417,73 @@
         "summary": "Seeds the analysis workspace with the provided file."
       }
     },
+    "/api/analyses/{analysis_id}/workspace/outputs/{file_name}": {
+      "get": {
+        "description": "This resource is expecting a workflow UUID and a file name to return its content.",
+        "operationId": "get_analysis_outputs_file",
+        "parameters": [
+          {
+            "description": "Required. Organization which the analysis belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of analysis owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. analysis UUID.",
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. Name (or path) of the file to be downloaded.",
+            "in": "path",
+            "name": "file_name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "multipart/form-data"
+        ],
+        "responses": {
+          "200": {
+            "description": "Requests succeeded. The file has been downloaded.",
+            "schema": {
+              "type": "file"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming data specification seems malformed."
+          },
+          "404": {
+            "description": "Request failed. `file_name` does not exist .",
+            "examples": {
+              "application/json": {
+                "message": "input.csv does not exist"
+              }
+            }
+          },
+          "500": {
+            "description": "Request failed. Internal controller error.",
+            "examples": {
+              "application/json": {
+                "message": "Either organization or user doesn't exist."
+              }
+            }
+          }
+        },
+        "summary": "Returns the requested file."
+      }
+    },
     "/api/ping": {
       "get": {
         "description": "Ping the server.",

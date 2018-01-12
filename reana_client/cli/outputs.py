@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -142,9 +142,23 @@ def outputs_download(ctx, user, organization, workflow, file_, output_folder):
     logging.debug('workflow: {}'.format(workflow))
     logging.debug('file_: {}'.format(file_))
     logging.debug('output_folder: {}'.format(output_folder))
+    for file_name in file_:
+        try:
+            binary_file = \
+                ctx.obj.client.download_analysis_output_file(user,
+                                                             organization,
+                                                             workflow,
+                                                             file_name)
+            logging.info('{0} binary file downloaded ... writing to {1}'.
+                         format(file_name, output_folder))
+            with open(os.path.join(output_folder, file_name), 'wb') as f:
+                f.write(binary_file)
+            click.echo('File {0} downloaded to {1}'.format(file_name,
+                                                           output_folder))
+        except Exception as e:
+            click.echo('File {0} could not be downloaded.'.format(file_name))
+            logging.debug(str(e))
 
-    for f in file_:
-        click.echo('File `{}` downloaded to `{}`'.format(f, output_folder))
 
 outputs.add_command(outputs_list)
 outputs.add_command(outputs_download)

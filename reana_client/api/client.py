@@ -200,3 +200,32 @@ class Client(object):
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
+
+    def get_analysis_outputs(self, user, organization, analysis_id):
+        """Return the list of outputs for a given analysis.
+
+        :param user: UUID of the analysis owner.
+        :param organization: Organization which the user belongs to.
+        :param analysis_id: UUID which identifies the analysis.
+        :returns: A list of dictionaries composed by the `name`, `size` and
+                  `last-modified`.
+        """
+        try:
+            (response,
+             http_response) = self._client.api.get_analysis_outputs(
+                 user=user,
+                 organization=organization,
+                 analysis_id=analysis_id).result()
+
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e

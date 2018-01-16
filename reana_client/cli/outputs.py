@@ -81,22 +81,33 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
     if workflow_name:
         logging.info('Workflow "{}" selected'.format(workflow_name))
 
-        data = tablib.Dataset()
-        data.headers = ['Name', 'Size', 'Last-Modified', 'Path']
+        try:
+            response = ctx.obj.client.get_analysis_outputs(user, organization,
+                                                           workflow)
 
-        for i in range(1, 10):
-            data.append([get_random_name(),
-                         '99kb',
-                         '2017-10-05 14:27',
-                         '/output'])
+            data = tablib.Dataset()
+            data.headers = ['Name', 'Size', 'Last-Modified']
 
-        if filter:
-            data = data.subset(rows=None, cols=list(filter))
+            for file_ in response:
+                data.append([file_['name'],
+                             file_['size'],
+                             file_['last-modified']])
 
-        if output_format:
-            click.echo(data.export(output_format))
-        else:
-            click.echo(data)
+            if filter:
+                data = data.subset(rows=None, cols=list(filter))
+
+            if output_format:
+                click.echo(data.export(output_format))
+            else:
+                click.echo(data)
+        except Exception as e:
+            logging.debug(str(e))
+            click.echo(
+                click.style('Something went wrong while retrieving output file'
+                            ' list for workflow {0}:\n{1}'.format(workflow,
+                                                                  str(e)),
+                            fg='red'),
+                err=True)
 
     else:
         click.echo(

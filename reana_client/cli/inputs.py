@@ -74,21 +74,31 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
     logging.debug('filter: {}'.format(filter))
     logging.debug('output_format: {}'.format(output_format))
 
-    data = tablib.Dataset()
-    data.headers = ['Name', 'Size', 'Last-Modified', 'Path']
-    for i in range(1, 10):
-        data.append([get_random_name(),
-                     '1kb',
-                     '2017-10-05 14:27',
-                     '/input'])
+    try:
+        response = ctx.obj.client.get_analysis_inputs(user, organization,
+                                                      workflow)
 
-    if filter:
-        data = data.subset(rows=None, cols=list(filter))
+        data = tablib.Dataset()
+        data.headers = ['Name', 'Size', 'Last-Modified']
+        for file_ in response:
+            data.append([file_['name'],
+                         file_['size'],
+                         file_['last-modified']])
 
-    if output_format:
-        click.echo(data.export(output_format))
-    else:
-        click.echo(data)
+        if filter:
+            data = data.subset(rows=None, cols=list(filter))
+
+        if output_format:
+            click.echo(data.export(output_format))
+        else:
+            click.echo(data)
+    except Exception as e:
+        logging.debug(str(e))
+        click.echo(
+            click.style('Something went wrong while retrieving input file list'
+                        ' for workflow {0}:\n{1}'.format(workflow, str(e)),
+                        fg='red'),
+            err=True)
 
 
 @click.command(

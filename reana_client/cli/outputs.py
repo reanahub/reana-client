@@ -109,10 +109,10 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
 
 @click.command(
     'download',
-    help='Download file(s) a workflow has outputted.')
+    help='Download one or more FILE that the workflow has outputted.')
 @click.argument(
     'file_',
-    metavar='[FILE(S)]',
+    metavar='FILE',
     nargs=-1)
 @click.option(
     '-u',

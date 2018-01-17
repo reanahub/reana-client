@@ -6,6 +6,7 @@
 
    installation
    gettingstarted
+   cliapi
    contributing
    changes
    license

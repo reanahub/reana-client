@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -93,10 +93,10 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
 
 @click.command(
     'upload',
-    help='Upload file(s) to analysis workspace. Associate with a workflow.')
+    help='Upload one of more FILE to the analysis workspace.')
 @click.argument(
     'file_',
-    metavar='[FILE(S)]',
+    metavar='FILE',
     type=click.File('rb'),
     nargs=-1)
 @click.option(

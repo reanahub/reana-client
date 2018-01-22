@@ -148,11 +148,12 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def seed_analysis(self, user, organization, analysis_id, file_, file_name):
-        """Seed analysis with file."""
+    def seed_analysis_inputs(self, user, organization, analysis_id, file_,
+                             file_name):
+        """Seed analysis with input files."""
         try:
             (response,
-             http_response) = self._client.api.seed_analysis(
+             http_response) = self._client.api.seed_analysis_inputs(
                  user=user,
                  organization=organization,
                  analysis_id=analysis_id,

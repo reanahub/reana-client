@@ -139,7 +139,7 @@ def inputs_upload(ctx, user, organization, workflow, file_):
         for f in file_:
             click.echo('Uploading {} ...'.format(f.name))
             try:
-                response = ctx.obj.client.seed_analysis(
+                response = ctx.obj.client.seed_analysis_inputs(
                     user,
                     organization,
                     workflow,

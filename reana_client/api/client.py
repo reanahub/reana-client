@@ -171,6 +171,29 @@ class Client(object):
         except Exception as e:
             raise e
 
+    def seed_analysis_code(self, user, organization, analysis_id, file_,
+                           file_name):
+        """Seed analysis with code."""
+        try:
+            (response,
+             http_response) = self._client.api.seed_analysis_code(
+                 user=user,
+                 organization=organization,
+                 analysis_id=analysis_id,
+                 file_content=file_,
+                 file_name=file_name).result()
+
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except Exception as e:
+            raise e
+
     def download_analysis_output_file(self, user, organization, analysis_id,
                                       file_name):
         """Downdloads the requested file if it exists.
@@ -243,6 +266,35 @@ class Client(object):
         try:
             (response,
              http_response) = self._client.api.get_analysis_outputs(
+                 user=user,
+                 organization=organization,
+                 analysis_id=analysis_id).result()
+
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e
+
+    def get_analysis_code(self, user, organization, analysis_id):
+        """Return the list of code files for a given analysis.
+
+        :param user: UUID of the analysis owner.
+        :param organization: Organization which the user belongs to.
+        :param analysis_id: UUID which identifies the analysis.
+        :returns: A list of dictionaries composed by the `name`, `size` and
+                  `last-modified`.
+        """
+        try:
+            (response,
+             http_response) = self._client.api.get_analysis_code(
                  user=user,
                  organization=organization,
                  analysis_id=analysis_id).result()

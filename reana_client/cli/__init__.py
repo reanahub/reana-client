@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -28,7 +28,7 @@ import sys
 import click
 from reana_client.cli import outputs
 
-from . import analyses, workflow, inputs, ping
+from . import analyses, code, inputs, ping, workflow
 from ..api import Client
 
 DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \
@@ -73,3 +73,4 @@ cli.add_command(analyses.analyses)
 cli.add_command(workflow.workflow)
 cli.add_command(inputs.inputs)
 cli.add_command(outputs.outputs)
+cli.add_command(code.code)

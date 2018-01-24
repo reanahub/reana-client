@@ -76,7 +76,7 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
     logging.debug('filter: {}'.format(filter))
     logging.debug('output_format: {}'.format(output_format))
 
-    workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
+    workflow_name = workflow or os.environ.get('REANA_WORKON', None)
 
     if workflow_name:
         logging.info('Workflow "{}" selected'.format(workflow_name))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018 CERN.
+# Copyright (C) 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -131,7 +131,7 @@ def code_upload(ctx, user, organization, workflow, file_):
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
 
-    workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
+    workflow_name = workflow or os.environ.get('REANA_WORKON', None)
 
     if workflow_name:
         logging.info('Workflow "{}" selected'.format(workflow_name))

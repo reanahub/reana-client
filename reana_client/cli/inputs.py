@@ -132,7 +132,7 @@ def inputs_upload(ctx, user, organization, workflow, file_):
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
 
-    workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
+    workflow_name = workflow or os.environ.get('REANA_WORKON', None)
 
     if workflow_name:
         logging.info('Workflow "{}" selected'.format(workflow_name))

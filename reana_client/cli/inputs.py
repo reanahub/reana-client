@@ -27,8 +27,7 @@ import os
 import click
 import tablib
 
-from ..config import default_organization, default_user
-from .namesgenerator import get_random_name
+from ..config import default_inputs_path, default_organization, default_user
 
 
 @click.group(
@@ -104,11 +103,7 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
 @click.command(
     'upload',
     help='Upload one of more FILE to the analysis workspace.')
-@click.argument(
-    'file_',
-    metavar='FILE',
-    type=click.File('rb'),
-    nargs=-1)
+@click.argument('filenames', metavar='FILE', nargs=-1)
 @click.option(
     '-u',
     '--user',
@@ -123,31 +118,34 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
     '--workflow',
     help='Name of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
+@click.option(
+    '--inputs-directory',
+    default=default_inputs_path,
+    help='Path to the inputs files directory.')
 @click.pass_context
-def inputs_upload(ctx, user, organization, workflow, file_):
+def inputs_upload(ctx, user, organization, workflow, filenames,
+                  inputs_directory):
     """Upload file(s) to analysis workspace. Associate with a workflow."""
     logging.debug('inputs.upload')
-    logging.debug('file_: {}'.format(file_))
+    logging.debug('filenames: {}'.format(filenames))
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
+    logging.debug('inputs_directory: {}'.format(inputs_directory))
 
     workflow_name = workflow or os.environ.get('REANA_WORKON', None)
 
     if workflow_name:
         logging.info('Workflow "{}" selected'.format(workflow_name))
-        for f in file_:
-            click.echo('Uploading {} ...'.format(f.name))
+        for filename in filenames:
             try:
-                response = ctx.obj.client.seed_analysis_inputs(
-                    user,
-                    organization,
-                    workflow,
-                    f,
-                    f.name)
-                if response:
-                    click.echo('File {} was successfully uploaded.'.
-                               format(f.name))
+                with open(os.path.join(inputs_directory, filename)) as f:
+                    click.echo('Uploading {} ...'.format(f.name))
+                    response = ctx.obj.client.seed_analysis_inputs(
+                        user, organization, workflow, f, filename)
+                    if response:
+                        click.echo('File {} was successfully uploaded.'.
+                                   format(f.name))
 
             except Exception as e:
                 logging.debug(str(e))

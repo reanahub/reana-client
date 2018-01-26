@@ -140,19 +140,20 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
     help='Name of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
-    '--output-folder',
+    '--output-directory',
     default=default_download_path,
-    help='Path to the folder where files outputted '
+    help='Path to the directory where files outputted '
          'by a workflow will be downloaded')
 @click.pass_context
-def outputs_download(ctx, user, organization, workflow, file_, output_folder):
+def outputs_download(ctx, user, organization, workflow, file_,
+                     output_directory):
     """Download file(s) workflow has outputted."""
     logging.debug('outputs.download')
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
     logging.debug('file_: {}'.format(file_))
-    logging.debug('output_folder: {}'.format(output_folder))
+    logging.debug('output_directory: {}'.format(output_directory))
     for file_name in file_:
         try:
             binary_file = \
@@ -161,16 +162,16 @@ def outputs_download(ctx, user, organization, workflow, file_, output_folder):
                                                              workflow,
                                                              file_name)
             logging.info('{0} binary file downloaded ... writing to {1}'.
-                         format(file_name, output_folder))
+                         format(file_name, output_directory))
 
-            outputs_file_path = os.path.join(output_folder, file_name)
+            outputs_file_path = os.path.join(output_directory, file_name)
             if not os.path.exists(os.path.dirname(outputs_file_path)):
                     os.makedirs(os.path.dirname(outputs_file_path))
 
             with open(outputs_file_path, 'wb') as f:
                 f.write(binary_file)
             click.echo('File {0} downloaded to {1}'.format(file_name,
-                                                           output_folder))
+                                                           output_directory))
         except OSError as e:
             click.echo('File {0} could not be written.'.format(file_name))
             logging.debug(str(e))

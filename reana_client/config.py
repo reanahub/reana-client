@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -39,3 +39,9 @@ default_organization = 'default'
 
 default_download_path = './outputs/'
 """Default path where files outputted by a workflow will be downloaded."""
+
+default_inputs_path = './inputs/'
+"""Default path where input files are placed."""
+
+default_code_path = './code/'
+"""Default path where code files are placed."""

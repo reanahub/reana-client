@@ -53,6 +53,7 @@ def inputs(ctx):
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
     help='Name of the workflow whose input files you want to list.')
 @click.option(
     '--filter',
@@ -116,6 +117,7 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
     help='Name of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
@@ -133,10 +135,8 @@ def inputs_upload(ctx, user, organization, workflow, filenames,
     logging.debug('workflow: {}'.format(workflow))
     logging.debug('inputs_directory: {}'.format(inputs_directory))
 
-    workflow_name = workflow or os.environ.get('REANA_WORKON', None)
-
-    if workflow_name:
-        logging.info('Workflow "{}" selected'.format(workflow_name))
+    if workflow:
+        logging.info('Workflow "{}" selected'.format(workflow))
         for filename in filenames:
             try:
                 with open(os.path.join(inputs_directory, filename)) as f:

@@ -55,6 +55,7 @@ def outputs(ctx):
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
     help='Name of the workflow to be started. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
@@ -76,10 +77,8 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
     logging.debug('filter: {}'.format(filter))
     logging.debug('output_format: {}'.format(output_format))
 
-    workflow_name = workflow or os.environ.get('REANA_WORKON', None)
-
-    if workflow_name:
-        logging.info('Workflow "{}" selected'.format(workflow_name))
+    if workflow:
+        logging.info('Workflow "{}" selected'.format(workflow))
 
         try:
             response = ctx.obj.client.get_analysis_outputs(user, organization,
@@ -137,6 +136,7 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
     help='Name of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
 @click.option(

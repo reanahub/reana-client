@@ -1,3 +1,5 @@
+.. _cliapi:
+
 CLI API
 =======
 

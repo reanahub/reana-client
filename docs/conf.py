@@ -113,7 +113,7 @@ html_theme = 'alabaster'
 #
 html_theme_options = {
     'logo': 'logo-reana.png',
-    'description': 'REANA client',
+    'description': 'REANA-Client',
     'github_user': 'reanahub',
     'github_repo': 'reana-client',
     'github_button': False,

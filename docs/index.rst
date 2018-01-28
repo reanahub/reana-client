@@ -11,6 +11,7 @@
    introduction
    gettingstarted
    userguide
+   developerguide
    cliapi
    contributing
    changes

@@ -20,7 +20,7 @@ REANA_WORKON
 ~~~~~~~~~~~~
 
 Permits to specify a concrete workflow ID run for the given analysis. (As an
-alternative to specifying ``--workflow-id`` in commands.) For example:
+alternative to specifying ``--workflow`` in commands.) For example:
 
 .. code-block:: console
 

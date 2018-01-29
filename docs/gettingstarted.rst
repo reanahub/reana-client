@@ -75,7 +75,7 @@ and check its status:
    -----------|------------------------------------|------------------------------------|------------|-------
    lucid_kirch|57c917c8-d979-481e-ae4c-8d8b9ffb2d10|00000000-0000-0000-0000-000000000000|default     |created
 
-Note that instead of passing ``--workflow-id`` argument, we can define a new
+Note that instead of passing ``--workflow`` argument, we can define a new
 environment variable ``REANA_WORKON`` which specifies the workflow we are
 currently working on:
 

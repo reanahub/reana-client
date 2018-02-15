@@ -36,6 +36,7 @@ from reana_client.api import Client
 from reana_client.cli import analyses, workflow, inputs, outputs, ping, code
 from reana_client.config import default_user, default_organization
 from reana_client.utils import load_workflow_spec
+from reana_client.version import __version__
 
 DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \
                    '{%(pathname)s:%(lineno)d} ' \
@@ -75,6 +76,7 @@ def cli(ctx, loglevel):
 
 
 @click.command()
+@click.version_option(version=__version__)
 @click.option('--quiet', is_flag=True,
               help='No diagnostic output')
 @click.option('--outdir', type=click.Path(),

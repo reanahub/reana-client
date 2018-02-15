@@ -5,7 +5,7 @@
   "type": "object",
   "title": "REANA analysis specification",
   "description": "Full analysis specification including data, sofware, environment and workflow enabling reproducibility on a REANA cluster.",
-  "required": ["workflow", "environment"],
+  "required": ["workflow", "environments"],
   "properties": {
     "code": {
       "id": "/properties/code",
@@ -26,26 +26,26 @@
         }
       }
     },
-    "environment": {
-      "id": "/properties/environment",
+    "environments": {
+      "id": "/properties/environments",
       "type": "array",
       "title": "Set of analysis' environments.",
       "description": "All container images needed to reproduce the analysis.",
       "items": {
-        "id": "/properties/environment/items",
+        "id": "/properties/environments/items",
         "type": "object",
-        "title": "Analysis environment.",
-        "description": "Analysis environment represented by container technology and image name.",
+        "title": "Analysis environments.",
+        "description": "Analysis environments represented by container technology and image name.",
         "properties": {
           "image": {
-            "id": "/properties/environment/items/properties/image",
+            "id": "/properties/environments/items/properties/image",
             "type": "string",
             "title": "Environment image id.",
             "description": "String which represents an image used as environment for one or more steps of an analysis.",
             "default": "busybox"
           },
           "type": {
-            "id": "/properties/environment/items/properties/type",
+            "id": "/properties/environments/items/properties/type",
             "type": "string",
             "title": "Container technology.",
             "description": "Name which represents a supported container technology to provide as a REANA environment.",
@@ -74,29 +74,47 @@
         }
       }
     },
-    "output": {
-      "id": "/properties/output",
+    "outputs": {
+      "id": "/properties/outputs",
       "type": "object",
-      "title": "Analysis output.",
+      "title": "Analysis outputs.",
       "properties": {
         "files": {
-          "id": "/properties/output/properties/files",
+          "id": "/properties/outputs/properties/files",
           "type": "array",
           "title": "Analysis results.",
           "description": "Expected output from analysis represented by a set of files.",
           "items": {
-            "id": "/properties/output/properties/files/items",
+            "id": "/properties/outputs/properties/files/items",
             "type": "string",
             "title": "Relative path to the file."
           }
         }
       }
     },
-    "parameters": {
-      "id": "/properties/parameters",
+    "inputs": {
+      "id": "/properties/inputs",
       "type": "object",
-      "title": "Analysis parameters.",
-      "description": "Key value data structure which represents the analysis parameters."
+      "title": "Analysis inputs.",
+      "properties": {
+        "files": {
+          "id": "/properties/inputs/properties/files",
+          "type": "array",
+          "title": "Analysis input files.",
+          "description": "List of files provided as input for a given analysis.",
+          "items": {
+            "id": "/properties/inputs/properties/files/items",
+            "type": "string",
+            "title": "Relative path to the file."
+          }
+        },
+        "parameters": {
+            "id": "/properties/inputs/properties/parameters",
+            "type": "object",
+            "title": "Analysis parameters.",
+            "description": "Key value data structure which represents the analysis parameters."
+        }
+      }
     },
     "workflow": {
       "id": "/properties/workflow",

@@ -156,7 +156,7 @@
             }
           },
           "400": {
-            "description": "Request failed. The incoming data specification seems malformed"
+            "description": "Request failed. The incoming payload seems malformed"
           },
           "500": {
             "description": "Request failed. Internal controller error."
@@ -310,7 +310,7 @@
             }
           },
           "400": {
-            "description": "Request failed. The incoming data specification seems malformed.",
+            "description": "Request failed. The incoming payload seems malformed.",
             "examples": {
               "application/json": {
                 "message": "Malformed request."
@@ -406,7 +406,7 @@
             }
           },
           "400": {
-            "description": "Request failed. The incoming data specification seems malformed.",
+            "description": "Request failed. The incoming payload seems malformed.",
             "examples": {
               "application/json": {
                 "message": "Malformed request."
@@ -428,13 +428,13 @@
         "summary": "Set status of an analysis."
       }
     },
-    "/api/analyses/{analysis_id}/workspace": {
+    "/api/analyses/{analysis_id}/workspace/code": {
       "post": {
         "consumes": [
           "multipart/form-data"
         ],
         "description": "This resource expects a file which will be placed in the analysis workspace identified by the UUID `analysis_id`.",
-        "operationId": "seed_analysis",
+        "operationId": "seed_analysis_code",
         "parameters": [
           {
             "description": "Required. Organization which the analysis belongs to.",
@@ -493,10 +493,373 @@
             }
           },
           "400": {
-            "description": "Request failed. The incoming data specification seems malformed"
+            "description": "Request failed. The incoming payload seems malformed"
           }
         },
         "summary": "Seeds the analysis workspace with the provided file."
+      }
+    },
+    "/api/analyses/{analysis_id}/workspace/code/": {
+      "get": {
+        "description": "This resource is expecting an analysis UUID to return its list of code files.",
+        "operationId": "get_analysis_code",
+        "parameters": [
+          {
+            "description": "Required. Organization which the analysis belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of analysis owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. analysis UUID.",
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Requests succeeded. The list of code files has been retrieved.",
+            "schema": {
+              "items": {
+                "properties": {
+                  "last-modified": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming payload seems malformed."
+          },
+          "404": {
+            "description": "Request failed. Analysis does not exist.",
+            "examples": {
+              "application/json": {
+                "message": "Analysis 256b25f4-4cfb-4684-b7a8-73872ef455a1 does not exist."
+              }
+            }
+          },
+          "500": {
+            "description": "Request failed. Internal controller error.",
+            "examples": {
+              "application/json": {
+                "message": "Either organization or user doesn't exist."
+              }
+            }
+          }
+        },
+        "summary": "Returns the list of code files for a specific analysis."
+      }
+    },
+    "/api/analyses/{analysis_id}/workspace/inputs": {
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "This resource expects a file which will be placed in the analysis workspace identified by the UUID `analysis_id`.",
+        "operationId": "seed_analysis_inputs",
+        "parameters": [
+          {
+            "description": "Required. Organization which the analysis belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of analysis owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. Analysis UUID.",
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. File to be transferred to the analysis workspace.",
+            "in": "formData",
+            "name": "file_content",
+            "required": true,
+            "type": "file"
+          },
+          {
+            "description": "Required. File name.",
+            "in": "query",
+            "name": "file_name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Request succeeded. File successfully trasferred.",
+            "examples": {
+              "application/json": {
+                "message": "File successfully transferred"
+              }
+            },
+            "schema": {
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming payload seems malformed"
+          }
+        },
+        "summary": "Seeds the analysis workspace with the provided file."
+      }
+    },
+    "/api/analyses/{analysis_id}/workspace/inputs/": {
+      "get": {
+        "description": "This resource is expecting an analysis UUID to return its list of input files.",
+        "operationId": "get_analysis_inputs",
+        "parameters": [
+          {
+            "description": "Required. Organization which the analysis belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of analysis owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. analysis UUID.",
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Requests succeeded. The list of input files has been retrieved.",
+            "schema": {
+              "items": {
+                "properties": {
+                  "last-modified": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming payload seems malformed."
+          },
+          "404": {
+            "description": "Request failed. Analysis does not exist.",
+            "examples": {
+              "application/json": {
+                "message": "Analysis 256b25f4-4cfb-4684-b7a8-73872ef455a1 does not exist."
+              }
+            }
+          },
+          "500": {
+            "description": "Request failed. Internal controller error.",
+            "examples": {
+              "application/json": {
+                "message": "Either organization or user doesn't exist."
+              }
+            }
+          }
+        },
+        "summary": "Returns the list of input files for a specific analysis."
+      }
+    },
+    "/api/analyses/{analysis_id}/workspace/outputs/": {
+      "get": {
+        "description": "This resource is expecting an analysis UUID to return its list of output files.",
+        "operationId": "get_analysis_outputs",
+        "parameters": [
+          {
+            "description": "Required. Organization which the analysis belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of analysis owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. analysis UUID.",
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Requests succeeded. The list of output files has been retrieved.",
+            "schema": {
+              "items": {
+                "properties": {
+                  "last-modified": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming payload seems malformed."
+          },
+          "404": {
+            "description": "Request failed. Analysis does not exist.",
+            "examples": {
+              "application/json": {
+                "message": "Analysis 256b25f4-4cfb-4684-b7a8-73872ef455a1 does not exist."
+              }
+            }
+          },
+          "500": {
+            "description": "Request failed. Internal controller error.",
+            "examples": {
+              "application/json": {
+                "message": "Either organization or user doesn't exist."
+              }
+            }
+          }
+        },
+        "summary": "Returns the list of output files for a specific analysis."
+      }
+    },
+    "/api/analyses/{analysis_id}/workspace/outputs/{file_name}": {
+      "get": {
+        "description": "This resource is expecting a workflow UUID and a file name to return its content.",
+        "operationId": "get_analysis_outputs_file",
+        "parameters": [
+          {
+            "description": "Required. Organization which the analysis belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. UUID of analysis owner.",
+            "in": "query",
+            "name": "user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. analysis UUID.",
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. Name (or path) of the file to be downloaded.",
+            "in": "path",
+            "name": "file_name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "multipart/form-data"
+        ],
+        "responses": {
+          "200": {
+            "description": "Requests succeeded. The file has been downloaded.",
+            "schema": {
+              "type": "file"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming payload seems malformed."
+          },
+          "404": {
+            "description": "Request failed. `file_name` does not exist .",
+            "examples": {
+              "application/json": {
+                "message": "input.csv does not exist"
+              }
+            }
+          },
+          "500": {
+            "description": "Request failed. Internal controller error.",
+            "examples": {
+              "application/json": {
+                "message": "Either organization or user doesn't exist."
+              }
+            }
+          }
+        },
+        "summary": "Returns the requested file."
       }
     },
     "/api/ping": {

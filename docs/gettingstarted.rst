@@ -1,212 +1,203 @@
-Getting started
+.. _gettingstarted:
+
+Getting Started
 ===============
 
-.. admonition:: Work-In-Progress
+Install REANA client
+--------------------
 
-   **FIXME** The ``reana-client`` package is a not-yet-released work in
-   progress. Moreover, the ``reana-server`` instance at reana.cern.ch is
-   still not available.
+If you are a researcher that is interested in running analyses on the REANA
+cloud, all you need to install is the ``reana-client``, ideally in a new virtual
+environment:
 
-In order to check if the ``reana-client`` can connect with ``reana-cloud``
-we can run the following command.
+.. code-block:: console
+
+   $ mkvirtualenv reana-client -p /usr/bin/python2.7
+   $ pip install reana-client
+
+Note that we are using Python-2.7 here; this is currently necessary for the
+`Yadage <https://github.com/diana-hep/yadage>`_ computational workflows to work
+at this moment.
+
+Select REANA cloud
+------------------
+
+You can now select the REANA cloud instance where to run your analyses by
+setting the ``REANA_SERVER_URL`` variable appropriately. For example:
+
+.. code-block:: console
+
+   $ export REANA_SERVER_URL=http://reana.cern.ch
+
+Note that if you would like to try REANA locally, you can easily install a local
+REANA cluster on your laptop. Please follow the `REANA-Cluster getting started
+guide <http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_.
+
+Run example analysis
+--------------------
+
+Let us take `reana-demo-helloworld
+<https://github.com/reanahub/reana-demo-helloworld/>`_ as a simple example
+analysis to run on our REANA cloud.
+
+Please familiarise yourself with the structure of ``reana-demo-helloworld``
+GitHub repository and how it specifies the analusis code, data, environment, and
+the computation workflow to produce the analysis output. The ``reana-client``
+usage scenario will be identical in submitting any complex research data
+computational workflows.
+
+Let us start by testing connection to the REANA cloud:
 
 .. code-block:: console
 
    $ reana-client ping
-   [INFO] REANA Server URL set to: http://reana.cern.ch
-   [INFO] Connecting to http://reana.cern.ch
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   [INFO] Connecting to http://192.168.99.100:31201
    [INFO] Server is running.
 
-
-Validating analyses specifications
-----------------------------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You can validate your current analysis specification (``./.reana.yaml``), so it
-can be run in REANA, as follows:
+We can now create a new computational workflow:
 
 .. code-block:: console
 
-   $ reana-client analysis validate
-   File .reana.yaml is a valid REANA specification file.
+   $ reana-client workflow create -f reana.yaml
+   [INFO] Validating REANA specification file: /Users/rodrigdi/reana/reana-demo-helloworld/reana.yaml
+   [INFO] Connecting to http://192.168.99.100:31201
+   {u'message': u'Workflow workspace created', u'workflow_id': u'57c917c8-d979-481e-ae4c-8d8b9ffb2d10'}
 
-
-Create workflow
----------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You can create the workflow and its workspace as follows:
+and check its status:
 
 .. code-block:: console
 
-   $ reana-client workflow create --name mytest
-   Workflow `mytest` created.
+   $ reana-client workflow status --workflow 57c917c8-d979-481e-ae4c-8d8b9ffb2d10
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   [INFO] Workflow "afbbf6d1-a129-4e4f-ab8a-b8df325351d2" selected
+   Name       |UUID                                |User                                |Organization|Status
+   -----------|------------------------------------|------------------------------------|------------|-------
+   lucid_kirch|57c917c8-d979-481e-ae4c-8d8b9ffb2d10|00000000-0000-0000-0000-000000000000|default     |created
 
-
-Once the workflow is created, in order to use it you have to export the
-following environment variable or explicitly provide to each command to which
-workflow should the action be performed:
-
-.. code-block:: console
-
-   $ export REANA_WORKON=mytest
-
-
-Seeding workflow workspace
---------------------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You add files to the workflow workspace as follows:
+Note that instead of passing ``--workflow`` argument, we can define a new
+environment variable ``REANA_WORKON`` which specifies the workflow we are
+currently working on:
 
 .. code-block:: console
 
-   $ reana-client inputs upload mydata.csv
-   dataset.csv was successfully uploaded.
+   $ export REANA_WORKON="57c917c8-d979-481e-ae4c-8d8b9ffb2d10"
 
-
-Setting analysis parameters
----------------------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You can set analysis parameters as follows:
+Let us upload our code:
 
 .. code-block:: console
 
-   $ reana-client inputs set min_year 1990
-   min_year=1990
-   $ reana-client inputs set max_year 2001
-   max_year=2001
+   $ reana-client code upload helloworld.py
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   [INFO] Workflow "57c917c8-d979-481e-ae4c-8d8b9ffb2d10" selected
+   Uploading helloworld.py ...
+   File helloworld.py was successfully uploaded.
 
-
-List workflow inputs
---------------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You add files to the workflow workspace as follows:
+and check whether it indeed appears seeded in our workspace:
 
 .. code-block:: console
 
-   $ reana-client inputs list --json
-   {
-     'files': ['mydata.csv'],
-     'parameters': [
-       {'min_year': '1990'},
-       {'max_year': '2001'}
-     ]
-   }
-   $ reana-client inputs list --files
-   mydata.csv
-   $ reana-client inputs list --parameters
-   min_year=1990
-   max_year=2001
+   $ reana-client code list
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   Name         |Size|Last-Modified
+   -------------|----|--------------------------------
+   helloworld.py|2905|2018-01-25 16:34:59.448513+00:00
 
-
-Adding necessary code to start analysis
----------------------------------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You add code to the workflow workspace as follows:
+Similarly, let us now upload the input data file:
 
 .. code-block:: console
 
-   $ reana-client code upload mycode.py
-   mycode.py was successfully uploaded.
+   $ reana-client inputs upload names.txt
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   [INFO] Workflow "57c917c8-d979-481e-ae4c-8d8b9ffb2d10" selected
+   Uploading names.txt ...
+   File names.txt was successfully uploaded.
 
+and check whether it was well seeded in our input workspace:
 
-Starting a workflow
--------------------
+.. code-block:: console
 
-.. admonition:: Work-In-Progress
+   $ reana-client inputs list
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   Name     |Size|Last-Modified
+   ---------|----|--------------------------------
+   names.txt|18  |2018-01-25 16:34:21.888813+00:00
 
-   **FIXME** Not implemented yet.
-
-You can start your workflow in REANA as follows:
+Now that the input data and code was uploaded, we can start the workflow execution:
 
 .. code-block:: console
 
    $ reana-client workflow start
-   Workflow mytest has been started.
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   [INFO] Workflow `57c917c8-d979-481e-ae4c-8d8b9ffb2d10` selected
+   Workflow `57c917c8-d979-481e-ae4c-8d8b9ffb2d10` has been started.
+   [INFO] Connecting to http://192.168.99.100:31201
+   {u'status': u'running', u'organization': u'default', u'message': u'Workflow successfully launched', u'user': u'00000000-0000-0000-0000-000000000000', u'workflow_id': u'57c917c8-d979-481e-ae4c-8d8b9ffb2d10'}
+   Workflow `57c917c8-d979-481e-ae4c-8d8b9ffb2d10` has been started.
 
-
-Querying for the workflow status
---------------------------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You can query for a specific workflow status like follows:
+Let us enquire about its running status; we may see that it is still in the
+"running" state:
 
 .. code-block:: console
 
    $ reana-client workflow status
-   running
-   $ reana-client workflow status --workflow mytest1
-   failed
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   [INFO] Workflow "afbbf6d1-a129-4e4f-ab8a-b8df325351d2" selected
+   Name       |UUID                                |User                                |Organization|Status
+   -----------|------------------------------------|------------------------------------|------------|-------
+   lucid_kirch|57c917c8-d979-481e-ae4c-8d8b9ffb2d10|00000000-0000-0000-0000-000000000000|default     |running
 
+                After a few minutes, the workflow should be finished:
 
-Listing analyses
-----------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You can list the current analyses on REANA like follows:
+After the workflow execution successfully finished:
 
 .. code-block:: console
 
-   $ reana-client workflow list
-   Name     UUID                                  Status 
-   mytest   0328f3a0-a369-4971-b3c8-e8aa865ba5fa  running
-   mytest1  0328f3a0-a369-4971-b3c8-e8aa865ba5fa  failed
+   $ reana-client workflow status
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   [INFO] Workflow "afbbf6d1-a129-4e4f-ab8a-b8df325351d2" selected
+   Name       |UUID                                |User                                |Organization|Status
+   -----------|------------------------------------|------------------------------------|------------|-------
+   lucid_kirch|57c917c8-d979-481e-ae4c-8d8b9ffb2d10|00000000-0000-0000-0000-000000000000|default     |finished
 
-
-Getting workflow outputs
-------------------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You can start your analysis in REANA as follows:
+We can now check the output files:
 
 .. code-block:: console
 
-   $ reana-client outputs list
-   plot.png
-   $ reana-client outputs download plot.png
-   File plot.png downloaded under ./outputs/
+   $ reana-client outputs list --workflow 57c917c8-d979-481e-ae4c-8d8b9ffb2d10
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   [INFO] Workflow "57c917c8-d979-481e-ae4c-8d8b9ffb2d10" selected
+   Name                                 |Size|Last-Modified
+   -------------------------------------|----|--------------------------------
+   helloworld/greetings.txt             |32  |2018-01-25 16:36:00.582813+00:00
+   _yadage/yadage_snapshot_backend.json |590 |2018-01-25 16:36:00.582813+00:00
+   _yadage/yadage_snapshot_workflow.json|7668|2018-01-25 16:36:00.582813+00:00
+   _yadage/yadage_template.json         |1070|2018-01-25 16:36:00.582813+00:00
 
-
-Deleting a workflow
--------------------
-
-.. admonition:: Work-In-Progress
-
-   **FIXME** Not implemented yet.
-
-You can delete a workflow like follows:
+and retrieve the output file result:
 
 .. code-block:: console
 
-   $ reana-client workflow destroy --workflow mytest1
-   Workflow mytest1 has been destroyed.
+   $ reana-client outputs download helloworld/greetings.txt
+   [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
+   [INFO] helloworld/greetings.txt binary file downloaded ... writing to ./outputs/
+   File helloworld/greetings.txt downloaded to ./outputs/
+
+Let us see whether we got the expected output:
+
+.. code-block:: console
+
+   $ cat outputs/helloworld/greetings.txt
+   Hello John Doe!
+   Hello Jane Doe!
+
+Everything is well; the workflow was well executed.
+
+Next steps
+----------
+
+For more information, please see:
+
+- Looking for a more comprehensive user manual? See :ref:`userguide`
+- Looking for tips how to develop REANA-Client component? See :ref:`developerguide`
+- Looking for command-line API reference? See :ref:`cliapi`

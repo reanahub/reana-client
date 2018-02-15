@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -180,6 +180,7 @@ def workflow_create(ctx, file, user, organization, skip_validation):
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
     help='Name of the workflow to be started. '
          'Overrides value of $REANA_WORKON.')
 @click.pass_context
@@ -190,10 +191,9 @@ def workflow_start(ctx, user, organization, workflow):
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
 
-    workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
-
-    if workflow_name:
-        logging.info('Workflow `{}` selected'.format(workflow_name))
+    if workflow:
+        logging.info('Workflow `{}` selected'.format(workflow))
+        click.echo('Workflow `{}` has been started.'.format(workflow))
     else:
         click.echo(
             click.style('Workflow name must be provided either with '
@@ -208,7 +208,7 @@ def workflow_start(ctx, user, organization, workflow):
                                                  organization,
                                                  workflow)
         click.echo(response)
-        click.echo('Workflow `{}` has been started.'.format(workflow_name))
+        click.echo('Workflow `{}` has been started.'.format(workflow))
 
     except Exception as e:
         logging.error(str(e))
@@ -229,6 +229,7 @@ def workflow_start(ctx, user, organization, workflow):
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
     help='Name of the workflow whose status should be resolved. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
@@ -248,13 +249,11 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
 
-    workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
-
     data = tablib.Dataset()
     data.headers = ['Name', 'UUID', 'User', 'Organization', 'Status']
 
-    if workflow_name:
-        logging.info('Workflow "{}" selected'.format(workflow_name))
+    if workflow:
+        logging.info('Workflow "{}" selected'.format(workflow))
 
         try:
             response = ctx.obj.client.get_analysis_status(user,

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -55,6 +55,7 @@ def outputs(ctx):
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
     help='Name of the workflow to be started. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
@@ -76,27 +77,36 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
     logging.debug('filter: {}'.format(filter))
     logging.debug('output_format: {}'.format(output_format))
 
-    workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
+    if workflow:
+        logging.info('Workflow "{}" selected'.format(workflow))
 
-    if workflow_name:
-        logging.info('Workflow "{}" selected'.format(workflow_name))
+        try:
+            response = ctx.obj.client.get_analysis_outputs(user, organization,
+                                                           workflow)
 
-        data = tablib.Dataset()
-        data.headers = ['Name', 'Size', 'Last-Modified', 'Path']
+            data = tablib.Dataset()
+            data.headers = ['Name', 'Size', 'Last-Modified']
 
-        for i in range(1, 10):
-            data.append([get_random_name(),
-                         '99kb',
-                         '2017-10-05 14:27',
-                         '/output'])
+            for file_ in response:
+                data.append([file_['name'],
+                             file_['size'],
+                             file_['last-modified']])
 
-        if filter:
-            data = data.subset(rows=None, cols=list(filter))
+            if filter:
+                data = data.subset(rows=None, cols=list(filter))
 
-        if output_format:
-            click.echo(data.export(output_format))
-        else:
-            click.echo(data)
+            if output_format:
+                click.echo(data.export(output_format))
+            else:
+                click.echo(data)
+        except Exception as e:
+            logging.debug(str(e))
+            click.echo(
+                click.style('Something went wrong while retrieving output file'
+                            ' list for workflow {0}:\n{1}'.format(workflow,
+                                                                  str(e)),
+                            fg='red'),
+                err=True)
 
     else:
         click.echo(
@@ -109,10 +119,10 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
 
 @click.command(
     'download',
-    help='Download file(s) a workflow has outputted.')
+    help='Download one or more FILE that the workflow has outputted.')
 @click.argument(
     'file_',
-    metavar='[FILE(S)]',
+    metavar='FILE',
     nargs=-1)
 @click.option(
     '-u',
@@ -126,25 +136,49 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
     help='Name of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
-    '--output-folder',
+    '--output-directory',
     default=default_download_path,
-    help='Path to the folder where files outputted '
+    help='Path to the directory where files outputted '
          'by a workflow will be downloaded')
 @click.pass_context
-def outputs_download(ctx, user, organization, workflow, file_, output_folder):
+def outputs_download(ctx, user, organization, workflow, file_,
+                     output_directory):
     """Download file(s) workflow has outputted."""
     logging.debug('outputs.download')
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
     logging.debug('file_: {}'.format(file_))
-    logging.debug('output_folder: {}'.format(output_folder))
+    logging.debug('output_directory: {}'.format(output_directory))
+    for file_name in file_:
+        try:
+            binary_file = \
+                ctx.obj.client.download_analysis_output_file(user,
+                                                             organization,
+                                                             workflow,
+                                                             file_name)
+            logging.info('{0} binary file downloaded ... writing to {1}'.
+                         format(file_name, output_directory))
 
-    for f in file_:
-        click.echo('File `{}` downloaded to `{}`'.format(f, output_folder))
+            outputs_file_path = os.path.join(output_directory, file_name)
+            if not os.path.exists(os.path.dirname(outputs_file_path)):
+                    os.makedirs(os.path.dirname(outputs_file_path))
+
+            with open(outputs_file_path, 'wb') as f:
+                f.write(binary_file)
+            click.echo('File {0} downloaded to {1}'.format(file_name,
+                                                           output_directory))
+        except OSError as e:
+            click.echo('File {0} could not be written.'.format(file_name))
+            logging.debug(str(e))
+        except Exception as e:
+            click.echo('File {0} could not be downloaded.'.format(file_name))
+            logging.debug(str(e))
+
 
 outputs.add_command(outputs_list)
 outputs.add_command(outputs_download)

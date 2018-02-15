@@ -20,5 +20,29 @@
 .. image:: https://img.shields.io/github/license/reanahub/reana.svg
    :target: https://github.com/reanahub/reana-client/blob/master/COPYING
 
-This repository provides the REANA command-line client that researchers could
-use to talk to some REANA server in order to run and control their analyses.
+About
+-----
+
+REANA-Client is a component of the `REANA <http://reanahub.io/>`_ reusable
+analysis platform. It provides a command-line client that allows researcher to
+communicate to REANA cloud instances to submit, run, and manage their reusable
+analysis workflows.
+
+Features
+--------
+
+- run research analysis workflows on compute clouds
+- seed analysis workspace with input code and data
+- list submitted analyses and enquire about their statuses
+- download results of finished analysis workflows
+
+Useful links
+------------
+
+- `documentation <https://reana-client.readthedocs.io/>`_
+- `releases <https://github.com/reanahub/reana-client/releases>`_
+- `known issues <https://github.com/reanahub/reana-client/issues>`_
+- `source code <https://github.com/reanahub/reana-client>`_
+
+For more information about the REANA reusable analysis platform, please see the
+general `REANA documentation <http://reana.readthedocs.io/>`_.

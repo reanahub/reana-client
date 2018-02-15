@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -28,4 +28,4 @@ This file is imported by ``reana_client.__init__`` and parsed by
 
 from __future__ import absolute_import, print_function
 
-__version__ = "0.0.1.dev20170522"
+__version__ = "0.1.0.dev20180201"

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -32,7 +32,7 @@ import click
 import yaml
 from bravado.exception import HTTPServerError
 
-from reana_client.cli import analyses, workflow, inputs, outputs, ping
+from reana_client.cli import analyses, workflow, inputs, outputs, ping, code
 from reana_client.api import Client
 from reana_client.config import default_user, default_organization
 from reana_client.utils import load_workflow_spec
@@ -189,7 +189,7 @@ def transfer_file(ctx, file_dict, jobfile, workflow_id):
         path = file_dict.get('location', file_dict.get('path'))
         with open(os.path.join(os.path.abspath(os.path.dirname(jobfile)),
                                path)) as f:
-            response = ctx.obj.client.seed_analysis(
+            response = ctx.obj.client.seed_analysis_inputs(
                 default_user,
                 default_organization,
                 workflow_id,
@@ -281,7 +281,7 @@ def upload_directory(ctx, spec_file, workflow_id, location, basename=None, disk_
                 directory_name = filename.replace(os.path.abspath(os.path.dirname(spec_file)) + "/", "")
                 if basename:
                     directory_name = directory_name.replace(disk_directory_name, basename)
-                response = ctx.obj.client.seed_analysis(
+                response = ctx.obj.client.seed_analysis_inputs(
                     default_user,
                     default_organization,
                     workflow_id,
@@ -330,7 +330,7 @@ def upload_file(ctx, param, spec_file, workflow_id, directory_name=None):
     if os.path.exists(path):
         with open(path) as f:
             if directory_name:
-                response = ctx.obj.client.seed_analysis(
+                response = ctx.obj.client.seed_analysis_inputs(
                     default_user,
                     default_organization,
                     workflow_id,
@@ -338,7 +338,7 @@ def upload_file(ctx, param, spec_file, workflow_id, directory_name=None):
                     directory_name)
             else:
                 filename = path.replace(os.path.abspath(os.path.dirname(spec_file)) + "/", "")
-                response = ctx.obj.client.seed_analysis(
+                response = ctx.obj.client.seed_analysis_inputs(
                     default_user,
                     default_organization,
                     workflow_id,
@@ -354,6 +354,7 @@ cli.add_command(workflow.workflow)
 cli.add_command(inputs.inputs)
 cli.add_command(outputs.outputs)
 cli.add_command(cwl_runner)
+cli.add_command(code.code)
 
 if __name__ == "__main__":
     cwl_runner()

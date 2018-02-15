@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -41,13 +41,14 @@ tests_require = [
     'pytest-cache>=1.0',
     'pytest-cov>=1.8.0',
     'pytest-pep8>=1.0.6',
-    'pytest>=2.8.0'
+    'pytest>=2.8.0,<3.0.0'
 ]
 
 extras_require = {
     'docs': [
         'Sphinx>=1.4.4',
         'sphinx-rtd-theme>=0.1.9',
+        'sphinx-click>=1.0.4',
     ],
     'tests': tests_require,
 }
@@ -106,15 +107,16 @@ setup(
     setup_requires=setup_requires,
     tests_require=tests_require,
     classifiers=[
+        'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
         'Operating System :: OS Independent',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
-        'Development Status :: 3 - Alpha',
     ],
 )

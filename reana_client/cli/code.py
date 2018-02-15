@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018 CERN.
+# Copyright (C) 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -19,7 +19,7 @@
 # In applying this license, CERN does not waive the privileges and immunities
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
-"""REANA client inputs related commands."""
+"""REANA client code related commands."""
 
 import logging
 import os
@@ -27,20 +27,20 @@ import os
 import click
 import tablib
 
-from ..config import default_inputs_path, default_organization, default_user
+from ..config import default_code_path, default_organization, default_user
 
 
 @click.group(
-    help='All interaction related to input files and parameters of workflows.')
+    help='All interaction related to code files of workflows.')
 @click.pass_context
-def inputs(ctx):
-    """Top level wrapper for input file and parameter related interaction."""
+def code(ctx):
+    """Top level wrapper for code file and parameter related interaction."""
     logging.debug('inputs')
 
 
 @click.command(
     'list',
-    help='List input files of a workflow.')
+    help='List code files of a workflow.')
 @click.option(
     '-u',
     '--user',
@@ -54,7 +54,7 @@ def inputs(ctx):
 @click.option(
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name of the workflow whose input files you want to list.')
+    help='Name of the workflow whose code files you want to list.')
 @click.option(
     '--filter',
     multiple=True,
@@ -65,9 +65,9 @@ def inputs(ctx):
     type=click.Choice(['json', 'yaml']),
     help='Set output format.')
 @click.pass_context
-def inputs_list(ctx, user, organization, workflow, filter, output_format):
-    """List input files of a workflow."""
-    logging.debug('inputs.list')
+def code_list(ctx, user, organization, workflow, filter, output_format):
+    """List code files of a workflow."""
+    logging.debug('code.list')
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
@@ -75,8 +75,8 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
     logging.debug('output_format: {}'.format(output_format))
 
     try:
-        response = ctx.obj.client.get_analysis_inputs(user, organization,
-                                                      workflow)
+        response = ctx.obj.client.get_analysis_code(user, organization,
+                                                    workflow)
 
         data = tablib.Dataset()
         data.headers = ['Name', 'Size', 'Last-Modified']
@@ -103,7 +103,7 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
 
 @click.command(
     'upload',
-    help='Upload one of more FILE to the analysis workspace.')
+    help='Upload one of more code files to the analysis workspace.')
 @click.argument('filenames', metavar='FILE', nargs=-1)
 @click.option(
     '-u',
@@ -121,27 +121,26 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
     help='Name of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
-    '--inputs-directory',
-    default=default_inputs_path,
-    help='Path to the inputs files directory.')
+    '--code-directory',
+    default=default_code_path,
+    help='Path to the code files directory.')
 @click.pass_context
-def inputs_upload(ctx, user, organization, workflow, filenames,
-                  inputs_directory):
-    """Upload file(s) to analysis workspace. Associate with a workflow."""
-    logging.debug('inputs.upload')
+def code_upload(ctx, user, organization, workflow, filenames, code_directory):
+    """Upload code file(s) to analysis workspace. Associate with a workflow."""
+    logging.debug('code.upload')
     logging.debug('filenames: {}'.format(filenames))
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
-    logging.debug('inputs_directory: {}'.format(inputs_directory))
+    logging.debug('code_directory: {}'.format(code_directory))
 
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         for filename in filenames:
             try:
-                with open(os.path.join(inputs_directory, filename)) as f:
+                with open(os.path.join(code_directory, filename)) as f:
                     click.echo('Uploading {} ...'.format(f.name))
-                    response = ctx.obj.client.seed_analysis_inputs(
+                    response = ctx.obj.client.seed_analysis_code(
                         user, organization, workflow, f, filename)
                     if response:
                         click.echo('File {} was successfully uploaded.'.
@@ -165,5 +164,5 @@ def inputs_upload(ctx, user, organization, workflow, filenames,
             err=True)
 
 
-inputs.add_command(inputs_list)
-inputs.add_command(inputs_upload)
+code.add_command(code_list)
+code.add_command(code_upload)

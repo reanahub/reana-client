@@ -20,20 +20,20 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 """REANA command line interface client."""
-import json
 import logging
 import os
+import re
 import sys
 import traceback
 import urllib
 from time import sleep
-import re
+
 import click
 import yaml
 from bravado.exception import HTTPServerError
 
-from reana_client.cli import analyses, workflow, inputs, outputs, ping, code
 from reana_client.api import Client
+from reana_client.cli import analyses, workflow, inputs, outputs, ping, code
 from reana_client.config import default_user, default_organization
 from reana_client.utils import load_workflow_spec
 
@@ -148,13 +148,8 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
         except AttributeError:
             logging.error("Workflow execution failed")
             sys.exit(1)
-        stdout = sys.stdout
-        if isinstance(out, str):
-            stdout.write(out)
-        else:
-            stdout.write(json.dumps(out, indent=4))
-        stdout.write("\n")
-        stdout.flush()
+        sys.stdout.write(out)
+        sys.stdout.flush()
 
     except HTTPServerError as e:
         logging.error(traceback.print_exc())

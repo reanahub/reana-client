@@ -93,7 +93,7 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
         if processfile:
             with open(jobfile) as f:
                 reana_spec = {"workflow": {"type": "cwl"},
-                              "parameters": {"input": yaml.load(f)}}
+                              "inputs": {"parameters": {"input": yaml.load(f)}}}
 
             reana_spec['workflow']['spec'] = load_workflow_spec(
                 reana_spec['workflow']['type'],
@@ -110,7 +110,7 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
                 job['cwl:tool']
             )
             del job['cwl:tool']
-            reana_spec['parameters']['input'] = job
+            reana_spec['inputs']['parameters'] = {'input': job}
         reana_spec['workflow']['spec'] = replace_location_in_cwl_spec(reana_spec['workflow']['spec'])
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.create_workflow(default_user, default_organization,
@@ -119,8 +119,8 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
 
         workflow_id = response['workflow_id']
         upload_files_from_cwl_spec(ctx, reana_spec['workflow']['spec'], processfile, workflow_id)
-        if reana_spec['parameters']['input']:
-            upload_files(ctx, reana_spec['parameters']['input'], jobfile, workflow_id)
+        if reana_spec['inputs']['parameters']['input']:
+            upload_files(ctx, reana_spec['inputs']['parameters']['input'], jobfile, workflow_id)
 
         response = ctx.obj.client.start_analysis(default_user,
                                                  default_organization,

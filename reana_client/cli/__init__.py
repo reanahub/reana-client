@@ -151,6 +151,7 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
             logging.error("Workflow execution failed")
             sys.exit(1)
         sys.stdout.write(out)
+        sys.stdout.write("\n")
         sys.stdout.flush()
 
     except HTTPServerError as e:

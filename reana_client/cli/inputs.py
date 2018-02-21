@@ -23,6 +23,7 @@
 
 import logging
 import os
+import traceback
 
 import click
 import tablib
@@ -148,7 +149,7 @@ def inputs_upload(ctx, user, organization, workflow, filenames,
                                    format(f.name))
 
             except Exception as e:
-                logging.debug(str(e))
+                logging.error(traceback.format_exc())
                 click.echo(
                     click.style(
                         'Something went wrong while uploading {0}'.

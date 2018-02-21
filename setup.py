@@ -99,7 +99,7 @@ setup(
     entry_points={
         'console_scripts': [
             'reana-client = reana_client.cli:cli',
-            'reana-cwl-runner = reana_client.cli:cwl_runner'
+            'reana-cwl-runner = reana_client.cli.cwl_runner:cwl_runner'
         ],
     },
     extras_require=extras_require,

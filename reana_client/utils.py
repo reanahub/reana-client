@@ -26,11 +26,11 @@ import logging
 
 import yadageschemas
 import yaml
-from cwltool.main import main
 from jsonschema import ValidationError, validate
+from reana_client.config import reana_yaml_schema_file_path
 from six import StringIO
 
-from reana_client.config import reana_yaml_schema_file_path
+from cwltool.main import main
 
 
 def yadage_load(workflow_file, toplevel='.'):

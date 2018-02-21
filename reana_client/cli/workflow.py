@@ -23,15 +23,12 @@
 
 import logging
 import os
-import random
 import traceback
-import uuid
-
-import yaml
 from enum import Enum
 
 import click
 import tablib
+import yaml
 
 from ..config import (default_organization, default_user,
                       reana_yaml_default_file_path)
@@ -344,4 +341,3 @@ workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)
 workflow.add_command(workflow_status)
 # workflow.add_command(workflow_logs)
-

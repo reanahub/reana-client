@@ -315,7 +315,6 @@ def workflow_logs(ctx, user, organization, workflow):
 
     workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
 
-
     if workflow_name:
         logging.info('Workflow "{}" selected'.format(workflow_name))
 

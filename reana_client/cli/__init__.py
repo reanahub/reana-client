@@ -94,8 +94,9 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
     try:
         if processfile:
             with open(jobfile) as f:
-                reana_spec = {"workflow": {"type": "cwl"},
-                              "inputs": {"parameters": {"input": yaml.load(f)}}}
+                reana_spec = {
+                    "workflow": {"type": "cwl"},
+                    "inputs": {"parameters": {"input": yaml.load(f)}}}
 
             reana_spec['workflow']['spec'] = load_workflow_spec(
                 reana_spec['workflow']['type'],
@@ -113,16 +114,21 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
             )
             del job['cwl:tool']
             reana_spec['inputs']['parameters'] = {'input': job}
-        reana_spec['workflow']['spec'] = replace_location_in_cwl_spec(reana_spec['workflow']['spec'])
+        reana_spec['workflow']['spec'] = replace_location_in_cwl_spec(
+            reana_spec['workflow']['spec'])
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-        response = ctx.obj.client.create_workflow(default_user, default_organization,
+        response = ctx.obj.client.create_workflow(default_user,
+                                                  default_organization,
                                                   reana_spec)
         logging.error(response)
 
         workflow_id = response['workflow_id']
-        upload_files_from_cwl_spec(ctx, reana_spec['workflow']['spec'], processfile, workflow_id)
+        upload_files_from_cwl_spec(
+            ctx, reana_spec['workflow']['spec'], processfile, workflow_id)
         if reana_spec['inputs']['parameters']['input']:
-            upload_files(ctx, reana_spec['inputs']['parameters']['input'], jobfile, workflow_id)
+            upload_files(
+                ctx, reana_spec['inputs']['parameters']['input'],
+                jobfile, workflow_id)
 
         response = ctx.obj.client.start_analysis(default_user,
                                                  default_organization,
@@ -138,15 +144,17 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
                                                         workflow_id)
             logs = response['logs']
             if logs != first_logs:
-                
+
                 logging.error(logs[len(first_logs):])
                 first_logs = logs
 
-            if "Final process status" in logs or "Traceback (most recent call last)" in logs:
+            if "Final process status" in logs or \
+               "Traceback (most recent call last)" in logs:
                 # click.echo(response['status'])
                 break
         try:
-            out = re.search("success{[\S\s]*", logs).group().replace("success", "")
+            out = re.search("success{[\S\s]*",
+                            logs).group().replace("success", "")
         except AttributeError:
             logging.error("Workflow execution failed")
             sys.exit(1)
@@ -164,10 +172,13 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile):
 def upload_files(ctx, input_structure, jobfile, workflow_id):
     """Recursively find and upload input files and directories from CWL job."""
     if type(input_structure) is dict:
-        if type(input_structure) is dict and input_structure.get('class', None) == 'File':
+        if type(input_structure) is dict and \
+           input_structure.get('class', None) == 'File':
             transfer_file(ctx, input_structure, jobfile, workflow_id)
-        elif type(input_structure) is dict and input_structure.get('class', None) == 'Directory':
-            upload_directory(ctx, jobfile, workflow_id, input_structure.get("location"))
+        elif (type(input_structure) is dict and
+              input_structure.get('class', None) == 'Directory'):
+            upload_directory(ctx, jobfile, workflow_id,
+                             input_structure.get("location"))
         else:
             for parameter, value in input_structure.items():
                 if type(value) is dict and value.get('class', None) == 'File':
@@ -198,8 +209,8 @@ def transfer_file(ctx, file_dict, jobfile, workflow_id):
             logging.error(response)
             logging.error("Transferred file: {0}".format(f.name))
     """
-    Example of CWL parameter structure (.yml format): 
-    
+    Example of CWL parameter structure (.yml format):
+
     input_parameter:
       class: File
       location: hello.tar
@@ -215,11 +226,16 @@ def transfer_file(ctx, file_dict, jobfile, workflow_id):
             if f['class'] == 'File':
                 transfer_file(ctx, f, jobfile, workflow_id)
             elif f['class'] == 'Directory':
-                upload_directory(ctx, jobfile, workflow_id, f.get("location"), f.get("basename", None))
+                upload_directory(ctx, jobfile, workflow_id, f.get(
+                    "location"), f.get("basename", None))
 
 
 def upload_files_from_cwl_spec(ctx, spec, spec_file, workflow_id):
-    """Traverse through normalized (packed) cwl workflow to collect and upload all file inputs."""
+    """Collect and upload files from cwl workflow.
+
+    Traverse through normalized (packed) cwl workflow to collect and upload all
+    file inputs.
+    """
     if spec.get('$graph'):
         for tool in spec['$graph']:
             upload_files_from_cwl_tool(ctx, tool, spec_file, workflow_id)
@@ -231,7 +247,11 @@ def upload_files_from_cwl_spec(ctx, spec, spec_file, workflow_id):
 
 
 def upload_files_from_cwl_tool(ctx, spec, spec_file, workflow_id):
-    """Traverse through tool inputs and workflow steps to collect and upload all file inputs."""
+    """Collect and upload files from a cwl workflow step.
+
+    Traverse through tool inputs and workflow steps to collect and upload all
+    file inputs.
+    """
     if spec['inputs']:
         for param in spec['inputs']:
             if param['type'] == "File":
@@ -242,7 +262,8 @@ def upload_files_from_cwl_tool(ctx, spec, spec_file, workflow_id):
                 directory = os.path.abspath(os.path.dirname(spec_file))
                 for file in os.listdir(directory):
                     if any(file.endswith(ext) for ext in extensions):
-                        transfer_file(ctx, {"location": os.path.join(directory, file)}, spec_file, workflow_id)
+                        transfer_file(ctx, {"location": os.path.join(
+                            directory, file)}, spec_file, workflow_id)
 
     if spec.get("steps"):
         for tool in spec['steps']:
@@ -251,17 +272,22 @@ def upload_files_from_cwl_tool(ctx, spec, spec_file, workflow_id):
                     if param.get('default', ''):
                         upload_file(ctx, param, spec_file, workflow_id)
                 elif param.get('default', ''):
-                    if param['default'].get("type", param['default'].get("class")) == "File":
+                    if (param['default']
+                       .get("type", param['default'].get("class")) == "File"):
                         upload_file(ctx, param, spec_file, workflow_id)
 
 
 def replace_location_in_cwl_spec(spec):
-    """Recursively replace absolute paths with relative in a normalized (packed) workflow."""
+    """Replace absolute paths with relative in a workflow.
+
+    Recursively replace absolute paths with relative in a normalized (packed)
+    workflow.
+    """
     if spec.get('$graph'):
         result = spec.copy()
         result['$graph'] = []
         for tool in spec['$graph']:
-             result['$graph'].append(replace_location_in_cwl_tool(tool))
+            result['$graph'].append(replace_location_in_cwl_tool(tool))
         return result
     elif spec.get('inputs'):
         return replace_location_in_cwl_tool(spec)
@@ -269,23 +295,29 @@ def replace_location_in_cwl_spec(spec):
         return spec
 
 
-def upload_directory(ctx, spec_file, workflow_id, location, basename=None, disk_directory_name=None):
+def upload_directory(ctx, spec_file, workflow_id, location, basename=None,
+                     disk_directory_name=None):
     """Recursively upload directory as an input to a workflow."""
     if not os.path.isabs(location):
         disk_directory_name = location
-        location = os.path.join(os.path.abspath(os.path.dirname(spec_file)), location)
+        location = os.path.join(os.path.abspath(
+            os.path.dirname(spec_file)), location)
     else:
         disk_directory_name = disk_directory_name
     for f in os.listdir(location):
         filename = os.path.abspath(os.path.join(location, f))
         if os.path.isdir(filename):
-            upload_directory(ctx, spec_file, workflow_id, os.path.abspath(filename),
-                             basename=basename, disk_directory_name=disk_directory_name)
+            upload_directory(ctx, spec_file, workflow_id,
+                             os.path.abspath(filename),
+                             basename=basename,
+                             disk_directory_name=disk_directory_name)
         elif os.path.isfile(filename):
             with open(filename) as file_:
-                directory_name = filename.replace(os.path.abspath(os.path.dirname(spec_file)) + "/", "")
+                directory_name = filename.replace(
+                    os.path.abspath(os.path.dirname(spec_file)) + "/", "")
                 if basename:
-                    directory_name = directory_name.replace(disk_directory_name, basename)
+                    directory_name = directory_name.replace(
+                        disk_directory_name, basename)
                 response = ctx.obj.client.seed_analysis_inputs(
                     default_user,
                     default_organization,
@@ -303,8 +335,10 @@ def replace_location_in_cwl_tool(spec):
     for param in spec['inputs']:
         if param['type'] == "File":
             if param.get('default', ''):
-                location = "location" if param['default'].get("location") else "path"
-                param['default'][location] = param['default'][location].split('/')[-1]
+                location = "location" if param['default'].get(
+                    "location") else "path"
+                param['default'][location] = param['default'][location].split(
+                    '/')[-1]
         inputs_parameters.append(param)
     spec['inputs'] = inputs_parameters
     # workflows
@@ -314,9 +348,13 @@ def replace_location_in_cwl_tool(spec):
             tool_inputs = []
             for param in tool['in']:
                 if param.get('default', ''):
-                    if param['default'].get('class', param['default'].get('type')) == 'File':
-                        location = "location" if param['default'].get("location") else "path"
-                        param['default'][location] = param['default'][location].split('/')[-1]
+                    if param['default'].get('class',
+                                            param['default'].get('type')) == \
+                                            'File':
+                        location = "location" if param['default'].get(
+                            "location") else "path"
+                        param['default'][location] = \
+                            param['default'][location].split('/')[-1]
                 tool_inputs.append(param)
             tool['in'] = tool_inputs
             steps.append(tool)
@@ -331,12 +369,14 @@ def upload_file(ctx, param, spec_file, workflow_id):
     if os.path.isabs(location):
         path = location
     else:
-        path = os.path.join(os.path.abspath(os.path.dirname(spec_file)), location)
+        path = os.path.join(os.path.abspath(
+            os.path.dirname(spec_file)), location)
     if path.startswith("file:///"):
         path = urllib.parse.unquote(path)[7:]
     if os.path.exists(path):
         with open(path) as f:
-            filename = path.replace(os.path.abspath(os.path.dirname(spec_file)) + "/", "")
+            filename = path.replace(os.path.abspath(
+                os.path.dirname(spec_file)) + "/", "")
             response = ctx.obj.client.seed_analysis_inputs(
                 default_user,
                 default_organization,

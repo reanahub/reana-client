@@ -152,8 +152,8 @@ def workflow_create(ctx, file, user, organization, skip_validation):
             reana_spec['workflow']['file'],
         )
         if reana_spec['workflow']['type'] == 'cwl':
-            with open(reana_spec['parameters']['input']) as f:
-                reana_spec['parameters']['input'] = yaml.load(f)
+            with open(reana_spec['inputs']['parameters']['input']) as f:
+                reana_spec['inputs']['parameters']['input'] = yaml.load(f)
 
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.create_workflow(user,
@@ -162,7 +162,7 @@ def workflow_create(ctx, file, user, organization, skip_validation):
         click.echo(response)
 
     except Exception as e:
-        logging.debug(str(e))
+        logging.error(str(e))
 
 
 @click.command(

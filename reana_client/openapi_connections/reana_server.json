@@ -395,9 +395,6 @@
                 "status": {
                   "type": "string"
                 },
-                "user": {
-                  "type": "string"
-                },
                 "workflow_id": {
                   "type": "string"
                 }

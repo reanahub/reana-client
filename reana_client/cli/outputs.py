@@ -27,8 +27,6 @@ import os
 import click
 import tablib
 
-from reana_client.cli.namesgenerator import get_random_name
-
 from ..config import default_download_path, default_organization, default_user
 
 

@@ -20,16 +20,14 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 """REANA command line interface client."""
-
 import logging
 import os
 import sys
 
 import click
-from reana_client.cli import outputs
 
-from . import analyses, code, inputs, ping, workflow
-from ..api import Client
+from reana_client.api import Client
+from reana_client.cli import analyses, workflow, inputs, outputs, ping, code
 
 DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \
                    '{%(pathname)s:%(lineno)d} ' \

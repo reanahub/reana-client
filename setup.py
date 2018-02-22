@@ -66,6 +66,7 @@ setup_requires = [
 install_requires = [
     'bravado>=9.0.6',
     'click>=6.7',
+    'cwltool',
     'yadage-schemas==0.7.4',
     'pyOpenSSL==17.3.0',  # FIXME remove once yadage-schemas solves deps.
     'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
@@ -98,6 +99,7 @@ setup(
     entry_points={
         'console_scripts': [
             'reana-client = reana_client.cli:cli',
+            'reana-cwl-runner = reana_client.cli.cwl_runner:cwl_runner'
         ],
     },
     extras_require=extras_require,

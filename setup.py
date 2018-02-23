@@ -67,7 +67,7 @@ install_requires = [
     'bravado>=9.0.6',
     'click>=6.7',
     'cwltool',
-    'yadage-schemas==0.7.4',
+    'yadage-schemas==0.7.16',
     'pyOpenSSL==17.3.0',  # FIXME remove once yadage-schemas solves deps.
     'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
     'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.

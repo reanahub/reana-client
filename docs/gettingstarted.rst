@@ -59,7 +59,7 @@ We can now create a new computational workflow:
 
 .. code-block:: console
 
-   $ reana-client workflow create -f reana.yaml
+   $ reana-client workflows create -f reana.yaml
    [INFO] Validating REANA specification file: /Users/rodrigdi/reana/reana-demo-helloworld/reana.yaml
    [INFO] Connecting to http://192.168.99.100:31201
    {u'message': u'Workflow workspace created', u'workflow_id': u'57c917c8-d979-481e-ae4c-8d8b9ffb2d10'}
@@ -68,7 +68,7 @@ and check its status:
 
 .. code-block:: console
 
-   $ reana-client workflow status --workflow 57c917c8-d979-481e-ae4c-8d8b9ffb2d10
+   $ reana-client workflows status --workflow 57c917c8-d979-481e-ae4c-8d8b9ffb2d10
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
    [INFO] Workflow "afbbf6d1-a129-4e4f-ab8a-b8df325351d2" selected
    Name       |UUID                                |User                                |Organization|Status
@@ -127,7 +127,7 @@ Now that the input data and code was uploaded, we can start the workflow executi
 
 .. code-block:: console
 
-   $ reana-client workflow start
+   $ reana-client workflows start
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
    [INFO] Workflow `57c917c8-d979-481e-ae4c-8d8b9ffb2d10` selected
    Workflow `57c917c8-d979-481e-ae4c-8d8b9ffb2d10` has been started.
@@ -140,7 +140,7 @@ Let us enquire about its running status; we may see that it is still in the
 
 .. code-block:: console
 
-   $ reana-client workflow status
+   $ reana-client workflows status
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
    [INFO] Workflow "afbbf6d1-a129-4e4f-ab8a-b8df325351d2" selected
    Name       |UUID                                |User                                |Organization|Status
@@ -153,7 +153,7 @@ After the workflow execution successfully finished:
 
 .. code-block:: console
 
-   $ reana-client workflow status
+   $ reana-client workflows status
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
    [INFO] Workflow "afbbf6d1-a129-4e4f-ab8a-b8df325351d2" selected
    Name       |UUID                                |User                                |Organization|Status

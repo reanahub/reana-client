@@ -46,9 +46,9 @@ class _WorkflowStatus(Enum):
 @click.group(
     help='All interaction related to workflows on REANA cloud.')
 @click.pass_context
-def workflow(ctx):
+def workflows(ctx):
     """Top level wrapper for workflow related interaction."""
-    logging.debug('workflow')
+    logging.debug('workflows')
 
 
 @click.command(
@@ -74,9 +74,9 @@ def workflow(ctx):
     type=click.Choice(['json', 'yaml']),
     help='Set output format.')
 @click.pass_context
-def workflow_list(ctx, user, organization, filter, output_format):
+def workflows_list(ctx, user, organization, filter, output_format):
     """List all workflows user has."""
-    logging.debug('workflow.list')
+    logging.debug('workflows.list')
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('filter: {}'.format(filter))
@@ -133,9 +133,9 @@ def workflow_list(ctx, user, organization, filter, output_format):
     help="If set, specifications file is not validated before "
          "submitting it's contents to REANA Server.")
 @click.pass_context
-def workflow_create(ctx, file, user, organization, skip_validation):
+def workflows_create(ctx, file, user, organization, skip_validation):
     """Create a REANA compatible analysis workflow from REANA spec file."""
-    logging.debug('workflow.create')
+    logging.debug('workflows.create')
     logging.debug('file: {}'.format(file))
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
@@ -182,9 +182,9 @@ def workflow_create(ctx, file, user, organization, skip_validation):
     help='Name of the workflow to be started. '
          'Overrides value of $REANA_WORKON.')
 @click.pass_context
-def workflow_start(ctx, user, organization, workflow):
+def workflows_start(ctx, user, organization, workflow):
     """Start previously created analysis workflow."""
-    logging.debug('workflow.start')
+    logging.debug('workflows.start')
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
@@ -240,9 +240,9 @@ def workflow_start(ctx, user, organization, workflow):
     type=click.Choice(['json', 'yaml']),
     help='Set output format.')
 @click.pass_context
-def workflow_status(ctx, user, organization, workflow, filter, output_format):
+def workflows_status(ctx, user, organization, workflow, filter, output_format):
     """Get status of previously created analysis workflow."""
-    logging.debug('workflow.start')
+    logging.debug('workflows.start')
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
@@ -335,8 +335,7 @@ def workflow_logs(ctx, user, organization, workflow):
             err=True)
 
 
-workflow.add_command(workflow_list)
-workflow.add_command(workflow_create)
-workflow.add_command(workflow_start)
-workflow.add_command(workflow_status)
-# workflow.add_command(workflow_logs)
+workflows.add_command(workflows_list)
+workflows.add_command(workflows_create)
+workflows.add_command(workflows_start)
+workflows.add_command(workflows_status)

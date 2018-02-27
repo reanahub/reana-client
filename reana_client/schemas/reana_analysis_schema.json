@@ -116,23 +116,29 @@
         }
       }
     },
-    "workflow": {
-      "id": "/properties/workflow",
-      "type": "object",
-      "title": "Analysis workflow.",
-      "description": "Workflow which represents the steps that need to be run to reproduce an analysis.",
-      "properties": {
-        "file": {
-          "id": "/properties/workflow/properties/file",
-          "type": "string",
-          "title": "Workflow file name.",
-          "default": "workflow.yml"
-        },
-        "type": {
-          "id": "/properties/workflow/properties/type",
-          "type": "string",
-          "title": "Workflow engine.",
-          "description": "Name which represents a supported workflow engine to be used to reproduce the analysis."
+    "workflows": {
+      "id": "/properties/workflows",
+      "type": "array",
+      "title": "Analysis workflows.",
+      "description": "Set of workflow which represent the steps that need to be run to reproduce an analysis.",
+      "items": {
+        "id": "/properties/workflows/items",
+        "type": "object",
+        "title": "Analysis workflow.",
+        "description": "Workflow which represent the steps that need to be run to reproduce an analysis.",
+        "properties": {
+          "file": {
+            "id": "/properties/workflows/items/properties/file",
+            "type": "string",
+            "title": "Workflow file name.",
+            "default": "workflow.yml"
+          },
+          "type": {
+            "id": "/properties/workflows/items/properties/type",
+            "type": "string",
+            "title": "Workflow engine.",
+            "description": "Name which represents a supported workflow engine to be used to reproduce the analysis."
+          }
         }
       }
     }

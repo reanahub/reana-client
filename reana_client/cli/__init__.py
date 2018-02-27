@@ -27,7 +27,7 @@ import sys
 import click
 
 from reana_client.api import Client
-from reana_client.cli import analyses, workflow, inputs, outputs, ping, code
+from reana_client.cli import analyses, workflows, inputs, outputs, ping, code
 
 DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \
                    '{%(pathname)s:%(lineno)d} ' \
@@ -68,7 +68,7 @@ def cli(ctx, loglevel):
 
 cli.add_command(ping.ping)
 cli.add_command(analyses.analyses)
-cli.add_command(workflow.workflow)
+cli.add_command(workflows.workflows)
 cli.add_command(inputs.inputs)
 cli.add_command(outputs.outputs)
 cli.add_command(code.code)

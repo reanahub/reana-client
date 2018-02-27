@@ -240,7 +240,7 @@ def upload_files_from_cwl_tool(client, spec, spec_file, workflow_id):
                 if param.get('type', param.get('class')) == "File":
                     if param.get('default', ''):
                         upload_file(client, param, spec_file, workflow_id)
-                elif param.get('default', ''):
+                elif param.get('default') and type(param['default']) is dict:
                     if (param['default']
                        .get("type", param['default'].get("class")) == "File"):
                         upload_file(client, param, spec_file, workflow_id)
@@ -316,7 +316,7 @@ def replace_location_in_cwl_tool(spec):
         for tool in spec['steps']:
             tool_inputs = []
             for param in tool['in']:
-                if param.get('default', ''):
+                if param.get('default') and type(param['default']) is dict:
                     if param['default'].get('class',
                                             param['default'].get('type')) == \
                             'File':

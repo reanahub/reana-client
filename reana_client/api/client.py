@@ -22,11 +22,12 @@
 """REANA REST API client."""
 
 import json
+import logging
 import os
 
 import pkg_resources
 from bravado.client import SwaggerClient
-from bravado.exception import HTTPError
+from bravado.exception import HTTPConflict, HTTPError
 
 
 class Client(object):
@@ -145,6 +146,13 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
+        except HTTPConflict as e:
+            logging.debug(
+                'Analysis could not be started:\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
 

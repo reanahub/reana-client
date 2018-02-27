@@ -211,7 +211,7 @@ def workflow_start(ctx, user, organization, workflow):
                         fg='green'))
 
     except Exception as e:
-        logging.error(str(e))
+        click.echo(str(e))
 
 
 @click.command(

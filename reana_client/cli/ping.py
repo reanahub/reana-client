@@ -34,10 +34,11 @@ def ping(ctx):
     try:
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.ping()
-        logging.info('Server is running.')
+        click.echo(click.style('Server is running.', fg='green'))
         logging.debug('Server response:\n{}'.format(response))
 
     except Exception as e:
+        click.echo(click.style('Could not connect to the server', fg='red'))
         logging.info('Something went wrong when trying to connect to {0}'
                      .format(ctx.obj.client.server_url))
         logging.error(traceback.format_exc())

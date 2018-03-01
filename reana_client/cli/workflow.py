@@ -157,7 +157,7 @@ def workflow_create(ctx, file, user, organization, skip_validation):
         response = ctx.obj.client.create_workflow(user,
                                                   organization,
                                                   reana_spec)
-        click.echo(response)
+        click.echo(click.style(response['workflow_id'], fg='green'))
 
     except Exception as e:
         logging.error(traceback.format_exc())
@@ -191,7 +191,6 @@ def workflow_start(ctx, user, organization, workflow):
 
     if workflow:
         logging.info('Workflow `{}` selected'.format(workflow))
-        click.echo('Workflow `{}` has been started.'.format(workflow))
     else:
         click.echo(
             click.style('Workflow name must be provided either with '
@@ -205,8 +204,10 @@ def workflow_start(ctx, user, organization, workflow):
         response = ctx.obj.client.start_analysis(user,
                                                  organization,
                                                  workflow)
-        click.echo(response)
-        click.echo('Workflow `{}` has been started.'.format(workflow))
+        click.echo(
+            click.style('Workflow `{}` has been started.'
+                        .format(response['workflow_id']),
+                        fg='green'))
 
     except Exception as e:
         logging.error(str(e))

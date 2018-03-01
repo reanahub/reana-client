@@ -145,8 +145,9 @@ def inputs_upload(ctx, user, organization, workflow, filenames,
                     response = ctx.obj.client.seed_analysis_inputs(
                         user, organization, workflow, f, filename)
                     if response:
-                        click.echo('File {} was successfully uploaded.'.
-                                   format(f.name))
+                        click.echo(
+                            click.style('File {} was successfully uploaded.'.
+                                        format(f.name), fg='green'))
 
             except Exception as e:
                 logging.error(traceback.format_exc())

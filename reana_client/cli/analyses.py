@@ -30,6 +30,8 @@ from ..config import (default_organization, default_user,
                       reana_yaml_default_file_path)
 from ..utils import load_reana_spec, load_workflow_spec
 
+from jsonschema.exceptions import ValidationError
+
 
 @click.group(
     help='All analysis related interaction on REANA cloud.')
@@ -39,7 +41,7 @@ def analyses(ctx):
     logging.debug('analysis')
 
 
-@click.command()
+@click.command('validate')
 @click.option(
     '-f',
     '--file',
@@ -55,10 +57,16 @@ def analysis_validate(ctx, file):
 
     try:
         load_reana_spec(click.format_filename(file))
+        click.echo(
+            click.style('File {filename} is a valid REANA specification file.'
+                        .format(filename=click.format_filename(file)),
+                        fg='green'))
 
-        click.echo('File {filename} is a valid REANA specification file.'
-                   .format(filename=click.format_filename(file)))
-
+    except ValidationError as e:
+        click.echo(click.style('{0} is not a valid REANA specification:\n{1}'
+                               .format(click.format_filename(file),
+                                       e.message),
+                               fg='red'))
     except Exception as e:
         logging.info('Something went wrong when trying to validate {0}'
                      .format(click.format_filename(file)))

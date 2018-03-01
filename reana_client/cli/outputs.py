@@ -164,17 +164,25 @@ def outputs_download(ctx, user, organization, workflow, file_,
 
             outputs_file_path = os.path.join(output_directory, file_name)
             if not os.path.exists(os.path.dirname(outputs_file_path)):
-                    os.makedirs(os.path.dirname(outputs_file_path))
+                os.makedirs(os.path.dirname(outputs_file_path))
 
             with open(outputs_file_path, 'wb') as f:
                 f.write(binary_file)
-            click.echo('File {0} downloaded to {1}'.format(file_name,
-                                                           output_directory))
+            click.echo(
+                click.style(
+                    'File {0} downloaded to {1}'.format(file_name,
+                                                        output_directory),
+                    fg='green'))
         except OSError as e:
-            click.echo('File {0} could not be written.'.format(file_name))
+            click.echo(
+                click.style('File {0} could not be written.'.format(file_name),
+                            fg='red'))
             logging.debug(str(e))
         except Exception as e:
-            click.echo('File {0} could not be downloaded.'.format(file_name))
+            click.echo(
+                click.style(
+                    'File {0} could not be downloaded.'.format(file_name),
+                    fg='red'))
             logging.debug(str(e))
 
 

@@ -143,8 +143,9 @@ def code_upload(ctx, user, organization, workflow, filenames, code_directory):
                     response = ctx.obj.client.seed_analysis_code(
                         user, organization, workflow, f, filename)
                     if response:
-                        click.echo('File {} was successfully uploaded.'.
-                                   format(f.name))
+                        click.echo(
+                            click.style('File {} was successfully uploaded.'.
+                                        format(f.name), fg='green'))
 
             except Exception as e:
                 logging.debug(str(e))

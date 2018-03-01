@@ -54,15 +54,15 @@ class Config(object):
     '--loglevel',
     '-l',
     help='Sets log level',
-    type=click.Choice(['debug', 'info']),
-    default='info')
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING']),
+    default='WARNING')
 @click.pass_context
 def cli(ctx, loglevel):
     """REANA Client for interacting with REANA Server."""
     logging.basicConfig(
-        format=DEBUG_LOG_FORMAT if loglevel == 'debug' else LOG_FORMAT,
+        format=DEBUG_LOG_FORMAT if loglevel == 'DEBUG' else LOG_FORMAT,
         stream=sys.stderr,
-        level=logging.DEBUG if loglevel == 'debug' else logging.INFO)
+        level=loglevel)
     ctx.obj = Config()
 
 

@@ -61,10 +61,11 @@ def inputs(ctx):
     multiple=True,
     help='Filter output according to column titles (case-sensitive).')
 @click.option(
-    '-of',
-    '--output-format',
-    type=click.Choice(['json', 'yaml']),
-    help='Set output format.')
+    '--json',
+    'output_format',
+    flag_value='json',
+    default=None,
+    help='Get output in JSON format.')
 @click.pass_context
 def inputs_list(ctx, user, organization, workflow, filter, output_format):
     """List input files of a workflow."""

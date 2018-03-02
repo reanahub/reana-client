@@ -69,10 +69,11 @@ def workflow(ctx):
     multiple=True,
     help='Filter output according to column titles (case-sensitive).')
 @click.option(
-    '-of',
-    '--output-format',
-    type=click.Choice(['json', 'yaml']),
-    help='Set output format.')
+    '--json',
+    'output_format',
+    flag_value='json',
+    default=None,
+    help='Get output in JSON format.')
 @click.pass_context
 def workflow_list(ctx, user, organization, filter, output_format):
     """List all workflows user has."""
@@ -236,10 +237,11 @@ def workflow_start(ctx, user, organization, workflow):
     multiple=True,
     help='Filter output according to column titles (case-sensitive).')
 @click.option(
-    '-of',
-    '--output-format',
-    type=click.Choice(['json', 'yaml']),
-    help='Set output format.')
+    '--json',
+    'output_format',
+    flag_value='json',
+    default=None,
+    help='Get output in JSON format.')
 @click.pass_context
 def workflow_status(ctx, user, organization, workflow, filter, output_format):
     """Get status of previously created analysis workflow."""
@@ -247,6 +249,7 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
+    logging.debug('output_format: {}'.format(output_format))
 
     data = tablib.Dataset()
     data.headers = ['Name', 'UUID', 'User', 'Organization', 'Status']

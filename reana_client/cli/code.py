@@ -152,7 +152,7 @@ def code_upload(ctx, user, organization, workflow, filenames, code_directory):
                 click.echo(
                     click.style(
                         'Something went wrong while uploading {0}'.
-                        format(f.name),
+                        format(filename),
                         fg='red'),
                     err=True)
 

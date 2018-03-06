@@ -154,7 +154,7 @@ def inputs_upload(ctx, user, organization, workflow, filenames,
                 click.echo(
                     click.style(
                         'Something went wrong while uploading {0}'.
-                        format(f.name),
+                        format(filename),
                         fg='red'),
                     err=True)
 

@@ -84,7 +84,7 @@ def workflow_list(ctx, user, organization, filter, output_format):
     logging.debug('output_format: {}'.format(output_format))
 
     data = tablib.Dataset()
-    data.headers = ['Name', 'UUID', 'User', 'Organization', 'Status']
+    data.headers = ['name', 'id', 'user', 'organization', 'status']
 
     try:
         response = ctx.obj.client.get_all_analyses(user, organization)
@@ -252,7 +252,7 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
     logging.debug('output_format: {}'.format(output_format))
 
     data = tablib.Dataset()
-    data.headers = ['Name', 'UUID', 'User', 'Organization', 'Status']
+    data.headers = ['name', 'id', 'user', 'organization', 'status']
 
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))

@@ -81,7 +81,7 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
                                                       workflow)
 
         data = tablib.Dataset()
-        data.headers = ['Name', 'Size', 'Last-Modified']
+        data.headers = ['name', 'size', 'last-modified']
         for file_ in response:
             data.append([file_['name'],
                          file_['size'],

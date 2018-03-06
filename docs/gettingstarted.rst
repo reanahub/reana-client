@@ -71,7 +71,7 @@ and check its status:
    $ reana-client workflow status --workflow 57c917c8-d979-481e-ae4c-8d8b9ffb2d10
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
    [INFO] Workflow "afbbf6d1-a129-4e4f-ab8a-b8df325351d2" selected
-   Name       |UUID                                |User                                |Organization|Status
+   name       |id                                  |user                                |organization|status
    -----------|------------------------------------|------------------------------------|------------|-------
    lucid_kirch|57c917c8-d979-481e-ae4c-8d8b9ffb2d10|00000000-0000-0000-0000-000000000000|default     |created
 
@@ -99,7 +99,7 @@ and check whether it indeed appears seeded in our workspace:
 
    $ reana-client code list
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
-   Name         |Size|Last-Modified
+   name         |size|last-modified
    -------------|----|--------------------------------
    helloworld.py|2905|2018-01-25 16:34:59.448513+00:00
 
@@ -119,7 +119,7 @@ and check whether it was well seeded in our input workspace:
 
    $ reana-client inputs list
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
-   Name     |Size|Last-Modified
+   name     |size|last-modified
    ---------|----|--------------------------------
    names.txt|18  |2018-01-25 16:34:21.888813+00:00
 
@@ -143,7 +143,7 @@ Let us enquire about its running status; we may see that it is still in the
    $ reana-client workflow status
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
    [INFO] Workflow "afbbf6d1-a129-4e4f-ab8a-b8df325351d2" selected
-   Name       |UUID                                |User                                |Organization|Status
+   name       |id                                  |user                                |organization|status
    -----------|------------------------------------|------------------------------------|------------|-------
    lucid_kirch|57c917c8-d979-481e-ae4c-8d8b9ffb2d10|00000000-0000-0000-0000-000000000000|default     |running
 
@@ -156,7 +156,7 @@ After the workflow execution successfully finished:
    $ reana-client workflow status
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
    [INFO] Workflow "afbbf6d1-a129-4e4f-ab8a-b8df325351d2" selected
-   Name       |UUID                                |User                                |Organization|Status
+   name       |id                                  |user                                |organization|status
    -----------|------------------------------------|------------------------------------|------------|-------
    lucid_kirch|57c917c8-d979-481e-ae4c-8d8b9ffb2d10|00000000-0000-0000-0000-000000000000|default     |finished
 
@@ -167,7 +167,7 @@ We can now check the output files:
    $ reana-client outputs list --workflow 57c917c8-d979-481e-ae4c-8d8b9ffb2d10
    [INFO] REANA Server URL ($REANA_SERVER_URL) is: http://192.168.99.100:31201
    [INFO] Workflow "57c917c8-d979-481e-ae4c-8d8b9ffb2d10" selected
-   Name                                 |Size|Last-Modified
+   name                                 |size|last-modified
    -------------------------------------|----|--------------------------------
    helloworld/greetings.txt             |32  |2018-01-25 16:36:00.582813+00:00
    _yadage/yadage_snapshot_backend.json |590 |2018-01-25 16:36:00.582813+00:00

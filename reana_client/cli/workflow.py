@@ -90,10 +90,10 @@ def workflow_list(ctx, user, organization, filter, output_format):
         response = ctx.obj.client.get_all_analyses(user, organization)
         for analysis in response:
             data.append([get_random_name(),
-                        analysis['id'],
-                        analysis['user'],
-                        analysis['organization'],
-                        analysis['status']])
+                         analysis['id'],
+                         analysis['user'],
+                         analysis['organization'],
+                         analysis['status']])
 
         if filter:
             data = data.subset(rows=None, cols=list(filter))
@@ -104,7 +104,12 @@ def workflow_list(ctx, user, organization, filter, output_format):
             click.echo(data)
 
     except Exception as e:
-        logging.error(traceback.format_exc())
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style('Workflow list culd not be retrieved: \n{}'
+                        .format(str(e)), fg='red'),
+            err=True)
 
 
 @click.command(
@@ -161,7 +166,12 @@ def workflow_create(ctx, file, user, organization, skip_validation):
         click.echo(click.style(response['workflow_id'], fg='green'))
 
     except Exception as e:
-        logging.error(traceback.format_exc())
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style('Workflow could not be created: \n{}'
+                        .format(str(e)), fg='red'),
+            err=True)
 
 
 @click.command(
@@ -211,7 +221,12 @@ def workflow_start(ctx, user, organization, workflow):
                         fg='green'))
 
     except Exception as e:
-        click.echo(str(e))
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style('Workflow could not be started: \n{}'
+                        .format(str(e)), fg='red'),
+            err=True)
 
 
 @click.command(
@@ -250,48 +265,43 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
     logging.debug('output_format: {}'.format(output_format))
+    logging.info('Workflow "{}" selected'.format(workflow))
 
     data = tablib.Dataset()
     data.headers = ['name', 'id', 'user', 'organization', 'status']
 
-    if workflow:
-        logging.info('Workflow "{}" selected'.format(workflow))
-
-        try:
-            response = ctx.obj.client.get_analysis_status(user,
-                                                          organization,
-                                                          workflow)
-            if isinstance(response, list):
-                for analysis in response:
-                    data.append([get_random_name(),
-                                analysis['id'],
-                                analysis['user'],
-                                analysis['organization'],
-                                analysis['status']])
-            else:
+    try:
+        response = ctx.obj.client.get_analysis_status(user,
+                                                      organization,
+                                                      workflow)
+        if isinstance(response, list):
+            for analysis in response:
                 data.append([get_random_name(),
-                             response['id'],
-                             response['user'],
-                             response['organization'],
-                             response['status']])
+                             analysis['id'],
+                             analysis['user'],
+                             analysis['organization'],
+                             analysis['status']])
+        else:
+            data.append([get_random_name(),
+                         response['id'],
+                         response['user'],
+                         response['organization'],
+                         response['status']])
 
-            if filter:
-                data = data.subset(rows=None, cols=list(filter))
+        if filter:
+            data = data.subset(rows=None, cols=list(filter))
 
-            if output_format:
-                click.echo(data.export(output_format))
-            else:
-                click.echo(data)
+        if output_format:
+            click.echo(data.export(output_format))
+        else:
+            click.echo(data)
 
-        except Exception as e:
-            logging.debug(str(e))
-
-    else:
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
         click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with `$REANA_WORKON` '
-                        'environment variable',
-                        fg='red'),
+            click.style('Workflow status could not be retrieved: \n{}'
+                        .format(str(e)), fg='red'),
             err=True)
 
 
@@ -319,23 +329,17 @@ def workflow_logs(ctx, user, organization, workflow):
 
     workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
 
-    if workflow_name:
-        logging.info('Workflow "{}" selected'.format(workflow_name))
-
-        try:
-            response = ctx.obj.client.get_workflow_logs(user,
-                                                        organization,
-                                                        workflow)
-            click.echo(response)
-        except Exception as e:
-            logging.debug(str(e))
-
-    else:
+    try:
+        response = ctx.obj.client.get_workflow_logs(user,
+                                                    organization,
+                                                    workflow)
+        click.echo(response)
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
         click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with `$REANA_WORKON` '
-                        'environment variable',
-                        fg='red'),
+            click.style('Workflow logs could not be retrieved: \n{}'
+                        .format(str(e)), fg='red'),
             err=True)
 
 

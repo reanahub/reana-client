@@ -38,7 +38,8 @@ def ping(ctx):
         logging.debug('Server response:\n{}'.format(response))
 
     except Exception as e:
-        click.echo(click.style('Could not connect to the server', fg='red'))
-        logging.info('Something went wrong when trying to connect to {0}'
-                     .format(ctx.obj.client.server_url))
-        logging.error(traceback.format_exc())
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style('Could not connect to the server.', fg='red'),
+            err=True)

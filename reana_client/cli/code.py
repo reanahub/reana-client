@@ -23,8 +23,10 @@
 
 import logging
 import os
+import traceback
 
 import click
+
 import tablib
 
 from ..config import default_code_path, default_organization, default_user
@@ -94,6 +96,7 @@ def code_list(ctx, user, organization, workflow, filter, output_format):
         else:
             click.echo(data)
     except Exception as e:
+        logging.debug(traceback.format_exc())
         logging.debug(str(e))
         click.echo(
             click.style('Something went wrong while retrieving input file list'
@@ -134,36 +137,31 @@ def code_upload(ctx, user, organization, workflow, filenames, code_directory):
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
     logging.debug('code_directory: {}'.format(code_directory))
+    logging.info('Workflow "{}" selected'.format(workflow))
+    for filename in filenames:
+        try:
+            with open(os.path.join(code_directory, filename)) as f:
+                click.echo('Uploading {} ...'.format(f.name))
+                response = ctx.obj.client.seed_analysis_code(
+                    user, organization, workflow, f, filename)
+                if response:
+                    click.echo(
+                        click.style('File {} was successfully uploaded.'.
+                                    format(f.name), fg='green'))
 
-    if workflow:
-        logging.info('Workflow "{}" selected'.format(workflow))
-        for filename in filenames:
-            try:
-                with open(os.path.join(code_directory, filename)) as f:
-                    click.echo('Uploading {} ...'.format(f.name))
-                    response = ctx.obj.client.seed_analysis_code(
-                        user, organization, workflow, f, filename)
-                    if response:
-                        click.echo(
-                            click.style('File {} was successfully uploaded.'.
-                                        format(f.name), fg='green'))
-
-            except Exception as e:
-                logging.debug(str(e))
-                click.echo(
-                    click.style(
-                        'Something went wrong while uploading {0}'.
-                        format(filename),
-                        fg='red'),
-                    err=True)
-
-    else:
-        click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with `$REANA_WORKON` '
-                        'environment variable',
-                        fg='red'),
-            err=True)
+        except IOError as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(click.style(str(e), fg='red'), err=True)
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style(
+                    'Something went wrong while uploading {0}'.
+                    format(filename),
+                    fg='red'),
+                err=True)
 
 
 code.add_command(code_list)

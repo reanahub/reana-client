@@ -23,8 +23,10 @@
 
 import logging
 import os
+import traceback
 
 import click
+
 import tablib
 
 from ..config import default_download_path, default_organization, default_user
@@ -75,43 +77,34 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
     logging.debug('workflow: {}'.format(workflow))
     logging.debug('filter: {}'.format(filter))
     logging.debug('output_format: {}'.format(output_format))
+    logging.info('Workflow "{}" selected'.format(workflow))
 
-    if workflow:
-        logging.info('Workflow "{}" selected'.format(workflow))
+    try:
+        response = ctx.obj.client.get_analysis_outputs(user, organization,
+                                                       workflow)
 
-        try:
-            response = ctx.obj.client.get_analysis_outputs(user, organization,
-                                                           workflow)
+        data = tablib.Dataset()
+        data.headers = ['name', 'size', 'last-modified']
 
-            data = tablib.Dataset()
-            data.headers = ['name', 'size', 'last-modified']
+        for file_ in response:
+            data.append([file_['name'],
+                         file_['size'],
+                         file_['last-modified']])
 
-            for file_ in response:
-                data.append([file_['name'],
-                             file_['size'],
-                             file_['last-modified']])
+        if filter:
+            data = data.subset(rows=None, cols=list(filter))
 
-            if filter:
-                data = data.subset(rows=None, cols=list(filter))
-
-            if output_format:
-                click.echo(data.export(output_format))
-            else:
-                click.echo(data)
-        except Exception as e:
-            logging.debug(str(e))
-            click.echo(
-                click.style('Something went wrong while retrieving output file'
-                            ' list for workflow {0}:\n{1}'.format(workflow,
-                                                                  str(e)),
-                            fg='red'),
-                err=True)
-
-    else:
+        if output_format:
+            click.echo(data.export(output_format))
+        else:
+            click.echo(data)
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
         click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with `$REANA_WORKON` '
-                        'environment variable',
+            click.style('Something went wrong while retrieving output file'
+                        ' list for workflow {0}:\n{1}'.format(workflow,
+                                                              str(e)),
                         fg='red'),
             err=True)
 
@@ -175,16 +168,16 @@ def outputs_download(ctx, user, organization, workflow, file_,
                                                         output_directory),
                     fg='green'))
         except OSError as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
             click.echo(
                 click.style('File {0} could not be written.'.format(file_name),
-                            fg='red'))
-            logging.debug(str(e))
+                            fg='red'), err=True)
         except Exception as e:
-            click.echo(
-                click.style(
-                    'File {0} could not be downloaded.'.format(file_name),
-                    fg='red'))
+            logging.debug(traceback.format_exc())
             logging.debug(str(e))
+            click.echo(click.style('File {0} could not be downloaded: {1}'.
+                                   format(file_name, e), fg='red'), err=True)
 
 
 outputs.add_command(outputs_list)

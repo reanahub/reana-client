@@ -63,14 +63,19 @@ def analysis_validate(ctx, file):
                         fg='green'))
 
     except ValidationError as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
         click.echo(click.style('{0} is not a valid REANA specification:\n{1}'
                                .format(click.format_filename(file),
                                        e.message),
-                               fg='red'))
+                               fg='red'), err=True)
     except Exception as e:
-        logging.info('Something went wrong when trying to validate {0}'
-                     .format(click.format_filename(file)))
-        logging.error(traceback.format_exc())
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style('Something went wrong when trying to validate {}'
+                        .format(file), fg='red'),
+            err=True)
 
 
 analyses.add_command(analysis_validate)

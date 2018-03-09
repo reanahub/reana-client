@@ -37,24 +37,28 @@
               "application/json": [
                 {
                   "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                  "name": "mytest-1",
                   "organization": "default_org",
                   "status": "running",
                   "user": "00000000-0000-0000-0000-000000000000"
                 },
                 {
                   "id": "3c9b117c-d40a-49e3-a6de-5f89fcada5a3",
+                  "name": "mytest-2",
                   "organization": "default_org",
                   "status": "finished",
                   "user": "00000000-0000-0000-0000-000000000000"
                 },
                 {
                   "id": "72e3ee4f-9cd3-4dc7-906c-24511d9f5ee3",
+                  "name": "mytest-3",
                   "organization": "default_org",
                   "status": "waiting",
                   "user": "00000000-0000-0000-0000-000000000000"
                 },
                 {
                   "id": "c4c0a1a6-beef-46c7-be04-bf4b3beca5a1",
+                  "name": "mytest-4",
                   "organization": "default_org",
                   "status": "waiting",
                   "user": "00000000-0000-0000-0000-000000000000"
@@ -65,6 +69,9 @@
               "items": {
                 "properties": {
                   "id": {
+                    "type": "string"
+                  },
+                  "name": {
                     "type": "string"
                   },
                   "organization": {
@@ -126,6 +133,13 @@
             "type": "string"
           },
           {
+            "description": "Name of the workflow to be created. If not provided name will be generated.",
+            "in": "query",
+            "name": "workflow_name",
+            "required": true,
+            "type": "string"
+          },
+          {
             "description": "Remote repository which contains a valid REANA specification.",
             "in": "query",
             "name": "spec",
@@ -151,7 +165,8 @@
             "examples": {
               "application/json": {
                 "message": "The workflow has been successfully created.",
-                "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac"
+                "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac",
+                "workflow_name": "mytest-1"
               }
             },
             "schema": {
@@ -160,6 +175,9 @@
                   "type": "string"
                 },
                 "workflow_id": {
+                  "type": "string"
+                },
+                "workflow_name": {
                   "type": "string"
                 }
               },
@@ -187,7 +205,7 @@
         "summary": "Creates a new workflow based on a REANA specification file."
       }
     },
-    "/api/analyses/{analysis_id}/logs": {
+    "/api/analyses/{analysis_id_or_name}/logs": {
       "get": {
         "description": "This resource reports the status of an analysis. Resource is expecting a analysis UUID.",
         "operationId": "get_analysis_logs",
@@ -207,9 +225,9 @@
             "type": "string"
           },
           {
-            "description": "Required. Analysis UUID.",
+            "description": "Required. Analysis UUID or name.",
             "in": "path",
-            "name": "analysis_id",
+            "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
           }
@@ -225,7 +243,8 @@
                 "logs": "<Workflow engine log output>",
                 "organization": "default_org",
                 "user": "00000000-0000-0000-0000-000000000000",
-                "workflow_id": "256b25f4-4cfb-4684-b7a8-73872ef455a1"
+                "workflow_id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "workflow_name": "mytest-1"
               }
             },
             "schema": {
@@ -240,6 +259,9 @@
                   "type": "string"
                 },
                 "workflow_id": {
+                  "type": "string"
+                },
+                "workflow_name": {
                   "type": "string"
                 }
               },
@@ -277,7 +299,7 @@
         "summary": "Get workflow logs of an analysis."
       }
     },
-    "/api/analyses/{analysis_id}/status": {
+    "/api/analyses/{analysis_id_or_name}/status": {
       "get": {
         "description": "This resource reports the status of an analysis. Resource is expecting a analysis UUID.",
         "operationId": "get_analysis_status",
@@ -297,9 +319,9 @@
             "type": "string"
           },
           {
-            "description": "Required. Analysis UUID.",
+            "description": "Required. Analysis UUID or name.",
             "in": "path",
-            "name": "analysis_id",
+            "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
           }
@@ -313,6 +335,7 @@
             "examples": {
               "application/json": {
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "name": "mytest-1",
                 "organization": "default_org",
                 "status": "created",
                 "user": "00000000-0000-0000-0000-000000000000"
@@ -321,6 +344,9 @@
             "schema": {
               "properties": {
                 "id": {
+                  "type": "string"
+                },
+                "name": {
                   "type": "string"
                 },
                 "organization": {
@@ -388,9 +414,9 @@
             "type": "string"
           },
           {
-            "description": "Required. Analysis UUID.",
+            "description": "Required. Analysis UUID or name.",
             "in": "path",
-            "name": "analysis_id",
+            "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
           },
@@ -414,9 +440,11 @@
             "examples": {
               "application/json": {
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "message": "Workflow successfully launched",
                 "organization": "default_org",
                 "status": "created",
-                "user": "00000000-0000-0000-0000-000000000000"
+                "user": "00000000-0000-0000-0000-000000000000",
+                "workflow_name": "mytest-1"
               }
             },
             "schema": {
@@ -434,6 +462,9 @@
                   "type": "string"
                 },
                 "workflow_id": {
+                  "type": "string"
+                },
+                "workflow_name": {
                   "type": "string"
                 }
               },
@@ -487,7 +518,7 @@
         "summary": "Set status of an analysis."
       }
     },
-    "/api/analyses/{analysis_id}/workspace/code": {
+    "/api/analyses/{analysis_id_or_name}/workspace/code": {
       "post": {
         "consumes": [
           "multipart/form-data"
@@ -510,9 +541,9 @@
             "type": "string"
           },
           {
-            "description": "Required. Analysis UUID.",
+            "description": "Required. Analysis UUID or name.",
             "in": "path",
-            "name": "analysis_id",
+            "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
           },
@@ -536,7 +567,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Request succeeded. File successfully trasferred.",
+            "description": "Request succeeded. File successfully transferred.",
             "examples": {
               "application/json": {
                 "message": "File successfully transferred"
@@ -569,7 +600,7 @@
         "summary": "Seeds the analysis workspace with the provided file."
       }
     },
-    "/api/analyses/{analysis_id}/workspace/code/": {
+    "/api/analyses/{analysis_id_or_name}/workspace/code/": {
       "get": {
         "description": "This resource is expecting an analysis UUID to return its list of code files.",
         "operationId": "get_analysis_code",
@@ -589,9 +620,9 @@
             "type": "string"
           },
           {
-            "description": "Required. analysis UUID.",
+            "description": "Required. Analysis UUID or name.",
             "in": "path",
-            "name": "analysis_id",
+            "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
           }
@@ -644,7 +675,7 @@
         "summary": "Returns the list of code files for a specific analysis."
       }
     },
-    "/api/analyses/{analysis_id}/workspace/inputs": {
+    "/api/analyses/{analysis_id_or_name}/workspace/inputs": {
       "post": {
         "consumes": [
           "multipart/form-data"
@@ -667,9 +698,9 @@
             "type": "string"
           },
           {
-            "description": "Required. Analysis UUID.",
+            "description": "Required. Analysis UUID or name",
             "in": "path",
-            "name": "analysis_id",
+            "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
           },
@@ -726,7 +757,7 @@
         "summary": "Seeds the analysis workspace with the provided file."
       }
     },
-    "/api/analyses/{analysis_id}/workspace/inputs/": {
+    "/api/analyses/{analysis_id_or_name}/workspace/inputs/": {
       "get": {
         "description": "This resource is expecting an analysis UUID to return its list of input files.",
         "operationId": "get_analysis_inputs",
@@ -746,9 +777,9 @@
             "type": "string"
           },
           {
-            "description": "Required. analysis UUID.",
+            "description": "Required. Analysis UUID or name.",
             "in": "path",
-            "name": "analysis_id",
+            "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
           }
@@ -801,7 +832,7 @@
         "summary": "Returns the list of input files for a specific analysis."
       }
     },
-    "/api/analyses/{analysis_id}/workspace/outputs/": {
+    "/api/analyses/{analysis_id_or_name}/workspace/outputs/": {
       "get": {
         "description": "This resource is expecting an analysis UUID to return its list of output files.",
         "operationId": "get_analysis_outputs",
@@ -821,9 +852,9 @@
             "type": "string"
           },
           {
-            "description": "Required. analysis UUID.",
+            "description": "Required. Analysis UUID or name.",
             "in": "path",
-            "name": "analysis_id",
+            "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
           }
@@ -876,7 +907,7 @@
         "summary": "Returns the list of output files for a specific analysis."
       }
     },
-    "/api/analyses/{analysis_id}/workspace/outputs/{file_name}": {
+    "/api/analyses/{analysis_id_or_name}/workspace/outputs/{file_name}": {
       "get": {
         "description": "This resource is expecting a workflow UUID and a file name to return its content.",
         "operationId": "get_analysis_outputs_file",
@@ -896,9 +927,9 @@
             "type": "string"
           },
           {
-            "description": "Required. analysis UUID.",
+            "description": "Required. analysis UUID or name.",
             "in": "path",
-            "name": "analysis_id",
+            "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
           },

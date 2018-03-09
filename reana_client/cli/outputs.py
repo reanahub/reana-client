@@ -56,7 +56,7 @@ def outputs(ctx):
 @click.option(
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name of the workflow to be started. '
+    help='Name or UUID of the workflow whose files should be listed. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
     '--filter',
@@ -129,7 +129,7 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
 @click.option(
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name of the workflow you are uploading files for. '
+    help='Name or UUID of that workflow where files should downloaded from. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
     '--output-directory',

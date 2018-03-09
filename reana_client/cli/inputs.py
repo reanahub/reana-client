@@ -55,7 +55,7 @@ def inputs(ctx):
 @click.option(
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name of the workflow whose input files you want to list.')
+    help='Name or UUID of the workflow whose input files you want to list.')
 @click.option(
     '--filter',
     multiple=True,
@@ -121,7 +121,7 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
 @click.option(
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name of the workflow you are uploading files for. '
+    help='Name or UUID of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
     '--inputs-directory',

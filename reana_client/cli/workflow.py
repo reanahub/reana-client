@@ -32,8 +32,8 @@ import yaml
 
 from ..config import (default_organization, default_user,
                       reana_yaml_default_file_path)
-from ..utils import load_reana_spec, load_workflow_spec
-from .namesgenerator import get_random_name
+from ..utils import get_workflow_name_and_run_number, load_reana_spec, \
+    load_workflow_spec, is_uuid_v4, workflow_uuid_or_name
 
 
 class _WorkflowStatus(Enum):
@@ -84,12 +84,16 @@ def workflow_list(ctx, user, organization, filter, output_format):
     logging.debug('output_format: {}'.format(output_format))
 
     data = tablib.Dataset()
-    data.headers = ['name', 'id', 'user', 'organization', 'status']
+    data.headers = ['name', 'run_number', 'id', 'user', 'organization',
+                    'status']
 
     try:
         response = ctx.obj.client.get_all_analyses(user, organization)
         for analysis in response:
-            data.append([get_random_name(),
+            name, run_number = get_workflow_name_and_run_number(
+                analysis['name'])
+            data.append([name,
+                         run_number,
                          analysis['id'],
                          analysis['user'],
                          analysis['organization'],
@@ -129,6 +133,11 @@ def workflow_list(ctx, user, organization, filter, output_format):
     default=default_user,
     help='User who creates the analysis.')
 @click.option(
+    '-n',
+    '--name',
+    default='',
+    help='Name of the workflow.')
+@click.option(
     '-o',
     '--organization',
     default=default_organization,
@@ -139,13 +148,21 @@ def workflow_list(ctx, user, organization, filter, output_format):
     help="If set, specifications file is not validated before "
          "submitting it's contents to REANA Server.")
 @click.pass_context
-def workflow_create(ctx, file, user, organization, skip_validation):
+def workflow_create(ctx, file, user, name, organization, skip_validation):
     """Create a REANA compatible analysis workflow from REANA spec file."""
     logging.debug('workflow.create')
     logging.debug('file: {}'.format(file))
     logging.debug('user: {}'.format(user))
     logging.debug('organization: {}'.format(organization))
     logging.debug('skip_validation: {}'.format(skip_validation))
+
+    # Check that name is not an UUIDv4.
+    # Otherwise it would mess up `--workflow` flag usage because no distinction
+    # could be made between the name and actual UUID of workflow.
+    if is_uuid_v4(name):
+        click.echo(
+            click.style('Workflow name cannot be a valid UUIDv4', fg='red'),
+            err=True)
 
     try:
         reana_spec = load_reana_spec(click.format_filename(file),
@@ -162,8 +179,9 @@ def workflow_create(ctx, file, user, organization, skip_validation):
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.create_workflow(user,
                                                   organization,
-                                                  reana_spec)
-        click.echo(click.style(response['workflow_id'], fg='green'))
+                                                  reana_spec,
+                                                  name)
+        click.echo(click.style(response['workflow_name'], fg='green'))
 
     except Exception as e:
         logging.debug(traceback.format_exc())
@@ -190,7 +208,8 @@ def workflow_create(ctx, file, user, organization, skip_validation):
 @click.option(
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name of the workflow to be started. '
+    callback=workflow_uuid_or_name,
+    help='Name or UUID of the workflow to be started. '
          'Overrides value of $REANA_WORKON.')
 @click.pass_context
 def workflow_start(ctx, user, organization, workflow):
@@ -200,17 +219,11 @@ def workflow_start(ctx, user, organization, workflow):
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
 
-    if workflow:
-        logging.info('Workflow `{}` selected'.format(workflow))
-    else:
-        click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with `$REANA_WORKON` '
-                        'environment variable',
-                        fg='red'),
-            err=True)
+    logging.info('Workflow `{}` selected'.format(workflow))
+    click.echo('Workflow `{}` selected.'.format(workflow))
 
     try:
+
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.start_analysis(user,
                                                  organization,
@@ -245,7 +258,8 @@ def workflow_start(ctx, user, organization, workflow):
 @click.option(
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name of the workflow whose status should be resolved. '
+    callback=workflow_uuid_or_name,
+    help='Name or UUID of the workflow whose status should be resolved. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
     '--filter',
@@ -268,7 +282,8 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
     logging.info('Workflow "{}" selected'.format(workflow))
 
     data = tablib.Dataset()
-    data.headers = ['name', 'id', 'user', 'organization', 'status']
+    data.headers = ['name', 'run_number', 'id', 'user', 'organization',
+                    'status']
 
     try:
         response = ctx.obj.client.get_analysis_status(user,
@@ -276,13 +291,19 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
                                                       workflow)
         if isinstance(response, list):
             for analysis in response:
-                data.append([get_random_name(),
+                name, run_number = get_workflow_name_and_run_number(
+                    analysis['name'])
+                data.append([name,
+                             run_number,
                              analysis['id'],
                              analysis['user'],
                              analysis['organization'],
                              analysis['status']])
         else:
-            data.append([get_random_name(),
+            name, run_number = get_workflow_name_and_run_number(
+                response['name'])
+            data.append([name,
+                         run_number,
                          response['id'],
                          response['user'],
                          response['organization'],
@@ -317,7 +338,8 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
     help='Organization whose resources will be used.')
 @click.option(
     '--workflow',
-    help='Name of the workflow whose status should be resolved. '
+    callback=workflow_uuid_or_name,
+    help='Name or UUID of the workflow whose logs should be fetched. '
          'Overrides value of $REANA_WORKON.')
 @click.pass_context
 def workflow_logs(ctx, user, organization, workflow):

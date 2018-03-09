@@ -108,11 +108,10 @@ class Client(object):
     def get_analysis_status(self, user, organization, workflow):
         """Get status of previously created analysis."""
         try:
-
             response, http_response = self.\
                 _client.api.get_analysis_status(user=user,
                                                 organization=organization,
-                                                analysis_id=workflow,
+                                                analysis_id_or_name=workflow,
                                                 ).result()
             if http_response.status_code == 200:
                 return response
@@ -133,7 +132,7 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def create_workflow(self, user, organization, reana_spec):
+    def create_workflow(self, user, organization, reana_spec, name):
         """Create a workflow."""
         try:
             (response,
@@ -141,7 +140,8 @@ class Client(object):
                                   user=user,
                                   organization=organization,
                                   reana_spec=json.loads(json.dumps(
-                                      reana_spec, sort_keys=True))).result()
+                                      reana_spec, sort_keys=True)),
+                                  workflow_name=name).result()
             if http_response.status_code == 201:
                 return response
             else:
@@ -168,7 +168,7 @@ class Client(object):
              http_response) = self._client.api.set_analysis_status(
                                   user=user,
                                   organization=organization,
-                                  analysis_id=workflow,
+                                  analysis_id_or_name=workflow,
                                   status='start').result()
             if http_response.status_code == 200:
                 return response
@@ -197,7 +197,7 @@ class Client(object):
              http_response) = self._client.api.seed_analysis_inputs(
                  user=user,
                  organization=organization,
-                 analysis_id=analysis_id,
+                 analysis_id_or_name=analysis_id,
                  file_content=file_,
                  file_name=file_name).result()
 
@@ -228,7 +228,7 @@ class Client(object):
              http_response) = self._client.api.seed_analysis_code(
                  user=user,
                  organization=organization,
-                 analysis_id=analysis_id,
+                 analysis_id_or_name=analysis_id,
                  file_content=file_,
                  file_name=file_name).result()
 
@@ -294,7 +294,7 @@ class Client(object):
              http_response) = self._client.api.get_analysis_outputs_file(
                  user=user,
                  organization=organization,
-                 analysis_id=analysis_id,
+                 analysis_id_or_name=analysis_id,
                  file_name=file_name).result()
 
             if http_response.status_code == 200:
@@ -330,7 +330,7 @@ class Client(object):
              http_response) = self._client.api.get_analysis_inputs(
                  user=user,
                  organization=organization,
-                 analysis_id=analysis_id).result()
+                 analysis_id_or_name=analysis_id).result()
 
             if http_response.status_code == 200:
                 return response
@@ -365,7 +365,7 @@ class Client(object):
              http_response) = self._client.api.get_analysis_outputs(
                  user=user,
                  organization=organization,
-                 analysis_id=analysis_id).result()
+                 analysis_id_or_name=analysis_id).result()
 
             if http_response.status_code == 200:
                 return response
@@ -400,7 +400,7 @@ class Client(object):
              http_response) = self._client.api.get_analysis_code(
                  user=user,
                  organization=organization,
-                 analysis_id=analysis_id).result()
+                 analysis_id_or_name=analysis_id).result()
 
             if http_response.status_code == 200:
                 return response

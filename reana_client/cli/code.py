@@ -56,7 +56,7 @@ def code(ctx):
 @click.option(
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name of the workflow whose code files you want to list.')
+    help='Name or UUID of the workflow whose code files should be listed.')
 @click.option(
     '--filter',
     multiple=True,
@@ -122,7 +122,7 @@ def code_list(ctx, user, organization, workflow, filter, output_format):
 @click.option(
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name of the workflow you are uploading files for. '
+    help='Name or UUID of the workflow where the files should be uploaded to. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
     '--code-directory',

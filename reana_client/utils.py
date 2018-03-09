@@ -23,7 +23,9 @@
 
 import json
 import logging
+from uuid import UUID
 
+import click
 import yadageschemas
 import yaml
 from cwltool.main import main
@@ -31,6 +33,18 @@ from jsonschema import ValidationError, validate
 from six import StringIO
 
 from reana_client.config import reana_yaml_schema_file_path
+
+
+def workflow_uuid_or_name(ctx, param, value):
+    """Get UUID of workflow from configuration / cache file based on name."""
+    if not value:
+        click.echo(click.style(
+            'Workflow name must be provided either with '
+            '`--workflow` option or with `$REANA_WORKON` '
+            'environment variable', fg='red'),
+            err=True)
+    else:
+        return value
 
 
 def yadage_load(workflow_file, toplevel='.'):
@@ -127,3 +141,45 @@ def _validate_reana_yaml(reana_yaml):
         logging.info('Invalid REANA specification: {error}'
                      .format(error=e.message))
         raise e
+
+
+def is_uuid_v4(uuid_or_name):
+    """Check if given string is a valid UUIDv4."""
+    # Based on https://gist.github.com/ShawnMilo/7777304
+    try:
+        uuid = UUID(uuid_or_name, version=4)
+    except Exception:
+        return False
+
+    return uuid.hex == uuid_or_name.replace('-', '')
+
+
+def get_workflow_name_and_run_number(workflow_name):
+    """Return name and run_number of a workflow.
+
+    :param workflow_name: String representing Workflow name.
+
+        Name might be in format 'reana.workflow.123' with arbitrary
+        number of dot-delimited substrings, where last substring specifies
+        the run number of the workflow this workflow name refers to.
+
+        If name does not contain a valid run number, name without run number
+        is returned.
+    """
+    # Try to split a dot-separated string.
+    try:
+        name, run_number = workflow_name.rsplit('.', 1)
+
+        if not run_number.isdigit():
+            # `workflow_name` was split, so it is a dot-separated string
+            # but it didn't contain a valid `run_number`.
+            # Assume that this dot-separated string is the name of
+            # the workflow and return just this without a `run_number`.
+            return workflow_name, ''
+
+        return name, run_number
+
+    except ValueError:
+        # Couldn't split. Probably not a dot-separated string.
+        # Return the name given as parameter without a `run_number`.
+        return workflow_name, ''

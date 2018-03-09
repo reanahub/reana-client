@@ -27,7 +27,7 @@ import os
 
 import pkg_resources
 from bravado.client import SwaggerClient
-from bravado.exception import HTTPConflict, HTTPError
+from bravado.exception import HTTPError
 
 
 class Client(object):
@@ -67,6 +67,14 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
+        except HTTPError as e:
+            logging.debug(
+                'REANA Server health check failed: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
 
@@ -86,6 +94,14 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
+        except HTTPError as e:
+            logging.debug(
+                'The list of analyses could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
 
@@ -106,6 +122,14 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
+        except HTTPError as e:
+            logging.debug(
+                'Analysis status could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
 
@@ -126,6 +150,14 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
+        except HTTPError as e:
+            logging.debug(
+                'Workflow creation failed: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
 
@@ -146,9 +178,10 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
-        except HTTPConflict as e:
+        except HTTPError as e:
             logging.debug(
-                'Analysis could not be started:\nStatus: {}\nReason: {}\n'
+                'Workflow could not be started: '
+                '\nStatus: {}\nReason: {}\n'
                 'Message: {}'.format(e.response.status_code,
                                      e.response.reason,
                                      e.response.json()['message']))
@@ -176,6 +209,14 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
+        except HTTPError as e:
+            logging.debug(
+                'Input files could not be uploaded: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
 
@@ -199,6 +240,14 @@ class Client(object):
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
+        except HTTPError as e:
+            logging.debug(
+                'Code file could not be uploaded: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
         except Exception:
             raise
 
@@ -218,6 +267,15 @@ class Client(object):
                     "Expected status code 200 but replied with "
                     "{status_code}".format(
                         status_code=http_response.status_code))
+
+        except HTTPError as e:
+            logging.debug(
+                'Workflow logs could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
 
@@ -248,6 +306,12 @@ class Client(object):
                         status_code=http_response.status_code))
 
         except HTTPError as e:
+            logging.debug(
+                'Output file could not be downloaded: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
@@ -277,6 +341,12 @@ class Client(object):
                         status_code=http_response.status_code))
 
         except HTTPError as e:
+            logging.debug(
+                'Analysis input file list could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
@@ -306,6 +376,12 @@ class Client(object):
                         status_code=http_response.status_code))
 
         except HTTPError as e:
+            logging.debug(
+                'Analysis output file list could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
@@ -335,6 +411,12 @@ class Client(object):
                         status_code=http_response.status_code))
 
         except HTTPError as e:
+            logging.debug(
+                'Analysis code files list could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e

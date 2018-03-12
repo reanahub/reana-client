@@ -21,6 +21,8 @@
 # submit itself to any jurisdiction.
 """REANA REST API client."""
 
+import traceback
+import enum
 import json
 import logging
 import os
@@ -28,6 +30,14 @@ import os
 import pkg_resources
 from bravado.client import SwaggerClient
 from bravado.exception import HTTPError
+from reana_client.errors import FileUploadError
+
+
+class UploadType(enum.Enum):
+    """Possible workflow status list enum."""
+
+    inputs = 0
+    code = 1
 
 
 class Client(object):
@@ -420,3 +430,96 @@ class Client(object):
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
+
+    def upload_to_server(self, user, organization, workflow,
+                         paths, upload_type):
+        """Upload file or directory to REANA-Server.
+
+        Shared e.g. by `code upload` and `inputs upload`.
+
+        :param user: User ID
+        :param organization: Organization ID
+        :param workflow: ID of that Workflow whose workspace should be
+            used to store the files.
+        :param paths: Absolute filepath(s) of files to be uploaded.
+        :param upload_type: Which type of upload is this.
+        :type upload_type: reana-client.utils.UploadType
+        """
+        if not workflow:
+            raise ValueError(
+                'Workflow name or id must be provided')
+        if not paths:
+            raise ValueError(
+                'Please provide path(s) to file(s) that '
+                'should be uploaded to workspace.')
+        if not upload_type:
+            raise ValueError(
+                "Please provide an upload type one of '{}' or '{}'.".
+                format(str(UploadType.inputs), str(UploadType.code)))
+
+        logging.info('Workflow "{}" selected'.format(workflow))
+
+        # Check if multiple paths were given and iterate over them
+        if type(paths) is list or type(paths) is tuple:
+            for path in paths:
+                self.upload_to_server(user, organization, workflow,
+                                      path, upload_type)
+        # `paths` points to a single file or directory
+        else:
+            path = paths
+            if '..' in paths.split('/'):
+                raise FileUploadError('Path cannot contain ".."')
+
+            # Check if input is a directory and upload everything
+            # including subdirectories.
+            if os.path.isdir(path):
+                logging.debug("'{}' is a directory.".format(path))
+                logging.info("Uploading contents of folder '{}' ..."
+                             .format(path))
+                for root, dirs, files in os.walk(path, topdown=False):
+                    responses = []
+                    for next_path in files + dirs:
+                        try:
+                            response = self.upload_to_server(
+                                user, organization, workflow,
+                                os.path.join(root, next_path),
+                                upload_type)
+                            responses.append(os.path.join(root, next_path))
+                        except Exception as e:
+                            logging.error(traceback.format_exc())
+                            logging.error("Something went wrong"
+                                          " while uploading '{0}'".
+                                          format(os.path.join(root,
+                                                              next_path)))
+                return responses
+
+            # Check if input is an absolute path and upload file.
+            else:
+                with open(path) as f:
+                    fname = os.path.basename(f.name)
+                    if len(path.split('/')) > 1 and \
+                            path.split('/')[0] == UploadType(upload_type).name:
+                        path = "/".join(path.strip("/").split('/')[1:])
+                    logging.debug("'{}' is an absolute filepath."
+                                  .format(os.path.basename(fname)))
+                    logging.info("Uploading '{}' ...".format(fname))
+                    try:
+                        if upload_type is UploadType.code:
+                            response = self.seed_analysis_code(
+                                user, organization, workflow, f, path)
+                        elif upload_type is UploadType.inputs:
+                            response = self.seed_analysis_inputs(
+                                user, organization, workflow, f, path)
+                        else:
+                            logging.warning("Unknown upload type of '{}'."
+                                            "File '{}' was not uploaded."
+                                            .format(upload_type, path))
+                        if response:
+                            logging.info("File '{}' was successfully "
+                                         "uploaded.".format(fname))
+                        return response
+                    except Exception as e:
+                        logging.error(traceback.format_exc())
+                        logging.error("Something went wrong"
+                                      " while uploading '{0}'".
+                                      format(path))

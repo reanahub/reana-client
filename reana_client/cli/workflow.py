@@ -48,7 +48,7 @@ class _WorkflowStatus(Enum):
 @click.pass_context
 def workflow(ctx):
     """Top level wrapper for workflow related interaction."""
-    logging.debug('workflow')
+    logging.debug(ctx.info_name)
 
 
 @click.command(
@@ -77,11 +77,9 @@ def workflow(ctx):
 @click.pass_context
 def workflow_list(ctx, user, organization, filter, output_format):
     """List all workflows user has."""
-    logging.debug('workflow.list')
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('filter: {}'.format(filter))
-    logging.debug('output_format: {}'.format(output_format))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     data = tablib.Dataset()
     data.headers = ['name', 'run_number', 'id', 'user', 'organization',
@@ -150,11 +148,9 @@ def workflow_list(ctx, user, organization, filter, output_format):
 @click.pass_context
 def workflow_create(ctx, file, user, name, organization, skip_validation):
     """Create a REANA compatible analysis workflow from REANA spec file."""
-    logging.debug('workflow.create')
-    logging.debug('file: {}'.format(file))
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('skip_validation: {}'.format(skip_validation))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     # Check that name is not an UUIDv4.
     # Otherwise it would mess up `--workflow` flag usage because no distinction
@@ -206,6 +202,7 @@ def workflow_create(ctx, file, user, name, organization, skip_validation):
     default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
+    '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
@@ -214,10 +211,9 @@ def workflow_create(ctx, file, user, name, organization, skip_validation):
 @click.pass_context
 def workflow_start(ctx, user, organization, workflow):
     """Start previously created analysis workflow."""
-    logging.debug('workflow.start')
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('workflow: {}'.format(workflow))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     logging.info('Workflow `{}` selected'.format(workflow))
     click.echo('Workflow `{}` selected.'.format(workflow))
@@ -256,6 +252,7 @@ def workflow_start(ctx, user, organization, workflow):
     default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
+    '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
@@ -274,12 +271,9 @@ def workflow_start(ctx, user, organization, workflow):
 @click.pass_context
 def workflow_status(ctx, user, organization, workflow, filter, output_format):
     """Get status of previously created analysis workflow."""
-    logging.debug('workflow.start')
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('workflow: {}'.format(workflow))
-    logging.debug('output_format: {}'.format(output_format))
-    logging.info('Workflow "{}" selected'.format(workflow))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     data = tablib.Dataset()
     data.headers = ['name', 'run_number', 'id', 'user', 'organization',
@@ -337,6 +331,7 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
     default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
+    '-w',
     '--workflow',
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose logs should be fetched. '
@@ -344,10 +339,9 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
 @click.pass_context
 def workflow_logs(ctx, user, organization, workflow):
     """Get status of previously created analysis workflow."""
-    logging.debug('workflow.start')
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('workflow: {}'.format(workflow))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     workflow_name = workflow or os.environ.get('REANA_WORKON', None)
 

@@ -37,7 +37,7 @@ from ..config import default_download_path, default_organization, default_user
 @click.pass_context
 def outputs(ctx):
     """Top level wrapper for output files related interaction.."""
-    logging.debug('outputs')
+    logging.debug(ctx.info_name)
 
 
 @click.command(
@@ -54,6 +54,7 @@ def outputs(ctx):
     default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
+    '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow whose files should be listed. '
@@ -71,36 +72,42 @@ def outputs(ctx):
 @click.pass_context
 def outputs_list(ctx, user, organization, workflow, filter, output_format):
     """List files a workflow has outputted."""
-    logging.debug('outputs.list')
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('workflow: {}'.format(workflow))
-    logging.debug('filter: {}'.format(filter))
-    logging.debug('output_format: {}'.format(output_format))
-    logging.info('Workflow "{}" selected'.format(workflow))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    try:
-        response = ctx.obj.client.get_analysis_outputs(user, organization,
-                                                       workflow)
+    if workflow:
+        logging.info('Workflow "{}" selected'.format(workflow))
 
-        data = tablib.Dataset()
-        data.headers = ['name', 'size', 'last-modified']
+        try:
+            response = ctx.obj.client.get_analysis_outputs(user, organization,
+                                                           workflow)
 
-        for file_ in response:
-            data.append([file_['name'],
-                         file_['size'],
-                         file_['last-modified']])
+            data = tablib.Dataset()
+            data.headers = ['name', 'size', 'last-modified']
 
-        if filter:
-            data = data.subset(rows=None, cols=list(filter))
+            for file_ in response:
+                data.append([file_['name'],
+                             file_['size'],
+                             file_['last-modified']])
 
-        if output_format:
-            click.echo(data.export(output_format))
-        else:
-            click.echo(data)
-    except Exception as e:
-        logging.debug(traceback.format_exc())
-        logging.debug(str(e))
+            if filter:
+                data = data.subset(rows=None, cols=list(filter))
+
+            if output_format:
+                click.echo(data.export(output_format))
+            else:
+                click.echo(data)
+        except Exception as e:
+            logging.debug(str(e))
+            click.echo(
+                click.style('Something went wrong while retrieving output file'
+                            ' list for workflow {0}:\n{1}'.format(workflow,
+                                                                  str(e)),
+                            fg='red'),
+                err=True)
+
+    else:
         click.echo(
             click.style('Something went wrong while retrieving output file'
                         ' list for workflow {0}:\n{1}'.format(workflow,
@@ -127,6 +134,7 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
     default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
+    '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of that workflow where files should downloaded from. '
@@ -140,12 +148,10 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
 def outputs_download(ctx, user, organization, workflow, file_,
                      output_directory):
     """Download file(s) workflow has outputted."""
-    logging.debug('outputs.download')
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('workflow: {}'.format(workflow))
-    logging.debug('file_: {}'.format(file_))
-    logging.debug('output_directory: {}'.format(output_directory))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
     for file_name in file_:
         try:
             binary_file = \

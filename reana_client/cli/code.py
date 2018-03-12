@@ -29,7 +29,9 @@ import click
 
 import tablib
 
-from ..config import default_code_path, default_organization, default_user
+from ..config import default_organization, default_user
+from ..errors import FileUploadError
+from ..api.client import UploadType
 
 
 @click.group(
@@ -37,7 +39,7 @@ from ..config import default_code_path, default_organization, default_user
 @click.pass_context
 def code(ctx):
     """Top level wrapper for code file and parameter related interaction."""
-    logging.debug('inputs')
+    logging.debug(ctx.info_name)
 
 
 @click.command(
@@ -54,6 +56,7 @@ def code(ctx):
     default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
+    '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow whose code files should be listed.')
@@ -70,12 +73,9 @@ def code(ctx):
 @click.pass_context
 def code_list(ctx, user, organization, workflow, filter, output_format):
     """List code files of a workflow."""
-    logging.debug('code.list')
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('workflow: {}'.format(workflow))
-    logging.debug('filter: {}'.format(filter))
-    logging.debug('output_format: {}'.format(output_format))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     try:
         response = ctx.obj.client.get_analysis_code(user, organization,
@@ -108,7 +108,11 @@ def code_list(ctx, user, organization, workflow, filter, output_format):
 @click.command(
     'upload',
     help='Upload one of more code files to the analysis workspace.')
-@click.argument('filenames', metavar='FILE', nargs=-1)
+@click.argument(
+    'filenames',
+    metavar='FILE',
+    type=click.Path(exists=False, resolve_path=False),
+    nargs=-1)
 @click.option(
     '-u',
     '--user',
@@ -120,48 +124,61 @@ def code_list(ctx, user, organization, workflow, filter, output_format):
     default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
+    '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow where the files should be uploaded to. '
-         'Overrides value of REANA_WORKON.')
-@click.option(
-    '--code-directory',
-    default=default_code_path,
-    help='Path to the code files directory.')
+         'Overrides value of $REANA_WORKON.')
 @click.pass_context
-def code_upload(ctx, user, organization, workflow, filenames, code_directory):
+def code_upload(ctx, user, organization, workflow, filenames):
     """Upload code file(s) to analysis workspace. Associate with a workflow."""
-    logging.debug('code.upload')
-    logging.debug('filenames: {}'.format(filenames))
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('workflow: {}'.format(workflow))
-    logging.debug('code_directory: {}'.format(code_directory))
-    logging.info('Workflow "{}" selected'.format(workflow))
-    for filename in filenames:
-        try:
-            with open(os.path.join(code_directory, filename)) as f:
-                click.echo('Uploading {} ...'.format(f.name))
-                response = ctx.obj.client.seed_analysis_code(
-                    user, organization, workflow, f, filename)
-                if response:
-                    click.echo(
-                        click.style('File {} was successfully uploaded.'.
-                                    format(f.name), fg='green'))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-        except IOError as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            click.echo(click.style(str(e), fg='red'), err=True)
-        except Exception as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            click.echo(
-                click.style(
-                    'Something went wrong while uploading {0}'.
-                    format(filename),
-                    fg='red'),
-                err=True)
+    if workflow:
+        for filename in filenames:
+            try:
+                response = ctx.obj.client.\
+                    upload_to_server(user,
+                                     organization,
+                                     workflow,
+                                     filename,
+                                     UploadType.code)
+                if type(response) is list:
+                    for _filename in response:
+                        click.echo(
+                            click.style('{} was uploaded successfully.'.
+                                        format(_filename), fg='green'))
+                elif response:
+                    click.echo(
+                        click.style('{} was uploaded successfully.'.
+                                    format(filename), fg='green'))
+            except FileUploadError as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(
+                    click.style(
+                        '{0}: {1}'.format(filename, str(e)),
+                        fg='red'),
+                    err=True)
+            except Exception as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(
+                    click.style(
+                        'Something went wrong while uploading {0}'.
+                        format(filename),
+                        fg='red'),
+                    err=True)
+
+    else:
+        click.echo(
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with `$REANA_WORKON` '
+                        'environment variable',
+                        fg='red'),
+            err=True)
 
 
 code.add_command(code_list)

@@ -38,7 +38,7 @@ from jsonschema.exceptions import ValidationError
 @click.pass_context
 def analyses(ctx):
     """Top level wrapper for analysis related interaction."""
-    logging.debug('analysis')
+    logging.debug(ctx.info_name)
 
 
 @click.command('validate')
@@ -52,9 +52,9 @@ def analyses(ctx):
 @click.pass_context
 def analysis_validate(ctx, file):
     """Validate given REANA specification file."""
-    logging.debug('analysis.validate')
-    logging.debug('file: {}'.format(file))
-
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
     try:
         load_reana_spec(click.format_filename(file))
         click.echo(

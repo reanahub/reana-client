@@ -28,7 +28,8 @@ import traceback
 import click
 import tablib
 
-from ..config import default_inputs_path, default_organization, default_user
+from ..config import default_organization, default_user
+from ..api.client import UploadType
 
 
 @click.group(
@@ -36,7 +37,7 @@ from ..config import default_inputs_path, default_organization, default_user
 @click.pass_context
 def inputs(ctx):
     """Top level wrapper for input file and parameter related interaction."""
-    logging.debug('inputs')
+    logging.debug(ctx.info_name)
 
 
 @click.command(
@@ -53,6 +54,7 @@ def inputs(ctx):
     default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
+    '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow whose input files you want to list.')
@@ -69,12 +71,9 @@ def inputs(ctx):
 @click.pass_context
 def inputs_list(ctx, user, organization, workflow, filter, output_format):
     """List input files of a workflow."""
-    logging.debug('inputs.list')
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('workflow: {}'.format(workflow))
-    logging.debug('filter: {}'.format(filter))
-    logging.debug('output_format: {}'.format(output_format))
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     try:
         response = ctx.obj.client.get_analysis_inputs(user, organization,
@@ -107,7 +106,11 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
 @click.command(
     'upload',
     help='Upload one of more FILE to the analysis workspace.')
-@click.argument('filenames', metavar='FILE', nargs=-1)
+@click.argument(
+    'filenames',
+    metavar='FILE',
+    type=click.Path(exists=True, resolve_path=True),
+    nargs=-1)
 @click.option(
     '-u',
     '--user',
@@ -119,49 +122,49 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
     default=default_organization,
     help='Organization whose resources will be used.')
 @click.option(
+    '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow you are uploading files for. '
-         'Overrides value of REANA_WORKON.')
-@click.option(
-    '--inputs-directory',
-    default=default_inputs_path,
-    help='Path to the inputs files directory.')
+         'Overrides value of $REANA_WORKON.')
 @click.pass_context
-def inputs_upload(ctx, user, organization, workflow, filenames,
-                  inputs_directory):
-    """Upload file(s) to analysis workspace. Associate with a workflow."""
-    logging.debug('inputs.upload')
-    logging.debug('filenames: {}'.format(filenames))
-    logging.debug('user: {}'.format(user))
-    logging.debug('organization: {}'.format(organization))
-    logging.debug('workflow: {}'.format(workflow))
-    logging.debug('inputs_directory: {}'.format(inputs_directory))
-    logging.info('Workflow "{}" selected'.format(workflow))
-    for filename in filenames:
-        try:
-            with open(os.path.join(inputs_directory, filename)) as f:
-                click.echo('Uploading {} ...'.format(f.name))
-                response = ctx.obj.client.seed_analysis_inputs(
-                    user, organization, workflow, f, filename)
+def inputs_upload(ctx, user, organization, workflow, filenames):
+    """Upload input file(s) to analysis workspace.Associate with a workflow."""
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if workflow:
+        for filename in filenames:
+            try:
+                response = ctx.obj.client.\
+                    upload_to_server(user,
+                                     organization,
+                                     workflow,
+                                     filename,
+                                     UploadType.inputs)
                 if response:
                     click.echo(
                         click.style('File {} was successfully uploaded.'.
-                                    format(f.name), fg='green'))
+                                    format(filename), fg='green'))
 
-        except IOError as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            click.echo(click.style(str(e), fg='red'), err=True)
-        except Exception as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            click.echo(
-                click.style(
-                    'Something went wrong while uploading {0}'.
-                    format(filename),
-                    fg='red'),
-                err=True)
+            except Exception as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(
+                    click.style(
+                        'Something went wrong while uploading {0}'.
+                        format(filename),
+                        fg='red'),
+                    err=True)
+
+    else:
+        click.echo(
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with `$REANA_WORKON` '
+                        'environment variable',
+                        fg='red'),
+            err=True)
 
 
 inputs.add_command(inputs_list)

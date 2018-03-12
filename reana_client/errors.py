@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018 CERN.
+# Copyright (C) 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -19,23 +19,9 @@
 # In applying this license, CERN does not waive the privileges and immunities
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
-"""REANA client configuration."""
 
-import pkg_resources
+"""REANA-Client errors."""
 
-reana_yaml_default_file_path = './reana.yaml'  # e.g. `./.reana.yaml`
-"""REANA specification file default location."""
 
-reana_yaml_schema_file_path = pkg_resources.resource_filename(
-        __name__,
-        'schemas/reana_analysis_schema.json')
-"""REANA specification schema location."""
-
-default_user = '00000000-0000-0000-0000-000000000000'
-"""Default user to use when submitting workflows to Reana Server."""
-
-default_organization = 'default'
-"""Default organisation to use when submitting workflows to Reana Server."""
-
-default_download_path = './outputs/'
-"""Default path where files outputted by a workflow will be downloaded."""
+class FileUploadError(Exception):
+    """File upload didn't succeed."""

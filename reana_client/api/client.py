@@ -258,7 +258,7 @@ class Client(object):
              http_response) = self._client.api.get_analysis_logs(
                  user=user,
                  organization=organization,
-                 analysis_id=analysis_id).result()
+                 analysis_id_or_name=analysis_id).result()
 
             if http_response.status_code == 200:
                 return response

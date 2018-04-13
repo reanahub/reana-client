@@ -88,7 +88,8 @@ def cwl_runner(client, quiet, outdir, processfile, jobfile):
         logging.info('Connecting to {0}'.format(client.server_url))
         response = client.create_workflow(default_user,
                                           default_organization,
-                                          reana_spec)
+                                          reana_spec,
+                                          'cwl-runner')
         logging.error(response)
 
         workflow_id = response['workflow_id']

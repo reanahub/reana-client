@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2017 CERN.
+# Copyright (C) 2017, 2018 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -17,9 +17,8 @@
 # In applying this license, CERN does not waive the privileges and immunities
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
- 
+
 exclude reana.yaml
-exclude pycharm_click_debug.py
 include COPYING
 include *.rst
 include *.sh

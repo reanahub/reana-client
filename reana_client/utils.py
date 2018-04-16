@@ -40,7 +40,7 @@ def workflow_uuid_or_name(ctx, param, value):
     if not value:
         click.echo(click.style(
             'Workflow name must be provided either with '
-            '`--workflow` option or with `$REANA_WORKON` '
+            '`--workflow` option or with REANA_WORKON '
             'environment variable', fg='red'),
             err=True)
     else:

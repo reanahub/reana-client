@@ -210,7 +210,7 @@ def workflow_create(ctx, file, user, name, organization, skip_validation):
     default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow to be started. '
-         'Overrides value of $REANA_WORKON.')
+         'Overrides value of REANA_WORKON.')
 @click.pass_context
 def workflow_start(ctx, user, organization, workflow):
     """Start previously created analysis workflow."""
@@ -260,7 +260,7 @@ def workflow_start(ctx, user, organization, workflow):
     default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose status should be resolved. '
-         'Overrides value of $REANA_WORKON.')
+         'Overrides value of REANA_WORKON.')
 @click.option(
     '--filter',
     multiple=True,
@@ -340,7 +340,7 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
     '--workflow',
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose logs should be fetched. '
-         'Overrides value of $REANA_WORKON.')
+         'Overrides value of REANA_WORKON.')
 @click.pass_context
 def workflow_logs(ctx, user, organization, workflow):
     """Get status of previously created analysis workflow."""
@@ -349,7 +349,7 @@ def workflow_logs(ctx, user, organization, workflow):
     logging.debug('organization: {}'.format(organization))
     logging.debug('workflow: {}'.format(workflow))
 
-    workflow_name = workflow or os.environ.get('$REANA_WORKON', None)
+    workflow_name = workflow or os.environ.get('REANA_WORKON', None)
 
     try:
         response = ctx.obj.client.get_workflow_logs(user,

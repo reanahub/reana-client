@@ -123,7 +123,7 @@ def code_list(ctx, user, organization, workflow, filter, output_format):
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow where the files should be uploaded to. '
-         'Overrides value of $REANA_WORKON.')
+         'Overrides value of REANA_WORKON.')
 @click.option(
     '--code-directory',
     default=default_code_path,

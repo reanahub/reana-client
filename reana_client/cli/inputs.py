@@ -31,6 +31,7 @@ import tablib
 from ..config import default_organization, default_user
 from ..errors import FileUploadError
 from ..api.client import UploadType
+from ..utils import cli_printer
 
 
 @click.group(
@@ -61,6 +62,7 @@ def inputs(ctx):
     help='Name or UUID of the workflow whose input files you want to list.')
 @click.option(
     '--filter',
+    '_filter',
     multiple=True,
     help='Filter output according to column titles (case-sensitive).')
 @click.option(
@@ -70,36 +72,49 @@ def inputs(ctx):
     default=None,
     help='Get output in JSON format.')
 @click.pass_context
-def inputs_list(ctx, user, organization, workflow, filter, output_format):
+def inputs_list(ctx, user, organization, workflow, _filter, output_format):
     """List input files of a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    try:
-        response = ctx.obj.client.get_analysis_inputs(user, organization,
-                                                      workflow)
+    if workflow:
+        try:
+            response = ctx.obj.client.get_analysis_inputs(user, organization,
+                                                          workflow)
+            headers = ['name', 'size', 'last-modified']
+            data = []
+            for file_ in response:
+                data.append(map(str, [file_['name'],
+                                      file_['size'],
+                                      file_['last-modified']]))
+            if output_format:
+                tablib_data = tablib.Dataset()
+                tablib_data.headers = headers
+                for row in data:
+                    tablib_data.append(row)
 
-        data = tablib.Dataset()
-        data.headers = ['name', 'size', 'last-modified']
-        for file_ in response:
-            data.append([file_['name'],
-                         file_['size'],
-                         file_['last-modified']])
+                if _filter:
+                    tablib_data = tablib_data.subset(
+                        rows=None, cols=list(_filter))
+                click.echo(tablib_data.export(output_format))
+            else:
+                cli_printer(headers, _filter, data)
 
-        if filter:
-            data = data.subset(rows=None, cols=list(filter))
-
-        if output_format:
-            click.echo(data.export(output_format))
-        else:
-            click.echo(data)
-    except Exception as e:
-        logging.debug(traceback.format_exc())
-        logging.debug(str(e))
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style(
+                    'Something went wrong while retrieving input file list'
+                    ' for workflow {0}:\n{1}'.format(workflow, str(e)),
+                    fg='red'),
+                err=True)
+    else:
         click.echo(
-            click.style('Something went wrong while retrieving input file list'
-                        ' for workflow {0}:\n{1}'.format(workflow, str(e)),
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with REANA_WORKON '
+                        'environment variable',
                         fg='red'),
             err=True)
 
@@ -170,7 +185,7 @@ def inputs_upload(ctx, user, organization, workflow, filenames):
     else:
         click.echo(
             click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with `$REANA_WORKON` '
+                        '`--workflow` option or with REANA_WORKON '
                         'environment variable',
                         fg='red'),
             err=True)

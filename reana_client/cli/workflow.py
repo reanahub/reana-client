@@ -33,7 +33,7 @@ import yaml
 from ..config import (default_organization, default_user,
                       reana_yaml_default_file_path)
 from ..utils import get_workflow_name_and_run_number, load_reana_spec, \
-    load_workflow_spec, is_uuid_v4, workflow_uuid_or_name
+    load_workflow_spec, is_uuid_v4, workflow_uuid_or_name, cli_printer
 
 
 class _WorkflowStatus(Enum):
@@ -66,6 +66,7 @@ def workflow(ctx):
     help='Organization whose resources will be used.')
 @click.option(
     '--filter',
+    '_filter',
     multiple=True,
     help='Filter output according to column titles (case-sensitive).')
 @click.option(
@@ -75,35 +76,38 @@ def workflow(ctx):
     default=None,
     help='Get output in JSON format.')
 @click.pass_context
-def workflow_list(ctx, user, organization, filter, output_format):
+def workflow_list(ctx, user, organization, _filter, output_format):
     """List all workflows user has."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    data = tablib.Dataset()
-    data.headers = ['name', 'run_number', 'id', 'user', 'organization',
-                    'status']
-
     try:
         response = ctx.obj.client.get_all_analyses(user, organization)
+        headers = ['name', 'run_number', 'id', 'user', 'organization',
+                   'status']
+        data = []
         for analysis in response:
             name, run_number = get_workflow_name_and_run_number(
                 analysis['name'])
-            data.append([name,
-                         run_number,
-                         analysis['id'],
-                         analysis['user'],
-                         analysis['organization'],
-                         analysis['status']])
-
-        if filter:
-            data = data.subset(rows=None, cols=list(filter))
-
+            data.append(map(str, [name,
+                                  run_number,
+                                  analysis['id'],
+                                  analysis['user'],
+                                  analysis['organization'],
+                                  analysis['status']]))
         if output_format:
-            click.echo(data.export(output_format))
+            tablib_data = tablib.Dataset()
+            tablib_data.headers = headers
+            for row in data:
+                tablib_data.append(row)
+
+            if _filter:
+                tablib_data = tablib_data.subset(rows=None, cols=list(_filter))
+
+            click.echo(tablib_data.export(output_format))
         else:
-            click.echo(data)
+            cli_printer(headers, _filter, data)
 
     except Exception as e:
         logging.debug(traceback.format_exc())
@@ -215,24 +219,29 @@ def workflow_start(ctx, user, organization, workflow):
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    logging.info('Workflow `{}` selected'.format(workflow))
+    if workflow:
+        try:
+            logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
+            response = ctx.obj.client.start_analysis(user,
+                                                     organization,
+                                                     workflow)
+            click.echo(
+                click.style('{} has been started.'.format(workflow),
+                            fg='green'))
 
-    try:
-
-        logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-        response = ctx.obj.client.start_analysis(user,
-                                                 organization,
-                                                 workflow)
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Workflow could not be started: \n{}'
+                            .format(str(e)), fg='red'),
+                err=True)
+    else:
         click.echo(
-            click.style('{} has been started.'.format(workflow),
-                        fg='green'))
-
-    except Exception as e:
-        logging.debug(traceback.format_exc())
-        logging.debug(str(e))
-        click.echo(
-            click.style('Workflow could not be started: \n{}'
-                        .format(str(e)), fg='red'),
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with REANA_WORKON '
+                        'environment variable',
+                        fg='red'),
             err=True)
 
 
@@ -258,6 +267,7 @@ def workflow_start(ctx, user, organization, workflow):
          'Overrides value of REANA_WORKON.')
 @click.option(
     '--filter',
+    '_filter',
     multiple=True,
     help='Filter output according to column titles (case-sensitive).')
 @click.option(
@@ -267,54 +277,66 @@ def workflow_start(ctx, user, organization, workflow):
     default=None,
     help='Get output in JSON format.')
 @click.pass_context
-def workflow_status(ctx, user, organization, workflow, filter, output_format):
+def workflow_status(ctx, user, organization, workflow, _filter, output_format):
     """Get status of previously created analysis workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    data = tablib.Dataset()
-    data.headers = ['name', 'run_number', 'id', 'user', 'organization',
-                    'status']
-
-    try:
-        response = ctx.obj.client.get_analysis_status(user,
-                                                      organization,
-                                                      workflow)
-        if isinstance(response, list):
-            for analysis in response:
+    if workflow:
+        try:
+            response = ctx.obj.client.get_analysis_status(user,
+                                                          organization,
+                                                          workflow)
+            headers = ['name', 'run_number', 'id', 'user', 'organization',
+                       'status']
+            data = []
+            if isinstance(response, list):
+                for analysis in response:
+                    name, run_number = get_workflow_name_and_run_number(
+                        analysis['name'])
+                    data.append(map(str, [name,
+                                          run_number,
+                                          analysis['id'],
+                                          analysis['user'],
+                                          analysis['organization'],
+                                          analysis['status']]))
+            else:
                 name, run_number = get_workflow_name_and_run_number(
-                    analysis['name'])
-                data.append([name,
-                             run_number,
-                             analysis['id'],
-                             analysis['user'],
-                             analysis['organization'],
-                             analysis['status']])
-        else:
-            name, run_number = get_workflow_name_and_run_number(
-                response['name'])
-            data.append([name,
-                         run_number,
-                         response['id'],
-                         response['user'],
-                         response['organization'],
-                         response['status']])
+                    response['name'])
+                data.append(map(str, [name,
+                                      run_number,
+                                      response['id'],
+                                      response['user'],
+                                      response['organization'],
+                                      response['status']]))
 
-        if filter:
-            data = data.subset(rows=None, cols=list(filter))
+            if output_format:
+                tablib_data = tablib.Dataset()
+                tablib_data.headers = headers
+                for row in data:
+                    tablib_data.append(row)
 
-        if output_format:
-            click.echo(data.export(output_format))
-        else:
-            click.echo(data)
+                if _filter:
+                    data = data.subset(rows=None, cols=list(_filter))
 
-    except Exception as e:
-        logging.debug(traceback.format_exc())
-        logging.debug(str(e))
+                click.echo(data.export(output_format))
+            else:
+                cli_printer(headers, _filter, data)
+
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Workflow status could not be retrieved: \n{}'
+                            .format(str(e)), fg='red'),
+                err=True)
+    else:
         click.echo(
-            click.style('Workflow status could not be retrieved: \n{}'
-                        .format(str(e)), fg='red'),
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with REANA_WORKON '
+                        'environment variable',
+                        fg='red'),
             err=True)
 
 
@@ -331,6 +353,7 @@ def workflow_status(ctx, user, organization, workflow, filter, output_format):
 @click.option(
     '-w',
     '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose logs should be fetched. '
          'Overrides value of REANA_WORKON.')
@@ -341,19 +364,25 @@ def workflow_logs(ctx, user, organization, workflow):
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    workflow_name = workflow or os.environ.get('REANA_WORKON', None)
-
-    try:
-        response = ctx.obj.client.get_workflow_logs(user,
-                                                    organization,
-                                                    workflow)
-        click.echo(response)
-    except Exception as e:
-        logging.debug(traceback.format_exc())
-        logging.debug(str(e))
+    if workflow:
+        try:
+            response = ctx.obj.client.get_workflow_logs(user,
+                                                        organization,
+                                                        workflow)
+            click.echo(response)
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Workflow logs could not be retrieved: \n{}'
+                            .format(str(e)), fg='red'),
+                err=True)
+    else:
         click.echo(
-            click.style('Workflow logs could not be retrieved: \n{}'
-                        .format(str(e)), fg='red'),
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with REANA_WORKON '
+                        'environment variable',
+                        fg='red'),
             err=True)
 
 

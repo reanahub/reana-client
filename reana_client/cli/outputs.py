@@ -30,6 +30,7 @@ import click
 import tablib
 
 from ..config import default_download_path, default_organization, default_user
+from ..utils import cli_printer
 
 
 @click.group(
@@ -61,6 +62,7 @@ def outputs(ctx):
          'Overrides value of REANA_WORKON.')
 @click.option(
     '--filter',
+    '_filter',
     multiple=True,
     help='Filter output according to column titles (case-sensitive).')
 @click.option(
@@ -70,7 +72,7 @@ def outputs(ctx):
     default=None,
     help='Get output in JSON format.')
 @click.pass_context
-def outputs_list(ctx, user, organization, workflow, filter, output_format):
+def outputs_list(ctx, user, organization, workflow, _filter, output_format):
     """List files a workflow has outputted."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -78,40 +80,43 @@ def outputs_list(ctx, user, organization, workflow, filter, output_format):
 
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
-
         try:
             response = ctx.obj.client.get_analysis_outputs(user, organization,
                                                            workflow)
-
-            data = tablib.Dataset()
-            data.headers = ['name', 'size', 'last-modified']
-
+            headers = ['name', 'size', 'last-modified']
+            data = []
             for file_ in response:
-                data.append([file_['name'],
-                             file_['size'],
-                             file_['last-modified']])
-
-            if filter:
-                data = data.subset(rows=None, cols=list(filter))
-
+                data.append(map(str, [file_['name'],
+                                      file_['size'],
+                                      file_['last-modified']]))
             if output_format:
-                click.echo(data.export(output_format))
+                tablib_data = tablib.Dataset()
+                tablib_data.headers = headers
+                for row in data:
+                        tablib_data.append(row)
+
+                if _filter:
+                    tablib_data = tablib_data.subset(
+                        rows=None, cols=list(_filter))
+                click.echo(tablib_data.export(output_format))
             else:
-                click.echo(data)
+                cli_printer(headers, _filter, data)
+
         except Exception as e:
+            logging.debug(traceback.format_exc())
             logging.debug(str(e))
+
             click.echo(
                 click.style('Something went wrong while retrieving output file'
                             ' list for workflow {0}:\n{1}'.format(workflow,
                                                                   str(e)),
                             fg='red'),
                 err=True)
-
     else:
         click.echo(
-            click.style('Something went wrong while retrieving output file'
-                        ' list for workflow {0}:\n{1}'.format(workflow,
-                                                              str(e)),
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with REANA_WORKON '
+                        'environment variable',
                         fg='red'),
             err=True)
 
@@ -152,38 +157,48 @@ def outputs_download(ctx, user, organization, workflow, file_,
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    for file_name in file_:
-        try:
-            binary_file = \
-                ctx.obj.client.download_analysis_output_file(user,
-                                                             organization,
-                                                             workflow,
-                                                             file_name)
-            logging.info('{0} binary file downloaded ... writing to {1}'.
-                         format(file_name, output_directory))
+    if workflow:
+        for file_name in file_:
+            try:
+                binary_file = \
+                    ctx.obj.client.download_analysis_output_file(user,
+                                                                 organization,
+                                                                 workflow,
+                                                                 file_name)
+                logging.info('{0} binary file downloaded ... writing to {1}'.
+                             format(file_name, output_directory))
 
-            outputs_file_path = os.path.join(output_directory, file_name)
-            if not os.path.exists(os.path.dirname(outputs_file_path)):
-                os.makedirs(os.path.dirname(outputs_file_path))
+                outputs_file_path = os.path.join(output_directory, file_name)
+                if not os.path.exists(os.path.dirname(outputs_file_path)):
+                    os.makedirs(os.path.dirname(outputs_file_path))
 
-            with open(outputs_file_path, 'wb') as f:
-                f.write(binary_file)
-            click.echo(
-                click.style(
-                    'File {0} downloaded to {1}'.format(file_name,
-                                                        output_directory),
-                    fg='green'))
-        except OSError as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            click.echo(
-                click.style('File {0} could not be written.'.format(file_name),
-                            fg='red'), err=True)
-        except Exception as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            click.echo(click.style('File {0} could not be downloaded: {1}'.
-                                   format(file_name, e), fg='red'), err=True)
+                with open(outputs_file_path, 'wb') as f:
+                    f.write(binary_file)
+                click.echo(
+                    click.style(
+                        'File {0} downloaded to {1}'.format(file_name,
+                                                            output_directory),
+                        fg='green'))
+            except OSError as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(
+                    click.style('File {0} could not be written.'.
+                                format(file_name),
+                                fg='red'), err=True)
+            except Exception as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(click.style('File {0} could not be downloaded: {1}'.
+                                       format(file_name, e), fg='red'),
+                           err=True)
+    else:
+        click.echo(
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with REANA_WORKON '
+                        'environment variable',
+                        fg='red'),
+            err=True)
 
 
 outputs.add_command(outputs_list)

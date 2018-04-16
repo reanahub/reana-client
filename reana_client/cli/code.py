@@ -86,9 +86,9 @@ def code_list(ctx, user, organization, workflow, _filter, output_format):
             headers = ['name', 'size', 'last-modified']
             data = []
             for file_ in response:
-                data.append(map(str, [file_['name'],
-                                      file_['size'],
-                                      file_['last-modified']]))
+                data.append(list(map(str, [file_['name'],
+                                           file_['size'],
+                                           file_['last-modified']])))
             if output_format:
                 tablib_data = tablib.Dataset()
                 tablib_data.headers = headers

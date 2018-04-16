@@ -90,12 +90,12 @@ def workflow_list(ctx, user, organization, _filter, output_format):
         for analysis in response:
             name, run_number = get_workflow_name_and_run_number(
                 analysis['name'])
-            data.append(map(str, [name,
-                                  run_number,
-                                  analysis['id'],
-                                  analysis['user'],
-                                  analysis['organization'],
-                                  analysis['status']]))
+            data.append(list(map(str, [name,
+                                       run_number,
+                                       analysis['id'],
+                                       analysis['user'],
+                                       analysis['organization'],
+                                       analysis['status']])))
         if output_format:
             tablib_data = tablib.Dataset()
             tablib_data.headers = headers
@@ -295,21 +295,21 @@ def workflow_status(ctx, user, organization, workflow, _filter, output_format):
                 for analysis in response:
                     name, run_number = get_workflow_name_and_run_number(
                         analysis['name'])
-                    data.append(map(str, [name,
-                                          run_number,
-                                          analysis['id'],
-                                          analysis['user'],
-                                          analysis['organization'],
-                                          analysis['status']]))
+                    data.append(list(map(str, [name,
+                                               run_number,
+                                               analysis['id'],
+                                               analysis['user'],
+                                               analysis['organization'],
+                                               analysis['status']])))
             else:
                 name, run_number = get_workflow_name_and_run_number(
                     response['name'])
-                data.append(map(str, [name,
-                                      run_number,
-                                      response['id'],
-                                      response['user'],
-                                      response['organization'],
-                                      response['status']]))
+                data.append(list(map(str, [name,
+                                           run_number,
+                                           response['id'],
+                                           response['user'],
+                                           response['organization'],
+                                           response['status']])))
 
             if output_format:
                 tablib_data = tablib.Dataset()

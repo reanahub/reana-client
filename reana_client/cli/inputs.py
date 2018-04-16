@@ -109,7 +109,7 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
 @click.argument(
     'filenames',
     metavar='FILE',
-    type=click.Path(exists=True, resolve_path=True),
+    type=click.Path(exists=True, resolve_path=False),
     nargs=-1)
 @click.option(
     '-u',
@@ -153,8 +153,7 @@ def inputs_upload(ctx, user, organization, workflow, filenames):
                 logging.debug(str(e))
                 click.echo(
                     click.style(
-                        'Something went wrong while uploading {0}'.
-                        format(filename),
+                        '{0}'.format(str(e)),
                         fg='red'),
                     err=True)
 

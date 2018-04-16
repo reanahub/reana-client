@@ -216,7 +216,6 @@ def workflow_start(ctx, user, organization, workflow):
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     logging.info('Workflow `{}` selected'.format(workflow))
-    click.echo('Workflow `{}` selected.'.format(workflow))
 
     try:
 
@@ -225,8 +224,7 @@ def workflow_start(ctx, user, organization, workflow):
                                                  organization,
                                                  workflow)
         click.echo(
-            click.style('Workflow `{}` has been started.'
-                        .format(response['workflow_id']),
+            click.style('{} has been started.'.format(workflow),
                         fg='green'))
 
     except Exception as e:

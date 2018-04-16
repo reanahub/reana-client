@@ -479,26 +479,21 @@ class Client(object):
                 for root, dirs, files in os.walk(path, topdown=False):
                     responses = []
                     for next_path in files + dirs:
-                        try:
-                            response = self.upload_to_server(
-                                user, organization, workflow,
-                                os.path.join(root, next_path),
-                                upload_type)
-                            responses.append(os.path.join(root, next_path))
-                        except Exception as e:
-                            logging.error(traceback.format_exc())
-                            logging.error("Something went wrong"
-                                          " while uploading '{0}'".
-                                          format(os.path.join(root,
-                                                              next_path)))
+                        response = self.upload_to_server(
+                            user, organization, workflow,
+                            os.path.join(root, next_path),
+                            upload_type)
+                        responses.append(os.path.join(root, next_path))
                 return responses
 
             # Check if input is an absolute path and upload file.
             else:
                 with open(path) as f:
                     fname = os.path.basename(f.name)
-                    if len(path.split('/')) > 1 and \
-                            path.split('/')[0] == UploadType(upload_type).name:
+                    # Remove prepending dirs named "." or as the upload type
+                    while len(path.split('/')) > 1 and \
+                            path.split('/')[0] in \
+                            [UploadType(upload_type).name, '.']:
                         path = "/".join(path.strip("/").split('/')[1:])
                     logging.debug("'{}' is an absolute filepath."
                                   .format(os.path.basename(fname)))
@@ -517,9 +512,9 @@ class Client(object):
                         if response:
                             logging.info("File '{}' was successfully "
                                          "uploaded.".format(fname))
-                        return response
                     except Exception as e:
-                        logging.error(traceback.format_exc())
-                        logging.error("Something went wrong"
-                                      " while uploading '{0}'".
-                                      format(path))
+                        logging.debug(traceback.format_exc())
+                        logging.debug(str(e))
+                        logging.info("Something went wrong while uploading {}".
+                                     format(fname))
+                    return response

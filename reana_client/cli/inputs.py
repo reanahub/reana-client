@@ -29,6 +29,7 @@ import click
 import tablib
 
 from ..config import default_organization, default_user
+from ..errors import FileUploadError
 from ..api.client import UploadType
 
 
@@ -109,7 +110,7 @@ def inputs_list(ctx, user, organization, workflow, filter, output_format):
 @click.argument(
     'filenames',
     metavar='FILE',
-    type=click.Path(exists=True, resolve_path=False),
+    type=click.Path(exists=True, resolve_path=True),
     nargs=-1)
 @click.option(
     '-u',
@@ -147,13 +148,22 @@ def inputs_upload(ctx, user, organization, workflow, filenames):
                     click.echo(
                         click.style('File {} was successfully uploaded.'.
                                     format(filename), fg='green'))
-
+            except FileUploadError as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(
+                    click.style(
+                        'Something went wrong while uploading {0}.\n{1}'.
+                        format(filename, str(e)),
+                        fg='red'),
+                    err=True)
             except Exception as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
                 click.echo(
                     click.style(
-                        '{0}'.format(str(e)),
+                        'Something went wrong while uploading {}'.
+                        format(filename),
                         fg='red'),
                     err=True)
 

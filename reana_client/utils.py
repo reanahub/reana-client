@@ -23,6 +23,8 @@
 
 import json
 import logging
+import os
+import sys
 from uuid import UUID
 
 import click
@@ -183,3 +185,27 @@ def get_workflow_name_and_run_number(workflow_name):
         # Couldn't split. Probably not a dot-separated string.
         # Return the name given as parameter without a `run_number`.
         return workflow_name, ''
+
+
+def get_analysis_root():
+    """Return the current analysis root directory."""
+    reana_yaml = 'reana.yaml'
+    analysis_root = os.getcwd()
+
+    while True:
+        file_list = os.listdir(analysis_root)
+        parent_dir = os.path.dirname(analysis_root)
+        if reana_yaml in file_list:
+            break
+        else:
+            if analysis_root == parent_dir:
+                click.echo(click.style(
+                    'Not an analysis directory (or any of the parent'
+                    ' directories).\nPlease upload from inside'
+                    ' the directory containing the reana.yaml '
+                    'file of your analysis.', fg='red'))
+                sys.exit(1)
+            else:
+                analysis_root = parent_dir
+    analysis_root += '/'
+    return analysis_root

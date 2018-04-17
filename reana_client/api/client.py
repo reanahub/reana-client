@@ -31,6 +31,7 @@ import pkg_resources
 from bravado.client import SwaggerClient
 from bravado.exception import HTTPError
 from reana_client.errors import FileUploadError
+from reana_client.utils import get_analysis_root
 
 
 class UploadType(enum.Enum):
@@ -472,6 +473,7 @@ class Client(object):
 
             # Check if input is a directory and upload everything
             # including subdirectories.
+
             if os.path.isdir(path):
                 logging.debug("'{}' is a directory.".format(path))
                 logging.info("Uploading contents of folder '{}' ..."
@@ -490,21 +492,31 @@ class Client(object):
             else:
                 with open(path) as f:
                     fname = os.path.basename(f.name)
+                    analysis_root = get_analysis_root()
+                    if not path.startswith(analysis_root):
+                        raise FileUploadError(
+                            'Files and directories to be uploaded'
+                            'must be under the analysis root directory.')
+                    # Calculate the path that will store the file
+                    # in the workflow controller, by subtracting
+                    # the analysis root path from the file path
+                    save_path = path.replace(analysis_root, '')
                     # Remove prepending dirs named "." or as the upload type
-                    while len(path.split('/')) > 1 and \
-                            path.split('/')[0] in \
+                    while len(save_path.split('/')) > 1 and \
+                            save_path.split('/')[0] in \
                             [UploadType(upload_type).name, '.']:
-                        path = "/".join(path.strip("/").split('/')[1:])
+                        save_path = "/".join(
+                            save_path.strip("/").split('/')[1:])
                     logging.debug("'{}' is an absolute filepath."
                                   .format(os.path.basename(fname)))
                     logging.info("Uploading '{}' ...".format(fname))
                     try:
                         if upload_type is UploadType.code:
                             response = self.seed_analysis_code(
-                                user, organization, workflow, f, path)
+                                user, organization, workflow, f, save_path)
                         elif upload_type is UploadType.inputs:
                             response = self.seed_analysis_inputs(
-                                user, organization, workflow, f, path)
+                                user, organization, workflow, f, save_path)
                         else:
                             logging.warning("Unknown upload type of '{}'."
                                             "File '{}' was not uploaded."

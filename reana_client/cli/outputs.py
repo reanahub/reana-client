@@ -30,7 +30,7 @@ import click
 import tablib
 
 from ..config import default_download_path, default_organization, default_user
-from ..utils import cli_printer
+from reana_commons.utils import click_table_printer
 
 
 @click.group(
@@ -100,7 +100,7 @@ def outputs_list(ctx, user, organization, workflow, _filter, output_format):
                         rows=None, cols=list(_filter))
                 click.echo(tablib_data.export(output_format))
             else:
-                cli_printer(headers, _filter, data)
+                click_table_printer(headers, _filter, data)
 
         except Exception as e:
             logging.debug(traceback.format_exc())

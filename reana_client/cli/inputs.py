@@ -31,7 +31,7 @@ import tablib
 from ..config import default_organization, default_user
 from ..errors import FileUploadError
 from ..api.client import UploadType
-from ..utils import cli_printer
+from reana_commons.utils import click_table_printer
 
 
 @click.group(
@@ -99,7 +99,7 @@ def inputs_list(ctx, user, organization, workflow, _filter, output_format):
                         rows=None, cols=list(_filter))
                 click.echo(tablib_data.export(output_format))
             else:
-                cli_printer(headers, _filter, data)
+                click_table_printer(headers, _filter, data)
 
         except Exception as e:
             logging.debug(traceback.format_exc())

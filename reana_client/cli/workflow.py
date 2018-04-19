@@ -33,7 +33,8 @@ import yaml
 from ..config import (default_organization, default_user,
                       reana_yaml_default_file_path)
 from ..utils import get_workflow_name_and_run_number, load_reana_spec, \
-    load_workflow_spec, is_uuid_v4, workflow_uuid_or_name, cli_printer
+    load_workflow_spec, is_uuid_v4, workflow_uuid_or_name
+from reana_commons.utils import click_table_printer
 
 
 class _WorkflowStatus(Enum):
@@ -107,7 +108,7 @@ def workflow_list(ctx, user, organization, _filter, output_format):
 
             click.echo(tablib_data.export(output_format))
         else:
-            cli_printer(headers, _filter, data)
+            click_table_printer(headers, _filter, data)
 
     except Exception as e:
         logging.debug(traceback.format_exc())
@@ -322,7 +323,7 @@ def workflow_status(ctx, user, organization, workflow, _filter, output_format):
 
                 click.echo(data.export(output_format))
             else:
-                cli_printer(headers, _filter, data)
+                click_table_printer(headers, _filter, data)
 
         except Exception as e:
             logging.debug(traceback.format_exc())

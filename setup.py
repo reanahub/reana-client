@@ -73,6 +73,7 @@ install_requires = [
     'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
     'tablib>=0.12.1',
     'webcolors==1.7',  # FIXME remove once yadage-schemas solves deps.
+    'reana-commons',
 ]
 
 packages = find_packages()

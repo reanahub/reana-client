@@ -232,9 +232,8 @@ def upload_files_from_cwl_tool(client, spec, spec_file, workflow_id):
                 directory = os.path.abspath(os.path.dirname(spec_file))
                 for file in os.listdir(directory):
                     if any(file.endswith(ext) for ext in extensions):
-                        transfer_file(client, {"location": os.path.join(
-                            directory, file)}, spec_file, workflow_id)
-
+                        transfer_file(client, {"location": os.path.join(file)},
+                                      spec_file, workflow_id)
     if spec.get("steps"):
         for tool in spec['steps']:
             for param in tool['in']:

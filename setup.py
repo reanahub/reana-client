@@ -35,6 +35,7 @@ history = open('CHANGES.rst').read()
 tests_require = [
     'check-manifest>=0.25',
     'coverage>=4.0',
+    'docutils==0.12',
     'httpretty>=0.8',
     'isort>=4.2.2',
     'pydocstyle>=1.0.0',
@@ -66,14 +67,13 @@ setup_requires = [
 install_requires = [
     'bravado>=9.0.6',
     'click>=6.7',
-    'cwltool',
+    'cwltool==1.0.20180326152342',
     'yadage-schemas==0.7.16',
     'pyOpenSSL==17.3.0',  # FIXME remove once yadage-schemas solves deps.
     'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
     'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
     'tablib>=0.12.1',
     'webcolors==1.7',  # FIXME remove once yadage-schemas solves deps.
-    'reana-commons',
 ]
 
 packages = find_packages()

@@ -28,6 +28,11 @@ language: python
 cache:
   - pip
 
+env:
+  - REQUIREMENTS=lowest EXTRAS=all
+  - REQUIREMENTS=release EXTRAS=all
+  - REQUIREMENTS=devel EXTRAS=all
+
 python:
   - "2.7"
 
@@ -36,10 +41,15 @@ matrix:
 
 before_install:
   - travis_retry pip install --upgrade pip setuptools py
-  - travis_retry pip install twine wheel coveralls
+  - travis_retry pip install twine wheel coveralls requirements-builder
+  - requirements-builder -e $EXTRAS --level=min setup.py > .travis-lowest-requirements.txt
+  - requirements-builder -e $EXTRAS --level=pypi setup.py > .travis-release-requirements.txt
+  - requirements-builder -e $EXTRAS --level=dev --req requirements-dev.txt setup.py > .travis-devel-requirements.txt
 
 install:
-  - travis_retry pip install -e .[all]
+  - pip install -r requirements-dev.txt
+  - travis_retry pip install -r .travis-${REQUIREMENTS}-requirements.txt
+  - travis_retry pip install -e .[$EXTRAS]
 
 script:
   - ./run-tests.sh

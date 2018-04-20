@@ -92,8 +92,7 @@ Let us upload our code:
 
 .. code-block:: console
 
-   $ reana-client code upload helloworld.py
-   reana-client code upload ./code/helloworld.py
+   $ reana-client code upload ./code/helloworld.py
    /home/simko/private/project/reana/src/reana-demo-helloworld/code/helloworld.py was uploaded successfully.
 
 and check whether it indeed appears seeded in our workspace:
@@ -108,7 +107,7 @@ Similarly, let us now upload the input data file:
 
 .. code-block:: console
 
-   $ reana-client inputs upload names.txt
+   $ reana-client inputs upload ./inputs/names.txt
    File /home/simko/private/project/reana/src/reana-demo-helloworld/inputs/names.txt was successfully uploaded.
 
 and check whether it was well seeded into our input workspace:

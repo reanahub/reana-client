@@ -52,6 +52,23 @@ Usage
 Please see the :ref:`gettingstarted` section for a basic ``reana-client`` use
 case scenario.
 
+Status
+------
+
+You can use the ``reana-client status`` command to see the current status of
+your REANA client session. The command prints an information to which REANA
+cloud is the client connected, what is the current workflow the client is
+working on, and what is the workflow status:
+
+.. code-block:: console
+
+   $ reana-client status
+   User: 00000000-0000-0000-0000-000000000000
+   REANA cluster selected: http://192.168.39.238:30380
+   REANA cluster status: ready
+   Workflow selected: workflow.2
+   Workflow status: finished
+
 Examples
 --------
 

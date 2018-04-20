@@ -43,7 +43,7 @@ from ..config import (default_organization, default_user)
     default=default_organization,
     help='Organization whose resources will be used.')
 def status(ctx, user, organization):
-    """Show current status of workspace."""
+    """Show current status of the client session."""
     try:
         click.echo(click.style('User: {}'.format(user), fg='green'))
         click.echo(click.style('REANA cluster selected: {}'.

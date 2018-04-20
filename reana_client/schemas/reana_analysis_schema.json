@@ -122,11 +122,15 @@
       "title": "Analysis workflow.",
       "description": "Workflow which represents the steps that need to be run to reproduce an analysis.",
       "properties": {
+        "specification": {
+          "id": "/properties/workflow/properties/specification",
+          "type": "object",
+          "title": "Workflow specification in yaml format."
+        },
         "file": {
           "id": "/properties/workflow/properties/file",
           "type": "string",
-          "title": "Workflow file name.",
-          "default": "workflow.yml"
+          "title": "Workflow file name."
         },
         "type": {
           "id": "/properties/workflow/properties/type",
@@ -134,7 +138,8 @@
           "title": "Workflow engine.",
           "description": "Name which represents a supported workflow engine to be used to reproduce the analysis."
         }
-      }
+      },
+      "required": ["type"]
     }
   }
 }

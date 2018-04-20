@@ -11,5 +11,6 @@ cloning it from GitHub, you can use:
 
  .. code-block:: console
 
+    $ mkvirtualenv reana-client-latest -p /usr/bin/python2.7
     $ pip install \
         'git+https://github.com/reanahub/reana-client.git@master#egg=reana-client'

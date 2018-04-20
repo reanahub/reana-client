@@ -169,10 +169,16 @@ def workflow_create(ctx, file, user, name, organization, skip_validation):
         reana_spec = load_reana_spec(click.format_filename(file),
                                      skip_validation)
 
+        kwargs = {}
+        if reana_spec['workflow']['type'] == 'serial':
+            kwargs['specification'] = reana_spec['workflow'].\
+                get('specification')
         reana_spec['workflow']['spec'] = load_workflow_spec(
             reana_spec['workflow']['type'],
-            reana_spec['workflow']['file'],
+            reana_spec['workflow'].get('file'),
+            **kwargs
         )
+
         if reana_spec['workflow']['type'] == 'cwl':
             with open(reana_spec['inputs']['parameters']['input']) as f:
                 reana_spec['inputs']['parameters']['input'] = yaml.load(f)

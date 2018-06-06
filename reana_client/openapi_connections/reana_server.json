@@ -346,11 +346,17 @@
                 "id": {
                   "type": "string"
                 },
+                "logs": {
+                  "type": "string"
+                },
                 "name": {
                   "type": "string"
                 },
                 "organization": {
                   "type": "string"
+                },
+                "progress": {
+                  "type": "object"
                 },
                 "status": {
                   "type": "string"

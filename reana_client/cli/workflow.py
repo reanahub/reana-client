@@ -296,27 +296,39 @@ def workflow_status(ctx, user, organization, workflow, _filter, output_format):
                                                           organization,
                                                           workflow)
             headers = ['name', 'run_number', 'id', 'user', 'organization',
-                       'status']
+                       'status', 'command', 'progress']
+
             data = []
             if isinstance(response, list):
                 for analysis in response:
                     name, run_number = get_workflow_name_and_run_number(
                         analysis['name'])
-                    data.append(list(map(str, [name,
-                                               run_number,
-                                               analysis['id'],
-                                               analysis['user'],
-                                               analysis['organization'],
-                                               analysis['status']])))
+                    data.append(list(map(str,
+                                         [name,
+                                          run_number,
+                                          analysis['id'],
+                                          analysis['user'],
+                                          analysis['organization'],
+                                          analysis['status'],
+                                          analysis['current_command'],
+                                          '{0}/{1}'.format(
+                                              analysis['current_command_idx'],
+                                              analysis['total_commands'])])))
             else:
                 name, run_number = get_workflow_name_and_run_number(
                     response['name'])
-                data.append(list(map(str, [name,
-                                           run_number,
-                                           response['id'],
-                                           response['user'],
-                                           response['organization'],
-                                           response['status']])))
+                data.append(list(
+                    map(str,
+                        [name,
+                         run_number,
+                         response['id'],
+                         response['user'],
+                         response['organization'],
+                         response['status'],
+                         response['progress'].get('current_command'),
+                         '{0}/{1}'.format(
+                             response['progress'].get('current_command_idx'),
+                             response['progress'].get('total_commands'))])))
 
             if output_format:
                 tablib_data = tablib.Dataset()

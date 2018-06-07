@@ -1010,6 +1010,145 @@
         },
         "summary": "Ping the server (healthcheck)"
       }
+    },
+    "/api/users": {
+      "get": {
+        "description": "Get user information.",
+        "operationId": "get_user",
+        "parameters": [
+          {
+            "description": "Required. The email of the user.",
+            "in": "query",
+            "name": "email",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Not required. UUID of the user.",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Required. API key of the admin.",
+            "in": "query",
+            "name": "api_key",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "User was found. Returns all user info stored.",
+            "examples": {
+              "application/json": {
+                "api_key": "Drmhze6EPcv0fN_81Bj-nA",
+                "email": "user@reana.info",
+                "id": "00000000-0000-0000-0000-000000000000"
+              }
+            },
+            "schema": {
+              "properties": {
+                "api_key": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming payload seems malformed."
+          },
+          "404": {
+            "description": "Request failed. User does not exist.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 does not exist."
+              }
+            }
+          },
+          "500": {
+            "description": "Request failed. Internal controller error.",
+            "examples": {
+              "application/json": {
+                "message": "Error while querying."
+              }
+            }
+          }
+        },
+        "summary": "Get user information. Requires the admin api key."
+      },
+      "post": {
+        "description": "This resource creates a new user with the proviced information (email, id). Requires the admin api key.",
+        "operationId": "create_user",
+        "parameters": [
+          {
+            "description": "Required. The email of the user.",
+            "in": "query",
+            "name": "email",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. API key of the admin.",
+            "in": "query",
+            "name": "api_key",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "User created successfully. Returns the api_key and a message.",
+            "examples": {
+              "application/json": {
+                "api_key": "Drmhze6EPcv0fN_81Bj-nA",
+                "email": "user@reana.info",
+                "id": "00000000-0000-0000-0000-000000000000"
+              }
+            },
+            "schema": {
+              "properties": {
+                "api_key": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming payload seems malformed."
+          },
+          "500": {
+            "description": "Request failed. Internal controller error.",
+            "examples": {
+              "application/json": {
+                "message": "Error while querying."
+              }
+            }
+          }
+        },
+        "summary": "Creates a new user with the provided information."
+      }
     }
   },
   "swagger": "2.0",

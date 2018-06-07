@@ -531,3 +531,72 @@ class Client(object):
                         logging.info("Something went wrong while uploading {}".
                                      format(fname))
                     return response
+
+    def get_user(self, id_, email, api_key):
+        """Return the user matching the provided id or email.
+
+        :param id: UUID of the user.
+        :param email: Email of the user.
+        :param api_key: API key of an administrator.
+        :returns: A dictionary with the user information if found.
+        """
+        try:
+            (response,
+             http_response) = self._client.api.get_user(
+                 id_=id_,
+                 email=email,
+                 api_key=api_key
+            ).result()
+
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            logging.debug(
+                'User could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e
+
+    def create_user(self, email, api_key):
+        """Create a new user with the provided id or email.
+
+        :param id: UUID of the user.
+        :param email: Email of the user.
+        :param api_key: API key of an administrator.
+        :returns: Ok.
+        """
+        try:
+            (response,
+             http_response) = self._client.api.create_user(
+                 email=email,
+                 api_key=api_key
+            ).result()
+
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            logging.debug(
+                'User could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e

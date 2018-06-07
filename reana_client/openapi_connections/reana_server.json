@@ -1026,7 +1026,7 @@
           {
             "description": "Not required. UUID of the user.",
             "in": "query",
-            "name": "user_id",
+            "name": "id_",
             "required": false,
             "type": "string"
           },
@@ -1043,7 +1043,7 @@
         ],
         "responses": {
           "200": {
-            "description": "User was found. Returns all user info stored.",
+            "description": "User was found. Returns all stored user information.",
             "examples": {
               "application/json": {
                 "api_key": "Drmhze6EPcv0fN_81Bj-nA",
@@ -1059,14 +1059,14 @@
                 "email": {
                   "type": "string"
                 },
-                "id": {
+                "id_": {
                   "type": "string"
                 }
               },
               "type": "object"
             }
           },
-          "400": {
+          "403": {
             "description": "Request failed. The incoming payload seems malformed."
           },
           "404": {
@@ -1078,7 +1078,7 @@
             }
           },
           "500": {
-            "description": "Request failed. Internal controller error.",
+            "description": "Request failed. Internal server error.",
             "examples": {
               "application/json": {
                 "message": "Error while querying."
@@ -1089,7 +1089,7 @@
         "summary": "Get user information. Requires the admin api key."
       },
       "post": {
-        "description": "This resource creates a new user with the proviced information (email, id). Requires the admin api key.",
+        "description": "This resource creates a new user with the provided information (email, id). Requires the admin api key.",
         "operationId": "create_user",
         "parameters": [
           {
@@ -1111,13 +1111,13 @@
           "application/json"
         ],
         "responses": {
-          "200": {
+          "201": {
             "description": "User created successfully. Returns the api_key and a message.",
             "examples": {
               "application/json": {
                 "api_key": "Drmhze6EPcv0fN_81Bj-nA",
                 "email": "user@reana.info",
-                "id": "00000000-0000-0000-0000-000000000000"
+                "id_": "00000000-0000-0000-0000-000000000000"
               }
             },
             "schema": {
@@ -1128,21 +1128,21 @@
                 "email": {
                   "type": "string"
                 },
-                "id": {
+                "id_": {
                   "type": "string"
                 }
               },
               "type": "object"
             }
           },
-          "400": {
+          "403": {
             "description": "Request failed. The incoming payload seems malformed."
           },
           "500": {
-            "description": "Request failed. Internal controller error.",
+            "description": "Request failed. Internal server error.",
             "examples": {
               "application/json": {
-                "message": "Error while querying."
+                "message": "Internal server error."
               }
             }
           }

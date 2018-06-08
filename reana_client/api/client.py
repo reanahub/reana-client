@@ -301,6 +301,7 @@ class Client(object):
         :returns: .
         """
         try:
+            logging.getLogger("urllib3").setLevel(logging.CRITICAL)
             (response,
              http_response) = self._client.api.get_analysis_outputs_file(
                  user=user,

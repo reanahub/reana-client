@@ -23,6 +23,7 @@
 
 import logging
 import os
+import sys
 import traceback
 from enum import Enum
 
@@ -76,15 +77,27 @@ def workflow(ctx):
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def workflow_list(ctx, user, organization, _filter, output_format):
+def workflow_list(ctx, user, organization, _filter, output_format, token):
     """List all workflows user has."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
+        sys.exit(1)
+
     try:
-        response = ctx.obj.client.get_all_analyses(user, organization)
+        response = ctx.obj.client.get_all_analyses(user, organization, token)
         headers = ['name', 'run_number', 'id', 'user', 'organization',
                    'status']
         data = []
@@ -150,8 +163,14 @@ def workflow_list(ctx, user, organization, _filter, output_format):
     is_flag=True,
     help="If set, specifications file is not validated before "
          "submitting it's contents to REANA Server.")
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def workflow_create(ctx, file, user, name, organization, skip_validation):
+def workflow_create(ctx, file, user, name, organization,
+                    skip_validation, token):
     """Create a REANA compatible analysis workflow from REANA spec file."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -164,7 +183,12 @@ def workflow_create(ctx, file, user, name, organization, skip_validation):
         click.echo(
             click.style('Workflow name cannot be a valid UUIDv4', fg='red'),
             err=True)
-
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
+        sys.exit(1)
     try:
         reana_spec = load_reana_spec(click.format_filename(file),
                                      skip_validation)
@@ -187,7 +211,8 @@ def workflow_create(ctx, file, user, name, organization, skip_validation):
         response = ctx.obj.client.create_workflow(user,
                                                   organization,
                                                   reana_spec,
-                                                  name)
+                                                  name,
+                                                  token)
         click.echo(click.style(response['workflow_name'], fg='green'))
 
     except Exception as e:
@@ -219,19 +244,32 @@ def workflow_create(ctx, file, user, name, organization, skip_validation):
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow to be started. '
          'Overrides value of REANA_WORKON.')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def workflow_start(ctx, user, organization, workflow):
+def workflow_start(ctx, user, organization, workflow, token):
     """Start previously created analysis workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
+        sys.exit(1)
 
     if workflow:
         try:
             logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
             response = ctx.obj.client.start_analysis(user,
                                                      organization,
-                                                     workflow)
+                                                     workflow,
+                                                     token)
             click.echo(
                 click.style('{} has been started.'.format(workflow),
                             fg='green'))
@@ -283,18 +321,32 @@ def workflow_start(ctx, user, organization, workflow):
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def workflow_status(ctx, user, organization, workflow, _filter, output_format):
+def workflow_status(ctx, user, organization, workflow, _filter, output_format,
+                    token):
     """Get status of previously created analysis workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
+        sys.exit(1)
+
     if workflow:
         try:
             response = ctx.obj.client.get_analysis_status(user,
                                                           organization,
-                                                          workflow)
+                                                          workflow,
+                                                          token)
             headers = ['name', 'run_number', 'id', 'user', 'organization',
                        'status', 'command', 'progress']
 

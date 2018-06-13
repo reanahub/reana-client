@@ -72,17 +72,29 @@ def code(ctx):
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def code_list(ctx, user, organization, workflow, _filter, output_format):
+def code_list(ctx, user, organization, workflow, _filter,
+              output_format, token):
     """List code files of a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
+
     if workflow:
         try:
             response = ctx.obj.client.get_analysis_code(user, organization,
-                                                        workflow)
+                                                        workflow, token)
             headers = ['name', 'size', 'last-modified']
             data = []
             for file_ in response:
@@ -144,12 +156,23 @@ def code_list(ctx, user, organization, workflow, _filter, output_format):
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow where the files should be uploaded to. '
          'Overrides value of $REANA_WORKON.')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def code_upload(ctx, user, organization, workflow, filenames):
+def code_upload(ctx, user, organization, workflow, filenames, token):
     """Upload code file(s) to analysis workspace. Associate with a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
 
     if workflow:
         for filename in filenames:
@@ -159,7 +182,8 @@ def code_upload(ctx, user, organization, workflow, filenames):
                                      organization,
                                      workflow,
                                      filename,
-                                     UploadType.code)
+                                     UploadType.code,
+                                     token)
                 if type(response) is list:
                     for _filename in response:
                         click.echo(

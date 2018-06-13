@@ -49,8 +49,8 @@ def users(ctx):
     '--email',
     help='The email of the user.')
 @click.option(
-    '-k',
-    '--api-key',
+    '-t',
+    '--token',
     help='The api key of an administrator.')
 @click.option(
     '--json',
@@ -59,12 +59,12 @@ def users(ctx):
     default=None,
     help='Get output in JSON format.')
 @click.pass_context
-def get_user(ctx, id, email, api_key, output_format):
+def get_user(ctx, id, email, token, output_format):
     """Return information about a specific user."""
     try:
-        response = ctx.obj.client.get_user(id, email, api_key)
-        headers = ['id', 'email', 'api_key']
-        data = [(response['id_'], response['email'], response['api_key'])]
+        response = ctx.obj.client.get_user(id, email, token)
+        headers = ['id', 'email', 'token']
+        data = [(response['id_'], response['email'], response['token'])]
         if output_format:
             tablib_data = tablib.Dataset()
             tablib_data.headers = headers
@@ -92,16 +92,16 @@ def get_user(ctx, id, email, api_key, output_format):
     '--email',
     help='The email of the user.')
 @click.option(
-    '-k',
-    '--api-key',
+    '-t',
+    '--token',
     help='The api key of an administrator.')
 @click.pass_context
-def create_user(ctx, email, api_key):
+def create_user(ctx, email, token):
     """Return information about a specific user."""
     try:
-        response = ctx.obj.client.create_user(email, api_key)
-        headers = ['id', 'email', 'api_key']
-        data = [(response['id_'], response['email'], response['api_key'])]
+        response = ctx.obj.client.create_user(email, token)
+        headers = ['id', 'email', 'token']
+        data = [(response['id_'], response['email'], response['token'])]
         click.echo(
             click.style('User was successfully created.', fg='green'))
         click_table_printer(headers, [], data)

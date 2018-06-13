@@ -23,6 +23,7 @@
 
 import logging
 import os
+import sys
 import traceback
 
 import click
@@ -71,18 +72,30 @@ def outputs(ctx):
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def outputs_list(ctx, user, organization, workflow, _filter, output_format):
+def outputs_list(ctx, user, organization, workflow, _filter,
+                 output_format, token):
     """List files a workflow has outputted."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
+        sys.exit(1)
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
             response = ctx.obj.client.get_analysis_outputs(user, organization,
-                                                           workflow)
+                                                           workflow, token)
             headers = ['name', 'size', 'last-modified']
             data = []
             for file_ in response:
@@ -149,13 +162,25 @@ def outputs_list(ctx, user, organization, workflow, _filter, output_format):
     default=default_download_path,
     help='Path to the directory where files outputted '
          'by a workflow will be downloaded')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
 def outputs_download(ctx, user, organization, workflow, file_,
-                     output_directory):
+                     output_directory, token):
     """Download file(s) workflow has outputted."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
+        sys.exit(1)
 
     if workflow:
         for file_name in file_:
@@ -164,7 +189,8 @@ def outputs_download(ctx, user, organization, workflow, file_,
                     ctx.obj.client.download_analysis_output_file(user,
                                                                  organization,
                                                                  workflow,
-                                                                 file_name)
+                                                                 file_name,
+                                                                 token)
                 logging.info('{0} binary file downloaded ... writing to {1}'.
                              format(file_name, output_directory))
 

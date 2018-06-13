@@ -23,6 +23,7 @@
 
 import logging
 import os
+import sys
 import traceback
 
 import click
@@ -71,17 +72,30 @@ def inputs(ctx):
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def inputs_list(ctx, user, organization, workflow, _filter, output_format):
+def inputs_list(ctx, user, organization, workflow, _filter,
+                output_format, token):
     """List input files of a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
+        sys.exit(1)
+
     if workflow:
         try:
             response = ctx.obj.client.get_analysis_inputs(user, organization,
-                                                          workflow)
+                                                          workflow, token)
             headers = ['name', 'size', 'last-modified']
             data = []
             for file_ in response:
@@ -143,12 +157,24 @@ def inputs_list(ctx, user, organization, workflow, _filter, output_format):
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def inputs_upload(ctx, user, organization, workflow, filenames):
+def inputs_upload(ctx, user, organization, workflow, filenames, token):
     """Upload input file(s) to analysis workspace.Associate with a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not token:
+        click.echo(
+            click.style('Please provide your API token, either by setting the'
+                        ' REANA_TOKEN environment variable, or by using'
+                        ' the -t/--token flag.', fg='red'), err=True)
+        sys.exit(1)
 
     if workflow:
         for filename in filenames:
@@ -158,7 +184,8 @@ def inputs_upload(ctx, user, organization, workflow, filenames):
                                      organization,
                                      workflow,
                                      filename,
-                                     UploadType.inputs)
+                                     UploadType.inputs,
+                                     token)
                 if response:
                     click.echo(
                         click.style('File {} was successfully uploaded.'.

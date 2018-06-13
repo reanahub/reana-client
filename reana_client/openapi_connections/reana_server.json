@@ -25,6 +25,12 @@
             "name": "user",
             "required": true,
             "type": "string"
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -92,6 +98,14 @@
           "400": {
             "description": "Request failed. The incoming payload seems malformed."
           },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
+          },
           "404": {
             "description": "Request failed. User does not exist.",
             "examples": {
@@ -154,6 +168,12 @@
             "schema": {
               "type": "object"
             }
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -186,6 +206,14 @@
           },
           "400": {
             "description": "Request failed. The incoming payload seems malformed"
+          },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
           },
           "404": {
             "description": "Request failed. User does not exist.",
@@ -324,6 +352,12 @@
             "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -435,6 +469,12 @@
               "description": "Required. New status.",
               "type": "string"
             }
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -566,6 +606,12 @@
             "name": "file_name",
             "required": true,
             "type": "string"
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -590,6 +636,14 @@
           },
           "400": {
             "description": "Request failed. The incoming payload seems malformed"
+          },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
           },
           "404": {
             "description": "Request failed. User does not exist.",
@@ -631,6 +685,12 @@
             "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -660,6 +720,14 @@
           },
           "400": {
             "description": "Request failed. The incoming payload seems malformed."
+          },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
           },
           "404": {
             "description": "Request failed. Analysis does not exist.",
@@ -723,6 +791,12 @@
             "name": "file_name",
             "required": true,
             "type": "string"
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -747,6 +821,14 @@
           },
           "400": {
             "description": "Request failed. The incoming payload seems malformed"
+          },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
           },
           "404": {
             "description": "Request failed. User does not exist.",
@@ -788,6 +870,12 @@
             "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -817,6 +905,14 @@
           },
           "400": {
             "description": "Request failed. The incoming payload seems malformed."
+          },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
           },
           "404": {
             "description": "Request failed. Analysis does not exist.",
@@ -863,6 +959,12 @@
             "name": "analysis_id_or_name",
             "required": true,
             "type": "string"
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -892,6 +994,14 @@
           },
           "400": {
             "description": "Request failed. The incoming payload seems malformed."
+          },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
           },
           "404": {
             "description": "Request failed. Analysis does not exist.",
@@ -945,6 +1055,12 @@
             "name": "file_name",
             "required": true,
             "type": "string"
+          },
+          {
+            "description": "Required. The API token of analysis owner.",
+            "in": "query",
+            "name": "token",
+            "type": "string"
           }
         ],
         "produces": [
@@ -959,6 +1075,14 @@
           },
           "400": {
             "description": "Request failed. The incoming payload seems malformed."
+          },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
           },
           "404": {
             "description": "Request failed. `file_name` does not exist .",
@@ -1033,7 +1157,7 @@
           {
             "description": "Required. API key of the admin.",
             "in": "query",
-            "name": "api_key",
+            "name": "token",
             "required": true,
             "type": "string"
           }
@@ -1046,20 +1170,20 @@
             "description": "User was found. Returns all stored user information.",
             "examples": {
               "application/json": {
-                "api_key": "Drmhze6EPcv0fN_81Bj-nA",
                 "email": "user@reana.info",
-                "id": "00000000-0000-0000-0000-000000000000"
+                "id": "00000000-0000-0000-0000-000000000000",
+                "token": "Drmhze6EPcv0fN_81Bj-nA"
               }
             },
             "schema": {
               "properties": {
-                "api_key": {
-                  "type": "string"
-                },
                 "email": {
                   "type": "string"
                 },
                 "id_": {
+                  "type": "string"
+                },
+                "token": {
                   "type": "string"
                 }
               },
@@ -1102,7 +1226,7 @@
           {
             "description": "Required. API key of the admin.",
             "in": "query",
-            "name": "api_key",
+            "name": "token",
             "required": true,
             "type": "string"
           }
@@ -1112,23 +1236,23 @@
         ],
         "responses": {
           "201": {
-            "description": "User created successfully. Returns the api_key and a message.",
+            "description": "User created successfully. Returns the token and a message.",
             "examples": {
               "application/json": {
-                "api_key": "Drmhze6EPcv0fN_81Bj-nA",
                 "email": "user@reana.info",
-                "id_": "00000000-0000-0000-0000-000000000000"
+                "id_": "00000000-0000-0000-0000-000000000000",
+                "token": "Drmhze6EPcv0fN_81Bj-nA"
               }
             },
             "schema": {
               "properties": {
-                "api_key": {
-                  "type": "string"
-                },
                 "email": {
                   "type": "string"
                 },
                 "id_": {
+                  "type": "string"
+                },
+                "token": {
                   "type": "string"
                 }
               },

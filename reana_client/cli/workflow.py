@@ -77,8 +77,13 @@ def workflow(ctx):
     '--token',
     default=os.environ.get('REANA_TOKEN', None),
     help='API token of the current user.')
+@click.option(
+    '-v',
+    '--verbose',
+    count=True,
+    help='Set status information verbosity.')
 @click.pass_context
-def workflow_list(ctx, organization, _filter, output_format, token):
+def workflow_list(ctx, organization, _filter, output_format, token, verbose):
     """List all workflows user has."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -93,8 +98,10 @@ def workflow_list(ctx, organization, _filter, output_format, token):
 
     try:
         response = ctx.obj.client.get_all_analyses(organization, token)
-        headers = ['name', 'run_number', 'id', 'user', 'organization',
-                   'status']
+        verbose_headers = ['user', 'organization']
+        headers = ['name', 'run_number', 'id', 'status']
+        if verbose:
+            headers += verbose_headers
         data = []
         for analysis in response:
             name, run_number = get_workflow_name_and_run_number(
@@ -102,9 +109,10 @@ def workflow_list(ctx, organization, _filter, output_format, token):
             data.append(list(map(str, [name,
                                        run_number,
                                        analysis['id'],
-                                       analysis['user'],
-                                       analysis['organization'],
                                        analysis['status']])))
+            if verbose:
+                data[-1] += [analysis[k] for k in verbose_headers]
+
         if output_format:
             tablib_data = tablib.Dataset()
             tablib_data.headers = headers

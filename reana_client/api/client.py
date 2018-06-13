@@ -89,15 +89,13 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_all_analyses(self, user, organization, token):
+    def get_all_analyses(self, organization, token):
         """List all existing analyses."""
         try:
 
             response, http_response = self._client.api.\
-                                      get_analyses(user=user,
-                                                   organization=organization,
-                                                   token=token)\
-                                      .result()
+                get_analyses(organization=organization,
+                             token=token).result()
             if http_response.status_code == 200:
                 return response
             else:
@@ -117,12 +115,11 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_analysis_status(self, user, organization, workflow, token):
+    def get_analysis_status(self, organization, workflow, token):
         """Get status of previously created analysis."""
         try:
             response, http_response = self.\
-                _client.api.get_analysis_status(user=user,
-                                                organization=organization,
+                _client.api.get_analysis_status(organization=organization,
                                                 analysis_id_or_name=workflow,
                                                 token=token).result()
             if http_response.status_code == 200:
@@ -144,17 +141,16 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def create_workflow(self, user, organization, reana_spec, name, token):
+    def create_workflow(self, organization, reana_spec, name, token):
         """Create a workflow."""
         try:
             (response,
              http_response) = self._client.api.create_analysis(
-                                  user=user,
-                                  organization=organization,
-                                  reana_spec=json.loads(json.dumps(
-                                      reana_spec, sort_keys=True)),
-                                  workflow_name=name,
-                                  token=token).result()
+                 organization=organization,
+                 reana_spec=json.loads(json.dumps(
+                     reana_spec, sort_keys=True)),
+                 workflow_name=name,
+                 token=token).result()
             if http_response.status_code == 201:
                 return response
             else:
@@ -174,16 +170,15 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def start_analysis(self, user, organization, workflow, token):
+    def start_analysis(self, organization, workflow, token):
         """Start a workflow."""
         try:
             (response,
              http_response) = self._client.api.set_analysis_status(
-                                  user=user,
-                                  organization=organization,
-                                  analysis_id_or_name=workflow,
-                                  status='start',
-                                  token=token).result()
+                 organization=organization,
+                 analysis_id_or_name=workflow,
+                 status='start',
+                 token=token).result()
             if http_response.status_code == 200:
                 return response
             else:
@@ -203,13 +198,12 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def seed_analysis_inputs(self, user, organization, analysis_id, file_,
+    def seed_analysis_inputs(self, organization, analysis_id, file_,
                              file_name, token):
         """Seed analysis with input files."""
         try:
             (response,
              http_response) = self._client.api.seed_analysis_inputs(
-                 user=user,
                  organization=organization,
                  analysis_id_or_name=analysis_id,
                  file_content=file_,
@@ -235,13 +229,12 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def seed_analysis_code(self, user, organization, analysis_id, file_,
+    def seed_analysis_code(self, organization, analysis_id, file_,
                            file_name, token):
         """Seed analysis with code."""
         try:
             (response,
              http_response) = self._client.api.seed_analysis_code(
-                 user=user,
                  organization=organization,
                  analysis_id_or_name=analysis_id,
                  file_content=file_,
@@ -267,12 +260,11 @@ class Client(object):
         except Exception:
             raise
 
-    def get_workflow_logs(self, user, organization, analysis_id):
+    def get_workflow_logs(self, organization, analysis_id):
         """Get logs from a workflow engine."""
         try:
             (response,
              http_response) = self._client.api.get_analysis_logs(
-                 user=user,
                  organization=organization,
                  analysis_id_or_name=analysis_id).result()
 
@@ -295,11 +287,10 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def download_analysis_output_file(self, user, organization, analysis_id,
+    def download_analysis_output_file(self, organization, analysis_id,
                                       file_name, token):
         """Downdloads the requested file if it exists.
 
-        :param user: UUID of the analysis owner.
         :param organization: Organization which the user belongs to.
         :param analysis_id: UUID which identifies the analysis.
         :param file_name: File name or path to the file requested.
@@ -309,7 +300,6 @@ class Client(object):
             logging.getLogger("urllib3").setLevel(logging.CRITICAL)
             (response,
              http_response) = self._client.api.get_analysis_outputs_file(
-                 user=user,
                  organization=organization,
                  analysis_id_or_name=analysis_id,
                  file_name=file_name,
@@ -334,10 +324,9 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_analysis_inputs(self, user, organization, analysis_id, token):
+    def get_analysis_inputs(self, organization, analysis_id, token):
         """Return the list of inputs for a given analysis .
 
-        :param user: UUID of the analysis owner.
         :param organization: Organization which the user belongs to.
         :param analysis_id: UUID which identifies the analysis.
         :returns: A list of dictionaries composed by the `name`, `size` and
@@ -346,7 +335,6 @@ class Client(object):
         try:
             (response,
              http_response) = self._client.api.get_analysis_inputs(
-                 user=user,
                  organization=organization,
                  analysis_id_or_name=analysis_id,
                  token=token).result()
@@ -370,10 +358,9 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_analysis_outputs(self, user, organization, analysis_id, token):
+    def get_analysis_outputs(self, organization, analysis_id, token):
         """Return the list of outputs for a given analysis.
 
-        :param user: UUID of the analysis owner.
         :param organization: Organization which the user belongs to.
         :param analysis_id: UUID which identifies the analysis.
         :returns: A list of dictionaries composed by the `name`, `size` and
@@ -382,7 +369,6 @@ class Client(object):
         try:
             (response,
              http_response) = self._client.api.get_analysis_outputs(
-                 user=user,
                  organization=organization,
                  analysis_id_or_name=analysis_id,
                  token=token).result()
@@ -406,10 +392,9 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_analysis_code(self, user, organization, analysis_id, token):
+    def get_analysis_code(self, organization, analysis_id, token):
         """Return the list of code files for a given analysis.
 
-        :param user: UUID of the analysis owner.
         :param organization: Organization which the user belongs to.
         :param analysis_id: UUID which identifies the analysis.
         :returns: A list of dictionaries composed by the `name`, `size` and
@@ -418,7 +403,6 @@ class Client(object):
         try:
             (response,
              http_response) = self._client.api.get_analysis_code(
-                 user=user,
                  organization=organization,
                  analysis_id_or_name=analysis_id,
                  token=token).result()
@@ -442,13 +426,12 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def upload_to_server(self, user, organization, workflow,
+    def upload_to_server(self, organization, workflow,
                          paths, upload_type, token):
         """Upload file or directory to REANA-Server.
 
         Shared e.g. by `code upload` and `inputs upload`.
 
-        :param user: User ID
         :param organization: Organization ID
         :param workflow: ID of that Workflow whose workspace should be
             used to store the files.
@@ -473,7 +456,7 @@ class Client(object):
         # Check if multiple paths were given and iterate over them
         if type(paths) is list or type(paths) is tuple:
             for path in paths:
-                self.upload_to_server(user, organization, workflow,
+                self.upload_to_server(organization, workflow,
                                       path, upload_type, token)
         # `paths` points to a single file or directory
         else:
@@ -492,7 +475,7 @@ class Client(object):
                     responses = []
                     for next_path in files + dirs:
                         response = self.upload_to_server(
-                            user, organization, workflow,
+                            organization, workflow,
                             os.path.join(root, next_path),
                             upload_type, token)
                         responses.append(os.path.join(root, next_path))
@@ -523,11 +506,11 @@ class Client(object):
                     try:
                         if upload_type is UploadType.code:
                             response = self.seed_analysis_code(
-                                user, organization, workflow, f,
+                                organization, workflow, f,
                                 save_path, token)
                         elif upload_type is UploadType.inputs:
                             response = self.seed_analysis_inputs(
-                                user, organization, workflow, f,
+                                organization, workflow, f,
                                 save_path, token)
                         else:
                             logging.warning("Unknown upload type of '{}'."

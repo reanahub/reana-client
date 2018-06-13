@@ -46,11 +46,6 @@ def outputs(ctx):
     'list',
     help='List files workflow has outputted.')
 @click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who created the workflow.')
-@click.option(
     '-o',
     '--organization',
     default=default_organization,
@@ -78,7 +73,7 @@ def outputs(ctx):
     default=os.environ.get('REANA_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
-def outputs_list(ctx, user, organization, workflow, _filter,
+def outputs_list(ctx, organization, workflow, _filter,
                  output_format, token):
     """List files a workflow has outputted."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -94,7 +89,7 @@ def outputs_list(ctx, user, organization, workflow, _filter,
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
-            response = ctx.obj.client.get_analysis_outputs(user, organization,
+            response = ctx.obj.client.get_analysis_outputs(organization,
                                                            workflow, token)
             headers = ['name', 'size', 'last-modified']
             data = []
@@ -142,11 +137,6 @@ def outputs_list(ctx, user, organization, workflow, _filter,
     metavar='FILE',
     nargs=-1)
 @click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who created the workflow.')
-@click.option(
     '-o',
     '--organization',
     default=default_organization,
@@ -168,7 +158,7 @@ def outputs_list(ctx, user, organization, workflow, _filter,
     default=os.environ.get('REANA_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
-def outputs_download(ctx, user, organization, workflow, file_,
+def outputs_download(ctx, organization, workflow, file_,
                      output_directory, token):
     """Download file(s) workflow has outputted."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -186,8 +176,7 @@ def outputs_download(ctx, user, organization, workflow, file_,
         for file_name in file_:
             try:
                 binary_file = \
-                    ctx.obj.client.download_analysis_output_file(user,
-                                                                 organization,
+                    ctx.obj.client.download_analysis_output_file(organization,
                                                                  workflow,
                                                                  file_name,
                                                                  token)

@@ -47,11 +47,6 @@ def inputs(ctx):
     'list',
     help='List input files of a workflow.')
 @click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who created the workflow.')
-@click.option(
     '-o',
     '--organization',
     default=default_organization,
@@ -78,7 +73,7 @@ def inputs(ctx):
     default=os.environ.get('REANA_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
-def inputs_list(ctx, user, organization, workflow, _filter,
+def inputs_list(ctx, organization, workflow, _filter,
                 output_format, token):
     """List input files of a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -94,7 +89,7 @@ def inputs_list(ctx, user, organization, workflow, _filter,
 
     if workflow:
         try:
-            response = ctx.obj.client.get_analysis_inputs(user, organization,
+            response = ctx.obj.client.get_analysis_inputs(organization,
                                                           workflow, token)
             headers = ['name', 'size', 'last-modified']
             data = []
@@ -142,11 +137,6 @@ def inputs_list(ctx, user, organization, workflow, _filter,
     type=click.Path(exists=True, resolve_path=True),
     nargs=-1)
 @click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who created the workflow.')
-@click.option(
     '-o',
     '--organization',
     default=default_organization,
@@ -163,7 +153,7 @@ def inputs_list(ctx, user, organization, workflow, _filter,
     default=os.environ.get('REANA_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
-def inputs_upload(ctx, user, organization, workflow, filenames, token):
+def inputs_upload(ctx, organization, workflow, filenames, token):
     """Upload input file(s) to analysis workspace.Associate with a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -180,8 +170,7 @@ def inputs_upload(ctx, user, organization, workflow, filenames, token):
         for filename in filenames:
             try:
                 response = ctx.obj.client.\
-                    upload_to_server(user,
-                                     organization,
+                    upload_to_server(organization,
                                      workflow,
                                      filename,
                                      UploadType.inputs,

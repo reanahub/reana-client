@@ -57,11 +57,6 @@ def workflow(ctx):
     'list',
     help='List all available workflows.')
 @click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who created the analysis.')
-@click.option(
     '-o',
     '--organization',
     default=default_organization,
@@ -83,7 +78,7 @@ def workflow(ctx):
     default=os.environ.get('REANA_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
-def workflow_list(ctx, user, organization, _filter, output_format, token):
+def workflow_list(ctx, organization, _filter, output_format, token):
     """List all workflows user has."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -97,7 +92,7 @@ def workflow_list(ctx, user, organization, _filter, output_format, token):
         sys.exit(1)
 
     try:
-        response = ctx.obj.client.get_all_analyses(user, organization, token)
+        response = ctx.obj.client.get_all_analyses(organization, token)
         headers = ['name', 'run_number', 'id', 'user', 'organization',
                    'status']
         data = []
@@ -144,11 +139,6 @@ def workflow_list(ctx, user, organization, _filter, output_format, token):
     help='REANA specifications file describing the workflow and '
          'context which REANA should execute.')
 @click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who creates the analysis.')
-@click.option(
     '-n',
     '--name',
     default='',
@@ -169,7 +159,7 @@ def workflow_list(ctx, user, organization, _filter, output_format, token):
     default=os.environ.get('REANA_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
-def workflow_create(ctx, file, user, name, organization,
+def workflow_create(ctx, file, name, organization,
                     skip_validation, token):
     """Create a REANA compatible analysis workflow from REANA spec file."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -208,8 +198,7 @@ def workflow_create(ctx, file, user, name, organization,
                 reana_spec['inputs']['parameters']['input'] = yaml.load(f)
 
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-        response = ctx.obj.client.create_workflow(user,
-                                                  organization,
+        response = ctx.obj.client.create_workflow(organization,
                                                   reana_spec,
                                                   name,
                                                   token)
@@ -228,11 +217,6 @@ def workflow_create(ctx, file, user, name, organization,
     'start',
     help='Start previously created analysis workflow.')
 @click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who has created the workflow.')
-@click.option(
     '-o',
     '--organization',
     default=default_organization,
@@ -250,7 +234,7 @@ def workflow_create(ctx, file, user, name, organization,
     default=os.environ.get('REANA_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
-def workflow_start(ctx, user, organization, workflow, token):
+def workflow_start(ctx, organization, workflow, token):
     """Start previously created analysis workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -266,8 +250,7 @@ def workflow_start(ctx, user, organization, workflow, token):
     if workflow:
         try:
             logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-            response = ctx.obj.client.start_analysis(user,
-                                                     organization,
+            response = ctx.obj.client.start_analysis(organization,
                                                      workflow,
                                                      token)
             click.echo(
@@ -293,11 +276,6 @@ def workflow_start(ctx, user, organization, workflow, token):
 @click.command(
     'status',
     help='Get status of a previously created analysis workflow.')
-@click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who has created the workflow.')
 @click.option(
     '-o',
     '--organization',
@@ -326,9 +304,14 @@ def workflow_start(ctx, user, organization, workflow, token):
     '--token',
     default=os.environ.get('REANA_TOKEN', None),
     help='API token of the current user.')
+@click.option(
+    '-v',
+    '--verbose',
+    count=True,
+    help='Set status information verbosity.')
 @click.pass_context
-def workflow_status(ctx, user, organization, workflow, _filter, output_format,
-                    token):
+def workflow_status(ctx, organization, workflow, _filter, output_format,
+                    token, verbose):
     """Get status of previously created analysis workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -343,29 +326,30 @@ def workflow_status(ctx, user, organization, workflow, _filter, output_format,
 
     if workflow:
         try:
-            response = ctx.obj.client.get_analysis_status(user,
-                                                          organization,
+            response = ctx.obj.client.get_analysis_status(organization,
                                                           workflow,
                                                           token)
-            headers = ['name', 'run_number', 'id', 'user', 'organization',
+            verbose_headers = ['id', 'user', 'organization']
+            headers = ['name', 'run_number',
                        'status', 'command', 'progress']
-
+            if verbose:
+                headers += verbose_headers
             data = []
             if isinstance(response, list):
                 for analysis in response:
                     name, run_number = get_workflow_name_and_run_number(
                         analysis['name'])
-                    data.append(list(map(str,
-                                         [name,
-                                          run_number,
-                                          analysis['id'],
-                                          analysis['user'],
-                                          analysis['organization'],
-                                          analysis['status'],
-                                          analysis['current_command'],
-                                          '{0}/{1}'.format(
-                                              analysis['current_command_idx'],
-                                              analysis['total_commands'])])))
+                    data.append(list(map(
+                        str,
+                        [name,
+                         run_number,
+                         analysis['status'],
+                         analysis['current_command'],
+                         '{0}/{1}'.format(
+                             analysis['current_command_idx'],
+                             analysis['total_commands'])])))
+                    if verbose:
+                        data[-1] += [analysis[k] for k in verbose_headers]
             else:
                 name, run_number = get_workflow_name_and_run_number(
                     response['name'])
@@ -373,14 +357,13 @@ def workflow_status(ctx, user, organization, workflow, _filter, output_format,
                     map(str,
                         [name,
                          run_number,
-                         response['id'],
-                         response['user'],
-                         response['organization'],
                          response['status'],
                          response['progress'].get('current_command'),
                          '{0}/{1}'.format(
                              response['progress'].get('current_command_idx'),
                              response['progress'].get('total_commands'))])))
+                if verbose:
+                    data[-1] += [response[k] for k in verbose_headers]
 
             if output_format:
                 tablib_data = tablib.Dataset()
@@ -412,11 +395,6 @@ def workflow_status(ctx, user, organization, workflow, _filter, output_format,
 
 
 @click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who has created the workflow.')
-@click.option(
     '-o',
     '--organization',
     default=default_organization,
@@ -428,8 +406,13 @@ def workflow_status(ctx, user, organization, workflow, _filter, output_format,
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose logs should be fetched. '
          'Overrides value of REANA_WORKON.')
+@click.option(
+    '-t',
+    '--token',
+    default=os.environ.get('REANA_TOKEN', None),
+    help='API token of the current user.')
 @click.pass_context
-def workflow_logs(ctx, user, organization, workflow):
+def workflow_logs(ctx, organization, workflow, token):
     """Get status of previously created analysis workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -437,9 +420,8 @@ def workflow_logs(ctx, user, organization, workflow):
 
     if workflow:
         try:
-            response = ctx.obj.client.get_workflow_logs(user,
-                                                        organization,
-                                                        workflow)
+            response = ctx.obj.client.get_workflow_logs(organization,
+                                                        workflow, token)
             click.echo(response)
         except Exception as e:
             logging.debug(traceback.format_exc())

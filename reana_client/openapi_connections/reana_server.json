@@ -20,16 +20,10 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of analysis owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],
@@ -140,13 +134,6 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of workflow owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Name of the workflow to be created. If not provided name will be generated.",
             "in": "query",
             "name": "workflow_name",
@@ -173,6 +160,7 @@
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],
@@ -246,9 +234,9 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of workflow owner.",
+            "description": "Required. API token of workflow owner.",
             "in": "query",
-            "name": "user",
+            "name": "token",
             "required": true,
             "type": "string"
           },
@@ -340,13 +328,6 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of workflow owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
             "name": "analysis_id_or_name",
@@ -357,6 +338,7 @@
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],
@@ -447,13 +429,6 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of workflow owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
             "name": "analysis_id_or_name",
@@ -474,6 +449,7 @@
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],
@@ -580,13 +556,6 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of analysis owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
             "name": "analysis_id_or_name",
@@ -611,6 +580,7 @@
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],
@@ -673,13 +643,6 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of analysis owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
             "name": "analysis_id_or_name",
@@ -690,6 +653,7 @@
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],
@@ -765,13 +729,6 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of analysis owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name",
             "in": "path",
             "name": "analysis_id_or_name",
@@ -796,6 +753,7 @@
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],
@@ -858,13 +816,6 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of analysis owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
             "name": "analysis_id_or_name",
@@ -875,6 +826,7 @@
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],
@@ -947,13 +899,6 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of analysis owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
             "name": "analysis_id_or_name",
@@ -964,6 +909,7 @@
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],
@@ -1036,13 +982,6 @@
             "type": "string"
           },
           {
-            "description": "Required. UUID of analysis owner.",
-            "in": "query",
-            "name": "user",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. analysis UUID or name.",
             "in": "path",
             "name": "analysis_id_or_name",
@@ -1060,6 +999,7 @@
             "description": "Required. The API token of analysis owner.",
             "in": "query",
             "name": "token",
+            "required": true,
             "type": "string"
           }
         ],

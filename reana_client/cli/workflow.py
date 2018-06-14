@@ -339,7 +339,7 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                                                           token)
             verbose_headers = ['id', 'user', 'organization']
             headers = ['name', 'run_number',
-                       'status', 'command', 'progress']
+                       'status', 'progress', 'command']
             if verbose:
                 headers += verbose_headers
             data = []
@@ -352,10 +352,11 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                         [name,
                          run_number,
                          analysis['status'],
-                         analysis['current_command'],
                          '{0}/{1}'.format(
                              analysis['current_command_idx'],
-                             analysis['total_commands'])])))
+                             analysis['total_commands']),
+                         analysis.get('current_command')])))
+
                     if verbose:
                         data[-1] += [analysis[k] for k in verbose_headers]
             else:
@@ -366,10 +367,10 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                         [name,
                          run_number,
                          response['status'],
-                         response['progress'].get('current_command'),
                          '{0}/{1}'.format(
                              response['progress'].get('current_command_idx'),
-                             response['progress'].get('total_commands'))])))
+                             response['progress'].get('total_commands')),
+                         response['progress'].get('current_command')])))
                 if verbose:
                     data[-1] += [response[k] for k in verbose_headers]
 

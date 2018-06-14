@@ -112,6 +112,16 @@ def workflow_list(ctx, organization, _filter, output_format, token, verbose):
                                        analysis['status']])))
             if verbose:
                 data[-1] += [analysis[k] for k in verbose_headers]
+        data = sorted(data, key=lambda x: int(x[1]))
+        workflow_ids = ['{0}.{1}'.format(w[0], w[1]) for w in data]
+        active_workflow_idx = workflow_ids.index(os.getenv('REANA_WORKON', ''))
+        if active_workflow_idx > -1:
+            headers += ['active']
+            for idx, row in enumerate(data):
+                if idx == active_workflow_idx:
+                    data[idx].append('<---')
+                else:
+                    data[idx].append(' ')
 
         if output_format:
             tablib_data = tablib.Dataset()
@@ -130,7 +140,7 @@ def workflow_list(ctx, organization, _filter, output_format, token, verbose):
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
         click.echo(
-            click.style('Workflow list culd not be retrieved: \n{}'
+            click.style('Workflow list could not be retrieved: \n{}'
                         .format(str(e)), fg='red'),
             err=True)
 
@@ -337,11 +347,14 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
             response = ctx.obj.client.get_analysis_status(organization,
                                                           workflow,
                                                           token)
+            time_info_headers = ['run started at', 'step started at']
+            time_info_fields = ['run_started_at',
+                                'current_command_started_at']
             verbose_headers = ['id', 'user', 'organization']
-            headers = ['name', 'run_number',
+            headers = ['name', 'run_number', 'created',
                        'status', 'progress', 'command']
             if verbose:
-                headers += verbose_headers
+                headers += time_info_headers + verbose_headers
             data = []
             if isinstance(response, list):
                 for analysis in response:
@@ -351,6 +364,7 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                         str,
                         [name,
                          run_number,
+                         analysis['created'],
                          analysis['status'],
                          '{0}/{1}'.format(
                              analysis['current_command_idx'],
@@ -358,7 +372,9 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                          analysis.get('current_command')])))
 
                     if verbose:
-                        data[-1] += [analysis[k] for k in verbose_headers]
+                        data[-1] += [analysis.get('progress').
+                                     get(th) for th in time_info_fields]
+                        data[-1] += [analysis.get(k) for k in verbose_headers]
             else:
                 name, run_number = get_workflow_name_and_run_number(
                     response['name'])
@@ -366,13 +382,16 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                     map(str,
                         [name,
                          run_number,
+                         response['created'],
                          response['status'],
                          '{0}/{1}'.format(
                              response['progress'].get('current_command_idx'),
                              response['progress'].get('total_commands')),
                          response['progress'].get('current_command')])))
                 if verbose:
-                    data[-1] += [response[k] for k in verbose_headers]
+                    data[-1] += [response.get('progress').
+                                 get(th) for th in time_info_fields]
+                    data[-1] += [response.get(k) for k in verbose_headers]
 
             if output_format:
                 tablib_data = tablib.Dataset()

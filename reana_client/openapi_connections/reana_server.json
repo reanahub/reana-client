@@ -350,6 +350,7 @@
             "description": "Request succeeded. Info about an analysis, including the status is returned.",
             "examples": {
               "application/json": {
+                "created": "2018-06-13 09:47:35.660977",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
                 "name": "mytest-1",
                 "organization": "default_org",
@@ -359,6 +360,9 @@
             },
             "schema": {
               "properties": {
+                "created": {
+                  "type": "string"
+                },
                 "id": {
                   "type": "string"
                 },

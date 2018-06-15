@@ -1079,6 +1079,62 @@
         "summary": "Ping the server (healthcheck)"
       }
     },
+    "/api/register": {
+      "post": {
+        "description": "This resource registers a new user with the provided information email.",
+        "operationId": "register_user",
+        "parameters": [
+          {
+            "description": "Required. The email of the user.",
+            "in": "query",
+            "name": "email",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "201": {
+            "description": "User registered successfully. Returns the token and a message.",
+            "examples": {
+              "application/json": {
+                "email": "user@reana.info",
+                "id_": "00000000-0000-0000-0000-000000000000",
+                "token": "Drmhze6EPcv0fN_81Bj-nA"
+              }
+            },
+            "schema": {
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "id_": {
+                  "type": "string"
+                },
+                "token": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "403": {
+            "description": "Request failed. The incoming payload seems malformed."
+          },
+          "500": {
+            "description": "Request failed. Internal server error.",
+            "examples": {
+              "application/json": {
+                "message": "Internal server error."
+              }
+            }
+          }
+        },
+        "summary": "Registers a new user with the provided information."
+      }
+    },
     "/api/users": {
       "get": {
         "description": "Get user information.",

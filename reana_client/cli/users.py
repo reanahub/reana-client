@@ -97,7 +97,7 @@ def get_user(ctx, id, email, token, output_format):
     help='The api key of an administrator.')
 @click.pass_context
 def create_user(ctx, email, token):
-    """Return information about a specific user."""
+    """Create a new user."""
     try:
         response = ctx.obj.client.create_user(email, token)
         headers = ['id', 'email', 'token']
@@ -113,6 +113,34 @@ def create_user(ctx, email, token):
             click.style('User could not be created: \n{}'
                         .format(str(e)), fg='red'),
             err=True)
+
+
+@click.command(
+    'register',
+    help='Register a new user.')
+@click.option(
+    '-e',
+    '--email',
+    help='The email of the user.')
+@click.pass_context
+def register_user(ctx, email):
+    """Register a new user."""
+    try:
+        response = ctx.obj.client.register_user(email)
+        headers = ['id', 'email', 'token']
+        data = [(response['id_'], response['email'], response['token'])]
+        click.echo(
+            click.style('User was successfully registered.', fg='green'))
+        click_table_printer(headers, [], data)
+
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style('User could not be registered: \n{}'
+                        .format(str(e)), fg='red'),
+            err=True)
+
 
 
 users.add_command(get_user)

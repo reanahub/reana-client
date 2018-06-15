@@ -594,3 +594,35 @@ class Client(object):
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
+ 
+    def register_user(self, email):
+        """Register a new user with the provided id or email.
+
+        :param id: UUID of the user.
+        :param email: Email of the user.
+        :returns: The new user information.
+        """
+        try:
+            (response,
+             http_response) = self._client.api.register_user(
+                 email=email,
+            ).result()
+
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            logging.debug(
+                'User could not be registered: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e

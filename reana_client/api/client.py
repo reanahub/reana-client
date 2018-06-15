@@ -576,11 +576,11 @@ class Client(object):
                  token=token
             ).result()
 
-            if http_response.status_code == 200:
+            if http_response.status_code == 201:
                 return response
             else:
                 raise Exception(
-                    "Expected status code 200 but replied with "
+                    "Expected status code 201 but replied with "
                     "{status_code}".format(
                         status_code=http_response.status_code))
 
@@ -594,7 +594,7 @@ class Client(object):
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
- 
+
     def register_user(self, email):
         """Register a new user with the provided id or email.
 
@@ -608,11 +608,11 @@ class Client(object):
                  email=email,
             ).result()
 
-            if http_response.status_code == 200:
+            if http_response.status_code == 201:
                 return response
             else:
                 raise Exception(
-                    "Expected status code 200 but replied with "
+                    "Expected status code 201 but replied with "
                     "{status_code}".format(
                         status_code=http_response.status_code))
 

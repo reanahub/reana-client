@@ -142,6 +142,6 @@ def register_user(ctx, email):
             err=True)
 
 
-
 users.add_command(get_user)
 users.add_command(create_user)
+users.add_command(register_user)

@@ -347,12 +347,10 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
             response = ctx.obj.client.get_analysis_status(organization,
                                                           workflow,
                                                           token)
-            time_info_headers = ['run started at', 'step started at']
-            time_info_fields = ['run_started_at',
-                                'current_command_started_at']
+            time_info_headers = ['run started at']
             verbose_headers = ['id', 'user', 'organization']
             headers = ['name', 'run_number', 'created',
-                       'status', 'progress', 'command']
+                       'status', 'progress', 'failed']
             if verbose:
                 headers += time_info_headers + verbose_headers
             data = []
@@ -367,14 +365,14 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                          analysis['created'],
                          analysis['status'],
                          '{0}/{1}'.format(
-                             analysis['current_command_idx'],
-                             analysis['total_commands']),
-                         analysis.get('current_command')])))
+                             analysis['progress']['succeeded'],
+                             analysis['progress']['planned']),
+                         analysis['progress']['failed']])))
 
-                    if verbose:
-                        data[-1] += [analysis.get('progress').
-                                     get(th) for th in time_info_fields]
-                        data[-1] += [analysis.get(k) for k in verbose_headers]
+                    # if verbose:
+                    #     data[-1] += [analysis.get('progress').
+                    #                  get(th) for th in time_info_fields]
+                    #     data[-1] += [analysis.get(k) for k in verbose_headers]
             else:
                 name, run_number = get_workflow_name_and_run_number(
                     response['name'])
@@ -385,13 +383,13 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                          response['created'],
                          response['status'],
                          '{0}/{1}'.format(
-                             response['progress'].get('current_command_idx'),
-                             response['progress'].get('total_commands')),
-                         response['progress'].get('current_command')])))
-                if verbose:
-                    data[-1] += [response.get('progress').
-                                 get(th) for th in time_info_fields]
-                    data[-1] += [response.get(k) for k in verbose_headers]
+                             response['progress']['succeeded'],
+                             response['progress']['planned']),
+                         response['progress']['failed']])))
+                # if verbose:
+                #     data[-1] += [response.get('progress').
+                #                  get(th) for th in time_info_fields]
+                #     data[-1] += [response.get(k) for k in verbose_headers]
 
             if output_format:
                 tablib_data = tablib.Dataset()

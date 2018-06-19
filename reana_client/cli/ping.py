@@ -40,6 +40,7 @@ def ping(ctx):
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        click.echo(
-            click.style('Could not connect to the server.', fg='red'),
-            err=True)
+        click.echo(click.style(
+            'Could not connect to the selected '
+            'REANA cluster server at {0}.'.format(ctx.obj.client.server_url),
+            fg='red'), err=True)

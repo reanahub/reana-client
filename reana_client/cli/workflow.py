@@ -114,12 +114,13 @@ def workflow_list(ctx, organization, _filter, output_format, token, verbose):
                 data[-1] += [analysis[k] for k in verbose_headers]
         data = sorted(data, key=lambda x: int(x[1]))
         workflow_ids = ['{0}.{1}'.format(w[0], w[1]) for w in data]
-        active_workflow_idx = workflow_ids.index(os.getenv('REANA_WORKON', ''))
-        if active_workflow_idx > -1:
-            headers += ['working_on']
+
+        if os.getenv('REANA_WORKON', '') in workflow_ids:
+            active_workflow_idx = \
+                workflow_ids.index(os.getenv('REANA_WORKON', ''))
             for idx, row in enumerate(data):
                 if idx == active_workflow_idx:
-                    data[idx].append('<---')
+                    data[idx][headers.index('run_number')] += ' *'
                 else:
                     data[idx].append(' ')
 

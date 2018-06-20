@@ -384,7 +384,7 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
             else:
                 name, run_number = get_workflow_name_and_run_number(
                     response['name'])
-                current_command = response['progress']['current_command']
+                current_command = response['progress'].get('current_command')
                 if current_command:
                     if current_command.startswith('bash -c "cd '):
                         current_command = current_command[
@@ -401,8 +401,8 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                          response['status'],
                          '{0}/{1}'.
                          format(
-                             response['progress']['succeeded'],
-                             response['progress']['total_jobs']),
+                             response['progress'].get('succeeded', '-'),
+                             response['progress'].get('total_jobs', '-')),
                          current_command])))
                 if verbose:
                     data[-1] += [response.get(k) for k in verbose_headers]

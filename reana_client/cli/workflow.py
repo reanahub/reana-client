@@ -364,6 +364,9 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                             current_command = current_command[
                                 current_command.
                                 index(';') + 2:-2]
+                    else:
+                        if 'command' in headers:
+                            headers.remove('command')
                     data.append(list(map(
                         str,
                         [name,
@@ -387,6 +390,9 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
                         current_command = current_command[
                             current_command.
                             index(';') + 2:-2]
+                else:
+                    if 'command' in headers:
+                        headers.remove('command')
                 data.append(list(
                     map(str,
                         [name,

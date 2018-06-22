@@ -1,5 +1,5 @@
 ==============
- REANA client
+ REANA-Client
 ==============
 
 .. image:: https://img.shields.io/travis/reanahub/reana-client.svg
@@ -23,16 +23,16 @@
 About
 -----
 
-REANA-Client is a component of the `REANA <http://reanahub.io/>`_ reusable
-analysis platform. It provides a command-line client that allows researcher to
-communicate to REANA cloud instances to submit, run, and manage their reusable
-analysis workflows.
+REANA-Client is a component of the `REANA <http://www.reana.io/>`_ reusable and
+reproducible research data analysis platform. It provides a command-line tool
+that allows researchers to submit, run, and manage their computational
+workflows.
 
 Features
 --------
 
-- run research analysis workflows on compute clouds
 - seed analysis workspace with input code and data
+- run computational workflows on remote compute clouds
 - list submitted analyses and enquire about their statuses
 - download results of finished analysis workflows
 
@@ -45,4 +45,5 @@ Useful links
 - `source code <https://github.com/reanahub/reana-client>`_
 
 For more information about the REANA reusable analysis platform, please see the
-general `REANA documentation <http://reana.readthedocs.io/>`_.
+`REANA project <http://www.reana.io>`_ home page and the general `REANA
+documentation <http://reana.readthedocs.io/>`_ pages.

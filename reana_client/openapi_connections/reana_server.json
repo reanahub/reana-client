@@ -1085,16 +1085,23 @@
         "operationId": "get_user",
         "parameters": [
           {
-            "description": "Required. The email of the user.",
+            "description": "Not required. The email of the user.",
             "in": "query",
             "name": "email",
-            "required": true,
+            "required": false,
             "type": "string"
           },
           {
             "description": "Not required. UUID of the user.",
             "in": "query",
             "name": "id_",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "description": "Not required. API key of the admin.",
+            "in": "query",
+            "name": "user_token",
             "required": false,
             "type": "string"
           },
@@ -1111,27 +1118,37 @@
         ],
         "responses": {
           "200": {
-            "description": "User was found. Returns all stored user information.",
+            "description": "Users matching criteria were found. Returns all stored user information.",
             "examples": {
-              "application/json": {
-                "email": "user@reana.info",
-                "id": "00000000-0000-0000-0000-000000000000",
-                "token": "Drmhze6EPcv0fN_81Bj-nA"
-              }
+              "application/json": [
+                {
+                  "email": "user@reana.info",
+                  "id": "00000000-0000-0000-0000-000000000000",
+                  "token": "Drmhze6EPcv0fN_81Bj-nA"
+                },
+                {
+                  "email": "user2@reana.info",
+                  "id": "00000000-0000-0000-0000-000000000001",
+                  "token": "Drmhze6EPcv0fN_81Bj-nB"
+                }
+              ]
             },
             "schema": {
-              "properties": {
-                "email": {
-                  "type": "string"
+              "items": {
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "id_": {
+                    "type": "string"
+                  },
+                  "token": {
+                    "type": "string"
+                  }
                 },
-                "id_": {
-                  "type": "string"
-                },
-                "token": {
-                  "type": "string"
-                }
+                "type": "object"
               },
-              "type": "object"
+              "type": "array"
             }
           },
           "403": {
@@ -1165,6 +1182,13 @@
             "in": "query",
             "name": "email",
             "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. API key of the user.",
+            "in": "query",
+            "name": "user_token",
+            "required": false,
             "type": "string"
           },
           {

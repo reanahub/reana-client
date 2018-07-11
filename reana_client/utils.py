@@ -69,7 +69,7 @@ def cwl_load(workflow_file):
     :returns: A dictionary which represents the valid `cwl` workflow.
     """
     mystdout = StringIO()
-    main(["--debug", "--pack", workflow_file], stdout=mystdout)
+    main(["--pack", "--quiet", workflow_file], stdout=mystdout)
     value = mystdout.getvalue()
     return json.loads(value)
 

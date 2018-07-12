@@ -88,7 +88,7 @@ def code_list(ctx, organization, workflow, _filter,
 
     if workflow:
         try:
-            response = ctx.obj.client.get_analysis_code(organization,
+            response = ctx.obj.client.get_workflow_code(organization,
                                                         workflow, token)
             headers = ['name', 'size', 'last-modified']
             data = []
@@ -129,7 +129,7 @@ def code_list(ctx, organization, workflow, _filter,
 
 @click.command(
     'upload',
-    help='Upload one of more code files to the analysis workspace.')
+    help='Upload one of more code files to the workflow workspace.')
 @click.argument(
     'filenames',
     metavar='FILE',
@@ -153,7 +153,7 @@ def code_list(ctx, organization, workflow, _filter,
     help='API token of the current user.')
 @click.pass_context
 def code_upload(ctx, organization, workflow, filenames, token):
-    """Upload code file(s) to analysis workspace. Associate with a workflow."""
+    """Upload code file(s) to workflow workspace. Associate with a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))

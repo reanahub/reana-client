@@ -31,10 +31,10 @@ workflows.
 Features
 --------
 
-- seed analysis workspace with input code and data
+- seed workspace with input code and data
 - run computational workflows on remote compute clouds
-- list submitted analyses and enquire about their statuses
-- download results of finished analysis workflows
+- list submitted workflows and enquire about their statuses
+- download results of finished workflows
 
 Useful links
 ------------

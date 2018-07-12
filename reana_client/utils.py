@@ -225,25 +225,25 @@ def get_workflow_name_and_run_number(workflow_name):
         return workflow_name, ''
 
 
-def get_analysis_root():
-    """Return the current analysis root directory."""
+def get_workflow_root():
+    """Return the current workflow root directory."""
     reana_yaml = 'reana.yaml'
-    analysis_root = os.getcwd()
+    workflow_root = os.getcwd()
 
     while True:
-        file_list = os.listdir(analysis_root)
-        parent_dir = os.path.dirname(analysis_root)
+        file_list = os.listdir(workflow_root)
+        parent_dir = os.path.dirname(workflow_root)
         if reana_yaml in file_list:
             break
         else:
-            if analysis_root == parent_dir:
+            if workflow_root == parent_dir:
                 click.echo(click.style(
-                    'Not an analysis directory (or any of the parent'
+                    'Not an workflow directory (or any of the parent'
                     ' directories).\nPlease upload from inside'
                     ' the directory containing the reana.yaml '
-                    'file of your analysis.', fg='red'))
+                    'file of your workflow.', fg='red'))
                 sys.exit(1)
             else:
-                analysis_root = parent_dir
-    analysis_root += '/'
-    return analysis_root
+                workflow_root = parent_dir
+    workflow_root += '/'
+    return workflow_root

@@ -89,7 +89,7 @@ def outputs_list(ctx, organization, workflow, _filter,
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
-            response = ctx.obj.client.get_analysis_outputs(organization,
+            response = ctx.obj.client.get_workflow_outputs(organization,
                                                            workflow, token)
             headers = ['name', 'size', 'last-modified']
             data = []
@@ -176,7 +176,7 @@ def outputs_download(ctx, organization, workflow, file_,
         for file_name in file_:
             try:
                 binary_file = \
-                    ctx.obj.client.download_analysis_output_file(organization,
+                    ctx.obj.client.download_workflow_output_file(organization,
                                                                  workflow,
                                                                  file_name,
                                                                  token)

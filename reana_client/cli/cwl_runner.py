@@ -100,7 +100,7 @@ def cwl_runner(client, quiet, outdir, processfile, jobfile):
                 client, reana_spec['inputs']['parameters']['input'],
                 jobfile, workflow_id)
 
-        response = client.start_analysis(default_user,
+        response = client.start_workflow(default_user,
                                          default_organization,
                                          workflow_id)
         logging.error(response)
@@ -170,7 +170,7 @@ def transfer_file(client, file_dict, jobfile, workflow_id):
         path = file_dict.get('location', file_dict.get('path'))
         with open(os.path.join(os.path.abspath(os.path.dirname(jobfile)),
                                path)) as f:
-            response = client.seed_analysis_inputs(
+            response = client.seed_workflow_inputs(
                 default_user,
                 default_organization,
                 workflow_id,
@@ -287,7 +287,7 @@ def upload_directory(client, spec_file, workflow_id, location, basename=None,
                 if basename:
                     directory_name = directory_name.replace(
                         disk_directory_name, basename)
-                response = client.seed_analysis_inputs(
+                response = client.seed_workflow_inputs(
                     default_user,
                     default_organization,
                     workflow_id,
@@ -346,7 +346,7 @@ def upload_file(client, param, spec_file, workflow_id):
         with open(path) as f:
             filename = path.replace(os.path.abspath(
                 os.path.dirname(spec_file)) + "/", "")
-            response = client.seed_analysis_inputs(
+            response = client.seed_workflow_inputs(
                 default_user,
                 default_organization,
                 workflow_id,

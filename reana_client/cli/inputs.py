@@ -89,7 +89,7 @@ def inputs_list(ctx, organization, workflow, _filter,
 
     if workflow:
         try:
-            response = ctx.obj.client.get_analysis_inputs(organization,
+            response = ctx.obj.client.get_workflow_inputs(organization,
                                                           workflow, token)
             headers = ['name', 'size', 'last-modified']
             data = []
@@ -130,7 +130,7 @@ def inputs_list(ctx, organization, workflow, _filter,
 
 @click.command(
     'upload',
-    help='Upload one of more FILE to the analysis workspace.')
+    help='Upload one of more FILE to the workflow workspace.')
 @click.argument(
     'filenames',
     metavar='FILE',
@@ -154,7 +154,7 @@ def inputs_list(ctx, organization, workflow, _filter,
     help='API token of the current user.')
 @click.pass_context
 def inputs_upload(ctx, organization, workflow, filenames, token):
-    """Upload input file(s) to analysis workspace.Associate with a workflow."""
+    """Upload input file(s) to workflow workspace.Associate with a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))

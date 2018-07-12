@@ -207,13 +207,6 @@
         "operationId": "get_workflows",
         "parameters": [
           {
-            "description": "Required. Organization which the workflow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. The API access_token of workflow owner.",
             "in": "query",
             "name": "access_token",
@@ -232,29 +225,25 @@
                 {
                   "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
                   "name": "mytest-1",
-                  "organization": "default_org",
                   "status": "running",
                   "user": "00000000-0000-0000-0000-000000000000"
                 },
                 {
                   "id": "3c9b117c-d40a-49e3-a6de-5f89fcada5a3",
                   "name": "mytest-2",
-                  "organization": "default_org",
                   "status": "finished",
                   "user": "00000000-0000-0000-0000-000000000000"
                 },
                 {
                   "id": "72e3ee4f-9cd3-4dc7-906c-24511d9f5ee3",
                   "name": "mytest-3",
-                  "organization": "default_org",
-                  "status": "waiting",
+                  "status": "created",
                   "user": "00000000-0000-0000-0000-000000000000"
                 },
                 {
                   "id": "c4c0a1a6-beef-46c7-be04-bf4b3beca5a1",
                   "name": "mytest-4",
-                  "organization": "default_org",
-                  "status": "waiting",
+                  "status": "created",
                   "user": "00000000-0000-0000-0000-000000000000"
                 }
               ]
@@ -266,9 +255,6 @@
                     "type": "string"
                   },
                   "name": {
-                    "type": "string"
-                  },
-                  "organization": {
                     "type": "string"
                   },
                   "status": {
@@ -306,7 +292,7 @@
             "description": "Request failed. Internal controller error.",
             "examples": {
               "application/json": {
-                "message": "Either organization or user does not exist."
+                "message": "Something went wrong."
               }
             }
           }
@@ -320,13 +306,6 @@
         "description": "This resource is expecting a REANA specification in JSON format with all the necessary information to instantiate a workflow.",
         "operationId": "create_workflow",
         "parameters": [
-          {
-            "description": "Required. Organization which the worklow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
           {
             "description": "Name of the workflow to be created. If not provided name will be generated.",
             "in": "query",
@@ -421,13 +400,6 @@
         "operationId": "get_workflow_logs",
         "parameters": [
           {
-            "description": "Required. Organization which the worklow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. API access_token of workflow owner.",
             "in": "query",
             "name": "access_token",
@@ -451,7 +423,6 @@
             "examples": {
               "application/json": {
                 "logs": "<Workflow engine log output>",
-                "organization": "default_org",
                 "user": "00000000-0000-0000-0000-000000000000",
                 "workflow_id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
                 "workflow_name": "mytest-1"
@@ -460,9 +431,6 @@
             "schema": {
               "properties": {
                 "logs": {
-                  "type": "string"
-                },
-                "organization": {
                   "type": "string"
                 },
                 "user": {
@@ -515,13 +483,6 @@
         "operationId": "get_workflow_status",
         "parameters": [
           {
-            "description": "Required. Organization which the worklow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
             "name": "workflow_id_or_name",
@@ -547,7 +508,6 @@
                 "created": "2018-06-13 09:47:35.660977",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
                 "name": "mytest-1",
-                "organization": "default_org",
                 "status": "created",
                 "user": "00000000-0000-0000-0000-000000000000"
               }
@@ -564,9 +524,6 @@
                   "type": "string"
                 },
                 "name": {
-                  "type": "string"
-                },
-                "organization": {
                   "type": "string"
                 },
                 "progress": {
@@ -620,13 +577,6 @@
         "operationId": "set_workflow_status",
         "parameters": [
           {
-            "description": "Required. Organization which the worklow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
             "name": "workflow_id_or_name",
@@ -661,7 +611,6 @@
               "application/json": {
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
                 "message": "Workflow successfully launched",
-                "organization": "default_org",
                 "status": "created",
                 "user": "00000000-0000-0000-0000-000000000000",
                 "workflow_name": "mytest-1"
@@ -670,9 +619,6 @@
             "schema": {
               "properties": {
                 "message": {
-                  "type": "string"
-                },
-                "organization": {
                   "type": "string"
                 },
                 "status": {
@@ -744,13 +690,6 @@
         "operationId": "get_files",
         "parameters": [
           {
-            "description": "Required. Organization which the workflow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
-          {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
             "name": "workflow_id_or_name",
@@ -810,10 +749,10 @@
             }
           },
           "500": {
-            "description": "Request failed. Internal controller error.",
+            "description": "Request failed. Internal server error.",
             "examples": {
               "application/json": {
-                "message": "Either organization or user does not exist."
+                "message": "Internal server error."
               }
             }
           }
@@ -827,13 +766,6 @@
         "description": "This resource is expecting a file to place in the workspace.",
         "operationId": "upload_file",
         "parameters": [
-          {
-            "description": "Required. Organization which the workflow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
           {
             "description": "Required. Analysis UUID or name.",
             "in": "path",
@@ -869,11 +801,6 @@
         "responses": {
           "200": {
             "description": "Request succeeded. File successfully transferred.",
-            "examples": {
-              "application/json": {
-                "message": "File successfully transferred"
-              }
-            },
             "schema": {
               "properties": {
                 "message": {
@@ -903,7 +830,12 @@
             }
           },
           "500": {
-            "description": "Request failed. Internal controller error."
+            "description": "Request failed. Internal server error.",
+            "examples": {
+              "application/json": {
+                "message": "Internal server error."
+              }
+            }
           }
         },
         "summary": "Adds a file to the workspace."
@@ -914,13 +846,6 @@
         "description": "This resource is expecting a workflow UUID and a file name existing inside the workspace to return its content.",
         "operationId": "download_file",
         "parameters": [
-          {
-            "description": "Required. Organization which the workflow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
           {
             "description": "Required. workflow UUID or name.",
             "in": "path",
@@ -973,10 +898,10 @@
             }
           },
           "500": {
-            "description": "Request failed. Internal controller error.",
+            "description": "Request failed. Internal server error.",
             "examples": {
               "application/json": {
-                "message": "Either organization or user does not exist."
+                "message": "Internal server error."
               }
             }
           }

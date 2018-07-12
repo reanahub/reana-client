@@ -27,7 +27,7 @@ import traceback
 
 import click
 
-from ..config import (default_organization, default_user)
+from ..config import default_user
 
 
 @click.command()
@@ -37,12 +37,7 @@ from ..config import (default_organization, default_user)
     '--user',
     default=default_user,
     help='User who has created the workflow.')
-@click.option(
-    '-o',
-    '--organization',
-    default=default_organization,
-    help='Organization whose resources will be used.')
-def status(ctx, user, organization):
+def status(ctx, user):
     """Show current status of the client session."""
     try:
         click.echo(click.style('User: {}'.format(user), fg='green'))
@@ -54,7 +49,7 @@ def status(ctx, user, organization):
         click.echo(click.style('Workflow selected: {}'.
                    format(workflow), fg='green'))
         workflow_status_response = ctx.obj.client.get_workflow_status(
-            user, organization, workflow)
+            user, workflow)
         click.echo(click.style('Workflow status: {}'.
                                format(workflow_status_response['status']),
                                fg='green'))

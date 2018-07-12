@@ -34,7 +34,7 @@ import yaml
 from bravado.exception import HTTPServerError
 
 from reana_client.api import Client
-from reana_client.config import default_organization, default_user
+from reana_client.config import default_user
 from reana_client.utils import load_workflow_spec
 from reana_client.version import __version__
 
@@ -87,7 +87,6 @@ def cwl_runner(client, quiet, outdir, processfile, jobfile):
             reana_spec['workflow']['spec'])
         logging.info('Connecting to {0}'.format(client.server_url))
         response = client.create_workflow(default_user,
-                                          default_organization,
                                           reana_spec,
                                           'cwl-runner')
         logging.error(response)
@@ -101,7 +100,6 @@ def cwl_runner(client, quiet, outdir, processfile, jobfile):
                 jobfile, workflow_id)
 
         response = client.start_workflow(default_user,
-                                         default_organization,
                                          workflow_id)
         logging.error(response)
 
@@ -110,7 +108,6 @@ def cwl_runner(client, quiet, outdir, processfile, jobfile):
             sleep(1)
             logging.error('Polling workflow logs')
             response = client.get_workflow_logs(default_user,
-                                                default_organization,
                                                 workflow_id)
             logs = response['logs']
             if logs != first_logs:
@@ -172,7 +169,6 @@ def transfer_file(client, file_dict, jobfile, workflow_id):
                                path)) as f:
             response = client.seed_workflow_inputs(
                 default_user,
-                default_organization,
                 workflow_id,
                 f,
                 path)
@@ -289,7 +285,6 @@ def upload_directory(client, spec_file, workflow_id, location, basename=None,
                         disk_directory_name, basename)
                 response = client.seed_workflow_inputs(
                     default_user,
-                    default_organization,
                     workflow_id,
                     file_,
                     directory_name)
@@ -348,7 +343,6 @@ def upload_file(client, param, spec_file, workflow_id):
                 os.path.dirname(spec_file)) + "/", "")
             response = client.seed_workflow_inputs(
                 default_user,
-                default_organization,
                 workflow_id,
                 f,
                 filename)

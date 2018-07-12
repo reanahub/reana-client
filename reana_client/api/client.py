@@ -82,13 +82,12 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflows(self, organization, access_token):
+    def get_workflows(self, access_token):
         """List all existing workflows."""
         try:
 
             response, http_response = self._client.api.\
-                get_workflows(organization=organization,
-                              access_token=access_token).result()
+                get_workflows(access_token=access_token).result()
             if http_response.status_code == 200:
                 return response
             else:
@@ -108,12 +107,11 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflow_status(self, organization, workflow, access_token):
+    def get_workflow_status(self, workflow, access_token):
         """Get status of previously created workflow."""
         try:
             response, http_response = self.\
                 _client.api.get_workflow_status(
-                    organization=organization,
                     workflow_id_or_name=workflow,
                     access_token=access_token)\
                 .result()
@@ -136,12 +134,11 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def create_workflow(self, organization, reana_spec, name, access_token):
+    def create_workflow(self, reana_spec, name, access_token):
         """Create a workflow."""
         try:
             (response,
              http_response) = self._client.api.create_workflow(
-                 organization=organization,
                  reana_spec=json.loads(json.dumps(
                      reana_spec, sort_keys=True)),
                  workflow_name=name,
@@ -165,12 +162,11 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def start_workflow(self, organization, workflow, access_token):
+    def start_workflow(self, workflow, access_token):
         """Start a workflow."""
         try:
             (response,
              http_response) = self._client.api.set_workflow_status(
-                 organization=organization,
                  workflow_id_or_name=workflow,
                  status='start',
                  access_token=access_token).result()
@@ -193,13 +189,11 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def upload_file(self, organization, workflow_id, file_, file_name,
-                    access_token):
+    def upload_file(self, workflow_id, file_, file_name, access_token):
         """Upload file to workflow workspace."""
         try:
             (response,
              http_response) = self._client.api.upload_file(
-                 organization=organization,
                  workflow_id_or_name=workflow_id,
                  file_content=file_,
                  file_name=file_name,
@@ -224,12 +218,11 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflow_logs(self, organization, workflow_id):
+    def get_workflow_logs(self, workflow_id):
         """Get logs from a workflow engine."""
         try:
             (response,
              http_response) = self._client.api.get_workflow_logs(
-                 organization=organization,
                  workflow_id_or_name=workflow_id).result()
 
             if http_response.status_code == 200:
@@ -251,11 +244,9 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def download_file(self, organization, workflow_id,
-                      file_name, access_token):
+    def download_file(self, workflow_id, file_name, access_token):
         """Downdload the requested file if it exists.
 
-        :param organization: Organization which the user belongs to.
         :param workflow_id: UUID which identifies the workflow.
         :param file_name: File name or path to the file requested.
         :returns: .
@@ -264,7 +255,6 @@ class Client(object):
             logging.getLogger("urllib3").setLevel(logging.CRITICAL)
             (response,
              http_response) = self._client.api.download_file(
-                 organization=organization,
                  workflow_id_or_name=workflow_id,
                  file_name=file_name,
                  access_token=access_token).result()
@@ -288,10 +278,9 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_files(self, organization, workflow_id, access_token):
+    def get_files(self, workflow_id, access_token):
         """Return the list of file for a given workflow workspace.
 
-        :param organization: Organization which the user belongs to.
         :param workflow_id: UUID which identifies the workflow.
         :returns: A list of dictionaries composed by the `name`, `size` and
                   `last-modified`.
@@ -299,7 +288,6 @@ class Client(object):
         try:
             (response,
              http_response) = self._client.api.get_files(
-                 organization=organization,
                  workflow_id_or_name=workflow_id,
                  access_token=access_token).result()
 
@@ -322,12 +310,11 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def upload_to_server(self, organization, workflow, paths, access_token):
+    def upload_to_server(self, workflow, paths, access_token):
         """Upload file or directory to REANA-Server.
 
         Shared e.g. by `code upload` and `inputs upload`.
 
-        :param organization: Organization ID
         :param workflow: ID of that Workflow whose workspace should be
             used to store the files.
         :param paths: Absolute filepath(s) of files to be uploaded.
@@ -345,8 +332,7 @@ class Client(object):
         # Check if multiple paths were given and iterate over them
         if type(paths) is list or type(paths) is tuple:
             for path in paths:
-                self.upload_to_server(organization, workflow, path,
-                                      access_token)
+                self.upload_to_server(workflow, path, access_token)
         # `paths` points to a single file or directory
         else:
             path = paths
@@ -364,8 +350,8 @@ class Client(object):
                     uploaded_files = []
                     for next_path in files + dirs:
                         next_uploaded_files = self.upload_to_server(
-                            organization, workflow,
-                            os.path.join(root, next_path), access_token)
+                            workflow, os.path.join(root, next_path),
+                            access_token)
                         uploaded_files.extend(next_uploaded_files)
                 return uploaded_files
 
@@ -391,7 +377,7 @@ class Client(object):
                                   .format(os.path.basename(fname)))
                     logging.info("Uploading '{}' ...".format(fname))
                     try:
-                        response = self.upload_file(organization, workflow, f,
+                        response = self.upload_file(workflow, f,
                                                     save_path, access_token)
                         logging.info("File '{}' was successfully "
                                      "uploaded.".format(fname))

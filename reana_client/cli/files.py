@@ -30,7 +30,7 @@ import click
 
 import tablib
 
-from ..config import ERROR_MESSAGES, default_organization, default_user
+from ..config import ERROR_MESSAGES, default_user
 from ..errors import FileUploadError
 from reana_commons.utils import click_table_printer
 
@@ -46,11 +46,6 @@ def files(ctx):
 @click.command(
     'list',
     help='List workflow workspace files.')
-@click.option(
-    '-o',
-    '--organization',
-    default=default_organization,
-    help='Organization whose resources will be used.')
 @click.option(
     '-w',
     '--workflow',
@@ -74,7 +69,7 @@ def files(ctx):
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
-def get_files(ctx, organization, workflow, _filter,
+def get_files(ctx, workflow, _filter,
               output_format, access_token):
     """List workflow workspace files."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -89,8 +84,7 @@ def get_files(ctx, organization, workflow, _filter,
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
-            response = ctx.obj.client.get_files(organization,
-                                                workflow, access_token)
+            response = ctx.obj.client.get_files(workflow, access_token)
             headers = ['name', 'size', 'last-modified']
             data = []
             for file_ in response:
@@ -137,11 +131,6 @@ def get_files(ctx, organization, workflow, _filter,
     metavar='FILE',
     nargs=-1)
 @click.option(
-    '-o',
-    '--organization',
-    default=default_organization,
-    help='Organization whose resources will be used.')
-@click.option(
     '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
@@ -157,8 +146,7 @@ def get_files(ctx, organization, workflow, _filter,
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
-def download_files(ctx, organization, workflow, file_,
-                   output_directory, access_token):
+def download_files(ctx, workflow, file_, output_directory, access_token):
     """Download workflow workspace file(s)."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -174,8 +162,9 @@ def download_files(ctx, organization, workflow, file_,
         for file_name in file_:
             try:
                 binary_file = \
-                    ctx.obj.client.download_file(organization, workflow,
-                                                 file_name, access_token)
+                    ctx.obj.client.download_file(workflow,
+                                                 file_name,
+                                                 access_token)
                 logging.info('{0} binary file downloaded ... writing to {1}'.
                              format(file_name, output_directory))
 
@@ -221,11 +210,6 @@ def download_files(ctx, organization, workflow, file_,
     type=click.Path(exists=True, resolve_path=True),
     nargs=-1)
 @click.option(
-    '-o',
-    '--organization',
-    default=default_organization,
-    help='Organization whose resources will be used.')
-@click.option(
     '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
@@ -237,7 +221,7 @@ def download_files(ctx, organization, workflow, file_,
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
-def upload_files(ctx, organization, workflow, filenames, access_token):
+def upload_files(ctx, workflow, filenames, access_token):
     """Upload file(s) to workflow workspace."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -253,8 +237,7 @@ def upload_files(ctx, organization, workflow, filenames, access_token):
         for filename in filenames:
             try:
                 response = ctx.obj.client.\
-                    upload_to_server(organization,
-                                     workflow,
+                    upload_to_server(workflow,
                                      filename,
                                      access_token)
                 for file_ in response:

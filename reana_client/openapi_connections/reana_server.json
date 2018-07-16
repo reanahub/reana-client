@@ -738,13 +738,94 @@
         "summary": "Set status of a workflow."
       }
     },
-    "/api/workflows/{workflow_id_or_name}/workspace/code": {
+    "/api/workflows/{workflow_id_or_name}/workspace": {
+      "get": {
+        "description": "This resource retrieves the file list of a workspace, given its workflow UUID.",
+        "operationId": "get_files",
+        "parameters": [
+          {
+            "description": "Required. Organization which the workflow belongs to.",
+            "in": "query",
+            "name": "organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. Analysis UUID or name.",
+            "in": "path",
+            "name": "workflow_id_or_name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Required. The API access_token of workflow owner.",
+            "in": "query",
+            "name": "access_token",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Requests succeeded. The list of files has been retrieved.",
+            "schema": {
+              "items": {
+                "properties": {
+                  "last-modified": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "400": {
+            "description": "Request failed. The incoming payload seems malformed."
+          },
+          "403": {
+            "description": "Request failed. User is not allowed to access workflow.",
+            "examples": {
+              "application/json": {
+                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
+              }
+            }
+          },
+          "404": {
+            "description": "Request failed. Analysis does not exist.",
+            "examples": {
+              "application/json": {
+                "message": "Analysis 256b25f4-4cfb-4684-b7a8-73872ef455a1 does not exist."
+              }
+            }
+          },
+          "500": {
+            "description": "Request failed. Internal controller error.",
+            "examples": {
+              "application/json": {
+                "message": "Either organization or user does not exist."
+              }
+            }
+          }
+        },
+        "summary": "Returns the workspace file list."
+      },
       "post": {
         "consumes": [
           "multipart/form-data"
         ],
-        "description": "This resource expects a file which will be placed in the workflow workspace identified by the UUID `workflow_id`.",
-        "operationId": "seed_workflow_code",
+        "description": "This resource is expecting a file to place in the workspace.",
+        "operationId": "upload_file",
         "parameters": [
           {
             "description": "Required. Organization which the workflow belongs to.",
@@ -825,352 +906,13 @@
             "description": "Request failed. Internal controller error."
           }
         },
-        "summary": "Seeds the workflow workspace with the provided file."
+        "summary": "Adds a file to the workspace."
       }
     },
-    "/api/workflows/{workflow_id_or_name}/workspace/code/": {
+    "/api/workflows/{workflow_id_or_name}/workspace/{file_name}": {
       "get": {
-        "description": "This resource is expecting a workflow UUID to return its list of code files.",
-        "operationId": "get_workflow_code",
-        "parameters": [
-          {
-            "description": "Required. Organization which the workflow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "description": "Required. Analysis UUID or name.",
-            "in": "path",
-            "name": "workflow_id_or_name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "description": "Required. The API access_token of workflow owner.",
-            "in": "query",
-            "name": "access_token",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "responses": {
-          "200": {
-            "description": "Requests succeeded. The list of code files has been retrieved.",
-            "schema": {
-              "items": {
-                "properties": {
-                  "last-modified": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "size": {
-                    "type": "integer"
-                  }
-                },
-                "type": "object"
-              },
-              "type": "array"
-            }
-          },
-          "400": {
-            "description": "Request failed. The incoming payload seems malformed."
-          },
-          "403": {
-            "description": "Request failed. User is not allowed to access workflow.",
-            "examples": {
-              "application/json": {
-                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
-              }
-            }
-          },
-          "404": {
-            "description": "Request failed. Analysis does not exist.",
-            "examples": {
-              "application/json": {
-                "message": "Analysis 256b25f4-4cfb-4684-b7a8-73872ef455a1 does not exist."
-              }
-            }
-          },
-          "500": {
-            "description": "Request failed. Internal controller error.",
-            "examples": {
-              "application/json": {
-                "message": "Either organization or user does not exist."
-              }
-            }
-          }
-        },
-        "summary": "Returns the list of code files for a specific workflow."
-      }
-    },
-    "/api/workflows/{workflow_id_or_name}/workspace/inputs": {
-      "post": {
-        "consumes": [
-          "multipart/form-data"
-        ],
-        "description": "This resource expects a file which will be placed in the workflow workspace identified by the UUID `workflow_id`.",
-        "operationId": "seed_workflow_inputs",
-        "parameters": [
-          {
-            "description": "Required. Organization which the workflow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "description": "Required. Analysis UUID or name",
-            "in": "path",
-            "name": "workflow_id_or_name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "description": "Required. File to be transferred to the workflow workspace.",
-            "in": "formData",
-            "name": "file_content",
-            "required": true,
-            "type": "file"
-          },
-          {
-            "description": "Required. File name.",
-            "in": "query",
-            "name": "file_name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "description": "Required. The API access_token of workflow owner.",
-            "in": "query",
-            "name": "access_token",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "responses": {
-          "200": {
-            "description": "Request succeeded. File successfully trasferred.",
-            "examples": {
-              "application/json": {
-                "message": "File successfully transferred"
-              }
-            },
-            "schema": {
-              "properties": {
-                "message": {
-                  "type": "string"
-                }
-              },
-              "type": "object"
-            }
-          },
-          "400": {
-            "description": "Request failed. The incoming payload seems malformed"
-          },
-          "403": {
-            "description": "Request failed. User is not allowed to access workflow.",
-            "examples": {
-              "application/json": {
-                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
-              }
-            }
-          },
-          "404": {
-            "description": "Request failed. User does not exist.",
-            "examples": {
-              "application/json": {
-                "message": "Workflow cdcf48b1-c2f3-4693-8230-b066e088c6ac does not exist"
-              }
-            }
-          },
-          "500": {
-            "description": "Request failed. Internal controller error."
-          }
-        },
-        "summary": "Seeds the workflow workspace with the provided file."
-      }
-    },
-    "/api/workflows/{workflow_id_or_name}/workspace/inputs/": {
-      "get": {
-        "description": "This resource is expecting a workflow UUID to return its list of input files.",
-        "operationId": "get_workflow_inputs",
-        "parameters": [
-          {
-            "description": "Required. Organization which the workflow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "description": "Required. Analysis UUID or name.",
-            "in": "path",
-            "name": "workflow_id_or_name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "description": "Required. The API access_token of workflow owner.",
-            "in": "query",
-            "name": "access_token",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "responses": {
-          "200": {
-            "description": "Requests succeeded. The list of input files has been retrieved.",
-            "schema": {
-              "items": {
-                "properties": {
-                  "last-modified": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "size": {
-                    "type": "integer"
-                  }
-                },
-                "type": "object"
-              },
-              "type": "array"
-            }
-          },
-          "400": {
-            "description": "Request failed. The incoming payload seems malformed."
-          },
-          "403": {
-            "description": "Request failed. User is not allowed to access workflow.",
-            "examples": {
-              "application/json": {
-                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
-              }
-            }
-          },
-          "404": {
-            "description": "Request failed. Analysis does not exist.",
-            "examples": {
-              "application/json": {
-                "message": "Analysis 256b25f4-4cfb-4684-b7a8-73872ef455a1 does not exist."
-              }
-            }
-          },
-          "500": {
-            "description": "Request failed. Internal controller error.",
-            "examples": {
-              "application/json": {
-                "message": "Either organization or user does not exist."
-              }
-            }
-          }
-        },
-        "summary": "Returns the list of input files for a specific workflow."
-      }
-    },
-    "/api/workflows/{workflow_id_or_name}/workspace/outputs/": {
-      "get": {
-        "description": "This resource is expecting a workflow UUID to return its list of output files.",
-        "operationId": "get_workflow_outputs",
-        "parameters": [
-          {
-            "description": "Required. Organization which the workflow belongs to.",
-            "in": "query",
-            "name": "organization",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "description": "Required. Analysis UUID or name.",
-            "in": "path",
-            "name": "workflow_id_or_name",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "description": "Required. The API access_token of workflow owner.",
-            "in": "query",
-            "name": "access_token",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "responses": {
-          "200": {
-            "description": "Requests succeeded. The list of output files has been retrieved.",
-            "schema": {
-              "items": {
-                "properties": {
-                  "last-modified": {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "size": {
-                    "type": "integer"
-                  }
-                },
-                "type": "object"
-              },
-              "type": "array"
-            }
-          },
-          "400": {
-            "description": "Request failed. The incoming payload seems malformed."
-          },
-          "403": {
-            "description": "Request failed. User is not allowed to access workflow.",
-            "examples": {
-              "application/json": {
-                "message": "User 00000000-0000-0000-0000-000000000000 is not allowed to access workflow 256b25f4-4cfb-4684-b7a8-73872ef455a1"
-              }
-            }
-          },
-          "404": {
-            "description": "Request failed. Analysis does not exist.",
-            "examples": {
-              "application/json": {
-                "message": "Analysis 256b25f4-4cfb-4684-b7a8-73872ef455a1 does not exist."
-              }
-            }
-          },
-          "500": {
-            "description": "Request failed. Internal controller error.",
-            "examples": {
-              "application/json": {
-                "message": "Either organization or user does not exist."
-              }
-            }
-          }
-        },
-        "summary": "Returns the list of output files for a specific workflow."
-      }
-    },
-    "/api/workflows/{workflow_id_or_name}/workspace/outputs/{file_name}": {
-      "get": {
-        "description": "This resource is expecting a workflow UUID and a file name to return its content.",
-        "operationId": "get_workflow_outputs_file",
+        "description": "This resource is expecting a workflow UUID and a file name existing inside the workspace to return its content.",
+        "operationId": "download_file",
         "parameters": [
           {
             "description": "Required. Organization which the workflow belongs to.",

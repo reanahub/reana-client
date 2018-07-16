@@ -98,7 +98,7 @@ def workflow_list(ctx, organization, _filter, output_format, access_token,
         sys.exit(1)
 
     try:
-        response = ctx.obj.client.get_all_workflows(organization, access_token)
+        response = ctx.obj.client.get_workflows(organization, access_token)
         verbose_headers = ['id', 'user', 'organization']
         headers = ['name', 'run_number', 'created', 'status']
         if verbose:

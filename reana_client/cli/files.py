@@ -19,7 +19,7 @@
 # In applying this license, CERN does not waive the privileges and immunities
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
-"""REANA client inputs related commands."""
+"""REANA client output related commands."""
 
 import logging
 import os
@@ -27,25 +27,25 @@ import sys
 import traceback
 
 import click
+
 import tablib
 
 from ..config import ERROR_MESSAGES, default_organization, default_user
 from ..errors import FileUploadError
-from ..api.client import UploadType
 from reana_commons.utils import click_table_printer
 
 
 @click.group(
-    help='All interaction related to input files and parameters of workflows.')
+    help='All interaction related to files.')
 @click.pass_context
-def inputs(ctx):
-    """Top level wrapper for input file and parameter related interaction."""
+def files(ctx):
+    """Top level wrapper for files related interactions."""
     logging.debug(ctx.info_name)
 
 
 @click.command(
     'list',
-    help='List input files of a workflow.')
+    help='List workflow workspace files.')
 @click.option(
     '-o',
     '--organization',
@@ -55,7 +55,8 @@ def inputs(ctx):
     '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    help='Name or UUID of the workflow whose input files you want to list.')
+    help='Name or UUID of the workflow whose files should be listed. '
+         'Overrides value of REANA_WORKON.')
 @click.option(
     '--filter',
     '_filter',
@@ -73,9 +74,9 @@ def inputs(ctx):
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
-def inputs_list(ctx, organization, workflow, _filter,
-                output_format, access_token):
-    """List input files of a workflow."""
+def get_files(ctx, organization, workflow, _filter,
+              output_format, access_token):
+    """List workflow workspace files."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -85,12 +86,11 @@ def inputs_list(ctx, organization, workflow, _filter,
             click.style(ERROR_MESSAGES['missing_access_token'],
                         fg='red'), err=True)
         sys.exit(1)
-
     if workflow:
+        logging.info('Workflow "{}" selected'.format(workflow))
         try:
-            response = ctx.obj.client.get_workflow_inputs(organization,
-                                                          workflow,
-                                                          access_token)
+            response = ctx.obj.client.get_files(organization,
+                                                workflow, access_token)
             headers = ['name', 'size', 'last-modified']
             data = []
             for file_ in response:
@@ -101,7 +101,7 @@ def inputs_list(ctx, organization, workflow, _filter,
                 tablib_data = tablib.Dataset()
                 tablib_data.headers = headers
                 for row in data:
-                    tablib_data.append(row)
+                        tablib_data.append(row)
 
                 if _filter:
                     tablib_data = tablib_data.subset(
@@ -113,11 +113,12 @@ def inputs_list(ctx, organization, workflow, _filter,
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
+
             click.echo(
-                click.style(
-                    'Something went wrong while retrieving input file list'
-                    ' for workflow {0}:\n{1}'.format(workflow, str(e)),
-                    fg='red'),
+                click.style('Something went wrong while retrieving file list'
+                            ' for workflow {0}:\n{1}'.format(workflow,
+                                                             str(e)),
+                            fg='red'),
                 err=True)
     else:
         click.echo(
@@ -129,11 +130,94 @@ def inputs_list(ctx, organization, workflow, _filter,
 
 
 @click.command(
+    'download',
+    help='Download one or more files.')
+@click.argument(
+    'file_',
+    metavar='FILE',
+    nargs=-1)
+@click.option(
+    '-o',
+    '--organization',
+    default=default_organization,
+    help='Organization whose resources will be used.')
+@click.option(
+    '-w',
+    '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    help='Name or UUID of that workflow where files should downloaded from. '
+         'Overrides value of REANA_WORKON.')
+@click.option(
+    '--output-directory',
+    default=os.getcwd(),
+    help='Path to the directory where files  will be downloaded.')
+@click.option(
+    '-at',
+    '--access-token',
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
+    help='Access token of the current user.')
+@click.pass_context
+def download_files(ctx, organization, workflow, file_,
+                   output_directory, access_token):
+    """Download workflow workspace file(s)."""
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not access_token:
+        click.echo(
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
+        sys.exit(1)
+
+    if workflow:
+        for file_name in file_:
+            try:
+                binary_file = \
+                    ctx.obj.client.download_file(organization, workflow,
+                                                 file_name, access_token)
+                logging.info('{0} binary file downloaded ... writing to {1}'.
+                             format(file_name, output_directory))
+
+                outputs_file_path = os.path.join(output_directory, file_name)
+                if not os.path.exists(os.path.dirname(outputs_file_path)):
+                    os.makedirs(os.path.dirname(outputs_file_path))
+
+                with open(outputs_file_path, 'wb') as f:
+                    f.write(binary_file)
+                click.echo(
+                    click.style(
+                        'File {0} downloaded to {1}.'.format(
+                            file_name, output_directory),
+                        fg='green'))
+            except OSError as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(
+                    click.style('File {0} could not be written.'.
+                                format(file_name),
+                                fg='red'), err=True)
+            except Exception as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(click.style('File {0} could not be downloaded: {1}'.
+                                       format(file_name, e), fg='red'),
+                           err=True)
+    else:
+        click.echo(
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with REANA_WORKON '
+                        'environment variable',
+                        fg='red'),
+            err=True)
+
+
+@click.command(
     'upload',
-    help='Upload one of more FILE to the workflow workspace.')
+    help='Upload one of more files to the workflow workspace.')
 @click.argument(
     'filenames',
-    metavar='FILE',
+    metavar='FILE(s)',
     type=click.Path(exists=True, resolve_path=True),
     nargs=-1)
 @click.option(
@@ -148,21 +232,21 @@ def inputs_list(ctx, organization, workflow, _filter,
     help='Name or UUID of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
-    '-at',
+    '-t',
     '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
-def inputs_upload(ctx, organization, workflow, filenames, access_token):
-    """Upload input file(s) to workflow workspace.Associate with a workflow."""
+def upload_files(ctx, organization, workflow, filenames, access_token):
+    """Upload file(s) to workflow workspace."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     if not access_token:
         click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'], fg='red'),
+            err=True)
         sys.exit(1)
 
     if workflow:
@@ -172,12 +256,11 @@ def inputs_upload(ctx, organization, workflow, filenames, access_token):
                     upload_to_server(organization,
                                      workflow,
                                      filename,
-                                     UploadType.inputs,
                                      access_token)
-                if response:
+                for file_ in response:
                     click.echo(
                         click.style('File {} was successfully uploaded.'.
-                                    format(filename), fg='green'))
+                                    format(file_), fg='green'))
             except FileUploadError as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
@@ -206,5 +289,6 @@ def inputs_upload(ctx, organization, workflow, filenames, access_token):
             err=True)
 
 
-inputs.add_command(inputs_list)
-inputs.add_command(inputs_upload)
+files.add_command(get_files)
+files.add_command(download_files)
+files.add_command(upload_files)

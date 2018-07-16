@@ -34,13 +34,6 @@ from reana_client.errors import FileUploadError
 from reana_client.utils import get_workflow_root
 
 
-class UploadType(enum.Enum):
-    """Possible workflow status list enum."""
-
-    inputs = 0
-    code = 1
-
-
 class Client(object):
     """REANA API client code."""
 
@@ -89,7 +82,7 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_all_workflows(self, organization, access_token):
+    def get_workflows(self, organization, access_token):
         """List all existing workflows."""
         try:
 
@@ -200,12 +193,12 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def seed_workflow_inputs(self, organization, workflow_id, file_,
-                             file_name, access_token):
-        """Seed workflow with input files."""
+    def upload_file(self, organization, workflow_id, file_, file_name,
+                    access_token):
+        """Upload file to workflow workspace."""
         try:
             (response,
-             http_response) = self._client.api.seed_workflow_inputs(
+             http_response) = self._client.api.upload_file(
                  organization=organization,
                  workflow_id_or_name=workflow_id,
                  file_content=file_,
@@ -222,7 +215,7 @@ class Client(object):
 
         except HTTPError as e:
             logging.debug(
-                'Input files could not be uploaded: '
+                'File could not be uploaded: '
                 '\nStatus: {}\nReason: {}\n'
                 'Message: {}'.format(e.response.status_code,
                                      e.response.reason,
@@ -230,37 +223,6 @@ class Client(object):
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
-
-    def seed_workflow_code(self, organization, workflow_id, file_,
-                           file_name, access_token):
-        """Seed workflow with code."""
-        try:
-            (response,
-             http_response) = self._client.api.seed_workflow_code(
-                 organization=organization,
-                 workflow_id_or_name=workflow_id,
-                 file_content=file_,
-                 file_name=file_name,
-                 access_token=access_token).result()
-
-            if http_response.status_code == 200:
-                return response
-            else:
-                raise Exception(
-                    "Expected status code 200 but replied with "
-                    "{status_code}".format(
-                        status_code=http_response.status_code))
-
-        except HTTPError as e:
-            logging.debug(
-                'Code file could not be uploaded: '
-                '\nStatus: {}\nReason: {}\n'
-                'Message: {}'.format(e.response.status_code,
-                                     e.response.reason,
-                                     e.response.json()['message']))
-            raise Exception(e.response.json()['message'])
-        except Exception:
-            raise
 
     def get_workflow_logs(self, organization, workflow_id):
         """Get logs from a workflow engine."""
@@ -289,9 +251,9 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def download_workflow_output_file(self, organization, workflow_id,
-                                      file_name, access_token):
-        """Downdloads the requested file if it exists.
+    def download_file(self, organization, workflow_id,
+                      file_name, access_token):
+        """Downdload the requested file if it exists.
 
         :param organization: Organization which the user belongs to.
         :param workflow_id: UUID which identifies the workflow.
@@ -301,7 +263,7 @@ class Client(object):
         try:
             logging.getLogger("urllib3").setLevel(logging.CRITICAL)
             (response,
-             http_response) = self._client.api.get_workflow_outputs_file(
+             http_response) = self._client.api.download_file(
                  organization=organization,
                  workflow_id_or_name=workflow_id,
                  file_name=file_name,
@@ -326,8 +288,8 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflow_inputs(self, organization, workflow_id, access_token):
-        """Return the list of inputs for a given workflow .
+    def get_files(self, organization, workflow_id, access_token):
+        """Return the list of file for a given workflow workspace.
 
         :param organization: Organization which the user belongs to.
         :param workflow_id: UUID which identifies the workflow.
@@ -336,7 +298,7 @@ class Client(object):
         """
         try:
             (response,
-             http_response) = self._client.api.get_workflow_inputs(
+             http_response) = self._client.api.get_files(
                  organization=organization,
                  workflow_id_or_name=workflow_id,
                  access_token=access_token).result()
@@ -351,7 +313,7 @@ class Client(object):
 
         except HTTPError as e:
             logging.debug(
-                'Analysis input file list could not be retrieved: '
+                'File list could not be retrieved: '
                 '\nStatus: {}\nReason: {}\n'
                 'Message: {}'.format(e.response.status_code,
                                      e.response.reason,
@@ -360,76 +322,7 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflow_outputs(self, organization, workflow_id, access_token):
-        """Return the list of outputs for a given workflow.
-
-        :param organization: Organization which the user belongs to.
-        :param workflow_id: UUID which identifies the workflow.
-        :returns: A list of dictionaries composed by the `name`, `size` and
-                  `last-modified`.
-        """
-        try:
-            (response,
-             http_response) = self._client.api.get_workflow_outputs(
-                 organization=organization,
-                 workflow_id_or_name=workflow_id,
-                 access_token=access_token).result()
-
-            if http_response.status_code == 200:
-                return response
-            else:
-                raise Exception(
-                    "Expected status code 200 but replied with "
-                    "{status_code}".format(
-                        status_code=http_response.status_code))
-
-        except HTTPError as e:
-            logging.debug(
-                'Analysis output file list could not be retrieved: '
-                '\nStatus: {}\nReason: {}\n'
-                'Message: {}'.format(e.response.status_code,
-                                     e.response.reason,
-                                     e.response.json()['message']))
-            raise Exception(e.response.json()['message'])
-        except Exception as e:
-            raise e
-
-    def get_workflow_code(self, organization, workflow_id, access_token):
-        """Return the list of code files for a given workflow.
-
-        :param organization: Organization which the user belongs to.
-        :param workflow_id: UUID which identifies the workflow.
-        :returns: A list of dictionaries composed by the `name`, `size` and
-                  `last-modified`.
-        """
-        try:
-            (response,
-             http_response) = self._client.api.get_workflow_code(
-                 organization=organization,
-                 workflow_id_or_name=workflow_id,
-                 access_token=access_token).result()
-
-            if http_response.status_code == 200:
-                return response
-            else:
-                raise Exception(
-                    "Expected status code 200 but replied with "
-                    "{status_code}".format(
-                        status_code=http_response.status_code))
-
-        except HTTPError as e:
-            logging.debug(
-                'Analysis code files list could not be retrieved: '
-                '\nStatus: {}\nReason: {}\n'
-                'Message: {}'.format(e.response.status_code,
-                                     e.response.reason,
-                                     e.response.json()['message']))
-            raise Exception(e.response.json()['message'])
-        except Exception as e:
-            raise e
-
-    def upload_to_server(self, organization, workflow,
-                         paths, upload_type, access_token):
+    def upload_to_server(self, organization, workflow, paths, access_token):
         """Upload file or directory to REANA-Server.
 
         Shared e.g. by `code upload` and `inputs upload`.
@@ -438,8 +331,6 @@ class Client(object):
         :param workflow: ID of that Workflow whose workspace should be
             used to store the files.
         :param paths: Absolute filepath(s) of files to be uploaded.
-        :param upload_type: Which type of upload is this.
-        :type upload_type: reana-client.utils.UploadType
         """
         if not workflow:
             raise ValueError(
@@ -448,18 +339,14 @@ class Client(object):
             raise ValueError(
                 'Please provide path(s) to file(s) that '
                 'should be uploaded to workspace.')
-        if not upload_type:
-            raise ValueError(
-                "Please provide an upload type one of '{}' or '{}'.".
-                format(str(UploadType.inputs), str(UploadType.code)))
 
         logging.info('Workflow "{}" selected'.format(workflow))
 
         # Check if multiple paths were given and iterate over them
         if type(paths) is list or type(paths) is tuple:
             for path in paths:
-                self.upload_to_server(organization, workflow,
-                                      path, upload_type, access_token)
+                self.upload_to_server(organization, workflow, path,
+                                      access_token)
         # `paths` points to a single file or directory
         else:
             path = paths
@@ -474,14 +361,13 @@ class Client(object):
                 logging.info("Uploading contents of folder '{}' ..."
                              .format(path))
                 for root, dirs, files in os.walk(path, topdown=False):
-                    responses = []
+                    uploaded_files = []
                     for next_path in files + dirs:
-                        response = self.upload_to_server(
+                        next_uploaded_files = self.upload_to_server(
                             organization, workflow,
-                            os.path.join(root, next_path),
-                            upload_type, access_token)
-                        responses.append(os.path.join(root, next_path))
-                return responses
+                            os.path.join(root, next_path), access_token)
+                        uploaded_files.extend(next_uploaded_files)
+                return uploaded_files
 
             # Check if input is an absolute path and upload file.
             else:
@@ -498,32 +384,20 @@ class Client(object):
                     save_path = path.replace(workflow_root, '')
                     # Remove prepending dirs named "." or as the upload type
                     while len(save_path.split('/')) > 1 and \
-                            save_path.split('/')[0] in \
-                            [UploadType(upload_type).name, '.']:
+                            save_path.split('/')[0] == '.':
                         save_path = "/".join(
                             save_path.strip("/").split('/')[1:])
                     logging.debug("'{}' is an absolute filepath."
                                   .format(os.path.basename(fname)))
                     logging.info("Uploading '{}' ...".format(fname))
                     try:
-                        if upload_type is UploadType.code:
-                            response = self.seed_workflow_code(
-                                organization, workflow, f,
-                                save_path, access_token)
-                        elif upload_type is UploadType.inputs:
-                            response = self.seed_workflow_inputs(
-                                organization, workflow, f,
-                                save_path, access_token)
-                        else:
-                            logging.warning("Unknown upload type of '{}'."
-                                            "File '{}' was not uploaded."
-                                            .format(upload_type, path))
-                        if response:
-                            logging.info("File '{}' was successfully "
-                                         "uploaded.".format(fname))
+                        response = self.upload_file(organization, workflow, f,
+                                                    save_path, access_token)
+                        logging.info("File '{}' was successfully "
+                                     "uploaded.".format(fname))
+                        return [save_path]
                     except Exception as e:
                         logging.debug(traceback.format_exc())
                         logging.debug(str(e))
                         logging.info("Something went wrong while uploading {}".
                                      format(fname))
-                    return response

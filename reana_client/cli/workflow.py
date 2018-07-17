@@ -73,10 +73,10 @@ def workflow(ctx):
     default=None,
     help='Get output in JSON format.')
 @click.option(
-    '-t',
-    '--token',
+    '-at',
+    '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='API token of the current user.')
+    help='Access token of the current user.')
 @click.option(
     '-v',
     '--verbose',
@@ -91,7 +91,7 @@ def workflow_list(ctx, organization, _filter, output_format, token, verbose):
 
     if not token:
         click.echo(
-            click.style('Please provide your API token, either by setting the'
+            click.style('Please provide your access token, either by setting the'
                         ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
@@ -173,10 +173,10 @@ def workflow_list(ctx, organization, _filter, output_format, token, verbose):
     help="If set, specifications file is not validated before "
          "submitting it's contents to REANA Server.")
 @click.option(
-    '-t',
-    '--token',
+    '-at',
+    '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='API token of the current user.')
+    help='Access token of the current user.')
 @click.pass_context
 def workflow_create(ctx, file, name, organization,
                     skip_validation, token):
@@ -194,7 +194,7 @@ def workflow_create(ctx, file, name, organization,
             err=True)
     if not token:
         click.echo(
-            click.style('Please provide your API token, either by setting the'
+            click.style('Please provide your access token, either by setting the'
                         ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
@@ -248,10 +248,10 @@ def workflow_create(ctx, file, name, organization,
     help='Name or UUID of the workflow to be started. '
          'Overrides value of REANA_WORKON.')
 @click.option(
-    '-t',
-    '--token',
+    '-at',
+    '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='API token of the current user.')
+    help='Access token of the current user.')
 @click.pass_context
 def workflow_start(ctx, organization, workflow, token):
     """Start previously created workflow."""
@@ -261,7 +261,7 @@ def workflow_start(ctx, organization, workflow, token):
 
     if not token:
         click.echo(
-            click.style('Please provide your API token, either by setting the'
+            click.style('Please provide your access token, either by setting the'
                         ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
@@ -319,10 +319,10 @@ def workflow_start(ctx, organization, workflow, token):
     default=None,
     help='Get output in JSON format.')
 @click.option(
-    '-t',
-    '--token',
+    '-at',
+    '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='API token of the current user.')
+    help='Access token of the current user.')
 @click.option(
     '-v',
     '--verbose',
@@ -338,7 +338,7 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
 
     if not token:
         click.echo(
-            click.style('Please provide your API token, either by setting the'
+            click.style('Please provide your access token, either by setting the'
                         ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
@@ -449,10 +449,10 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
     help='Name or UUID of the workflow whose logs should be fetched. '
          'Overrides value of REANA_WORKON.')
 @click.option(
-    '-t',
-    '--token',
+    '-at',
+    '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='API token of the current user.')
+    help='Access token of the current user.')
 @click.pass_context
 def workflow_logs(ctx, organization, workflow, token):
     """Get status of previously created workflow."""

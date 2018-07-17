@@ -89,13 +89,13 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_all_workflows(self, organization, token):
+    def get_all_workflows(self, organization, access_token):
         """List all existing workflows."""
         try:
 
             response, http_response = self._client.api.\
                 get_workflows(organization=organization,
-                              token=token).result()
+                              access_token=access_token).result()
             if http_response.status_code == 200:
                 return response
             else:
@@ -115,13 +115,13 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflow_status(self, organization, workflow, token):
+    def get_workflow_status(self, organization, workflow, access_token):
         """Get status of previously created workflow."""
         try:
             response, http_response = self.\
                 _client.api.get_workflow_status(organization=organization,
                                                 workflow_id_or_name=workflow,
-                                                token=token).result()
+                                                access_token=access_token).result()
             if http_response.status_code == 200:
                 return response
             else:
@@ -141,7 +141,7 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def create_workflow(self, organization, reana_spec, name, token):
+    def create_workflow(self, organization, reana_spec, name, access_token):
         """Create a workflow."""
         try:
             (response,
@@ -150,7 +150,7 @@ class Client(object):
                  reana_spec=json.loads(json.dumps(
                      reana_spec, sort_keys=True)),
                  workflow_name=name,
-                 token=token).result()
+                 access_token=access_token).result()
             if http_response.status_code == 201:
                 return response
             else:
@@ -170,7 +170,7 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def start_workflow(self, organization, workflow, token):
+    def start_workflow(self, organization, workflow, access_token):
         """Start a workflow."""
         try:
             (response,
@@ -178,7 +178,7 @@ class Client(object):
                  organization=organization,
                  workflow_id_or_name=workflow,
                  status='start',
-                 token=token).result()
+                 access_token=access_token).result()
             if http_response.status_code == 200:
                 return response
             else:
@@ -199,7 +199,7 @@ class Client(object):
             raise e
 
     def seed_workflow_inputs(self, organization, workflow_id, file_,
-                             file_name, token):
+                             file_name, access_token):
         """Seed workflow with input files."""
         try:
             (response,
@@ -208,7 +208,7 @@ class Client(object):
                  workflow_id_or_name=workflow_id,
                  file_content=file_,
                  file_name=file_name,
-                 token=token).result()
+                 access_token=access_token).result()
 
             if http_response.status_code == 200:
                 return response
@@ -230,7 +230,7 @@ class Client(object):
             raise e
 
     def seed_workflow_code(self, organization, workflow_id, file_,
-                           file_name, token):
+                           file_name, access_token):
         """Seed workflow with code."""
         try:
             (response,
@@ -239,7 +239,7 @@ class Client(object):
                  workflow_id_or_name=workflow_id,
                  file_content=file_,
                  file_name=file_name,
-                 token=token).result()
+                 access_token=access_token).result()
 
             if http_response.status_code == 200:
                 return response
@@ -288,7 +288,7 @@ class Client(object):
             raise e
 
     def download_workflow_output_file(self, organization, workflow_id,
-                                      file_name, token):
+                                      file_name, access_token):
         """Downdloads the requested file if it exists.
 
         :param organization: Organization which the user belongs to.
@@ -303,7 +303,7 @@ class Client(object):
                  organization=organization,
                  workflow_id_or_name=workflow_id,
                  file_name=file_name,
-                 token=token).result()
+                 access_token=access_token).result()
 
             if http_response.status_code == 200:
                 return http_response.raw_bytes
@@ -324,7 +324,7 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflow_inputs(self, organization, workflow_id, token):
+    def get_workflow_inputs(self, organization, workflow_id, access_token):
         """Return the list of inputs for a given workflow .
 
         :param organization: Organization which the user belongs to.
@@ -337,7 +337,7 @@ class Client(object):
              http_response) = self._client.api.get_workflow_inputs(
                  organization=organization,
                  workflow_id_or_name=workflow_id,
-                 token=token).result()
+                 access_token=access_token).result()
 
             if http_response.status_code == 200:
                 return response
@@ -358,7 +358,7 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflow_outputs(self, organization, workflow_id, token):
+    def get_workflow_outputs(self, organization, workflow_id, access_token):
         """Return the list of outputs for a given workflow.
 
         :param organization: Organization which the user belongs to.
@@ -371,7 +371,7 @@ class Client(object):
              http_response) = self._client.api.get_workflow_outputs(
                  organization=organization,
                  workflow_id_or_name=workflow_id,
-                 token=token).result()
+                 access_token=access_token).result()
 
             if http_response.status_code == 200:
                 return response
@@ -392,7 +392,7 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflow_code(self, organization, workflow_id, token):
+    def get_workflow_code(self, organization, workflow_id, access_token):
         """Return the list of code files for a given workflow.
 
         :param organization: Organization which the user belongs to.
@@ -405,7 +405,7 @@ class Client(object):
              http_response) = self._client.api.get_workflow_code(
                  organization=organization,
                  workflow_id_or_name=workflow_id,
-                 token=token).result()
+                 access_token=access_token).result()
 
             if http_response.status_code == 200:
                 return response
@@ -427,7 +427,7 @@ class Client(object):
             raise e
 
     def upload_to_server(self, organization, workflow,
-                         paths, upload_type, token):
+                         paths, upload_type, access_token):
         """Upload file or directory to REANA-Server.
 
         Shared e.g. by `code upload` and `inputs upload`.
@@ -457,7 +457,7 @@ class Client(object):
         if type(paths) is list or type(paths) is tuple:
             for path in paths:
                 self.upload_to_server(organization, workflow,
-                                      path, upload_type, token)
+                                      path, upload_type, access_token)
         # `paths` points to a single file or directory
         else:
             path = paths
@@ -477,7 +477,7 @@ class Client(object):
                         response = self.upload_to_server(
                             organization, workflow,
                             os.path.join(root, next_path),
-                            upload_type, token)
+                            upload_type, access_token)
                         responses.append(os.path.join(root, next_path))
                 return responses
 
@@ -507,11 +507,11 @@ class Client(object):
                         if upload_type is UploadType.code:
                             response = self.seed_workflow_code(
                                 organization, workflow, f,
-                                save_path, token)
+                                save_path, access_token)
                         elif upload_type is UploadType.inputs:
                             response = self.seed_workflow_inputs(
                                 organization, workflow, f,
-                                save_path, token)
+                                save_path, access_token)
                         else:
                             logging.warning("Unknown upload type of '{}'."
                                             "File '{}' was not uploaded."

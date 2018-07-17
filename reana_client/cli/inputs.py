@@ -68,10 +68,10 @@ def inputs(ctx):
     default=None,
     help='Get output in JSON format.')
 @click.option(
-    '-t',
-    '--token',
+    '-at',
+    '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='API token of the current user.')
+    help='Access token of the current user.')
 @click.pass_context
 def inputs_list(ctx, organization, workflow, _filter,
                 output_format, token):
@@ -82,7 +82,7 @@ def inputs_list(ctx, organization, workflow, _filter,
 
     if not token:
         click.echo(
-            click.style('Please provide your API token, either by setting the'
+            click.style('Please provide your access token, either by setting the'
                         ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
@@ -148,10 +148,10 @@ def inputs_list(ctx, organization, workflow, _filter,
     help='Name or UUID of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
 @click.option(
-    '-t',
-    '--token',
+    '-at',
+    '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='API token of the current user.')
+    help='Access token of the current user.')
 @click.pass_context
 def inputs_upload(ctx, organization, workflow, filenames, token):
     """Upload input file(s) to workflow workspace.Associate with a workflow."""
@@ -161,7 +161,7 @@ def inputs_upload(ctx, organization, workflow, filenames, token):
 
     if not token:
         click.echo(
-            click.style('Please provide your API token, either by setting the'
+            click.style('Please provide your access token, either by setting the'
                         ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)

@@ -67,7 +67,7 @@
           {
             "description": "Required. API key of the admin.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -81,27 +81,27 @@
             "examples": {
               "application/json": [
                 {
+                  "access_token": "Drmhze6EPcv0fN_81Bj-nA",
                   "email": "user@reana.info",
-                  "id": "00000000-0000-0000-0000-000000000000",
-                  "token": "Drmhze6EPcv0fN_81Bj-nA"
+                  "id": "00000000-0000-0000-0000-000000000000"
                 },
                 {
+                  "access_token": "Drmhze6EPcv0fN_81Bj-nB",
                   "email": "user2@reana.info",
-                  "id": "00000000-0000-0000-0000-000000000001",
-                  "token": "Drmhze6EPcv0fN_81Bj-nB"
+                  "id": "00000000-0000-0000-0000-000000000001"
                 }
               ]
             },
             "schema": {
               "items": {
                 "properties": {
+                  "access_token": {
+                    "type": "string"
+                  },
                   "email": {
                     "type": "string"
                   },
                   "id_": {
-                    "type": "string"
-                  },
-                  "token": {
                     "type": "string"
                   }
                 },
@@ -153,7 +153,7 @@
           {
             "description": "Required. API key of the admin.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -163,23 +163,23 @@
         ],
         "responses": {
           "201": {
-            "description": "User created successfully. Returns the token and a message.",
+            "description": "User created successfully. Returns the access_token and a message.",
             "examples": {
               "application/json": {
+                "access_token": "Drmhze6EPcv0fN_81Bj-nA",
                 "email": "user@reana.info",
-                "id_": "00000000-0000-0000-0000-000000000000",
-                "token": "Drmhze6EPcv0fN_81Bj-nA"
+                "id_": "00000000-0000-0000-0000-000000000000"
               }
             },
             "schema": {
               "properties": {
+                "access_token": {
+                  "type": "string"
+                },
                 "email": {
                   "type": "string"
                 },
                 "id_": {
-                  "type": "string"
-                },
-                "token": {
                   "type": "string"
                 }
               },
@@ -214,9 +214,9 @@
             "type": "string"
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -351,9 +351,9 @@
             }
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -428,9 +428,9 @@
             "type": "string"
           },
           {
-            "description": "Required. API token of workflow owner.",
+            "description": "Required. API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           },
@@ -529,9 +529,9 @@
             "type": "string"
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -644,9 +644,9 @@
             }
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -775,9 +775,9 @@
             "type": "string"
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -848,9 +848,9 @@
             "type": "string"
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -948,9 +948,9 @@
             "type": "string"
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -1021,9 +1021,9 @@
             "type": "string"
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -1104,9 +1104,9 @@
             "type": "string"
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }
@@ -1194,9 +1194,9 @@
             "type": "string"
           },
           {
-            "description": "Required. The API token of workflow owner.",
+            "description": "Required. The API access_token of workflow owner.",
             "in": "query",
-            "name": "token",
+            "name": "access_token",
             "required": true,
             "type": "string"
           }

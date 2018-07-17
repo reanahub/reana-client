@@ -70,7 +70,7 @@ def inputs(ctx):
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
 def inputs_list(ctx, organization, workflow, _filter,
@@ -83,7 +83,7 @@ def inputs_list(ctx, organization, workflow, _filter,
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
 
@@ -150,7 +150,7 @@ def inputs_list(ctx, organization, workflow, _filter,
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
 def inputs_upload(ctx, organization, workflow, filenames, token):
@@ -162,7 +162,7 @@ def inputs_upload(ctx, organization, workflow, filenames, token):
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
 

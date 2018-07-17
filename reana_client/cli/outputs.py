@@ -70,7 +70,7 @@ def outputs(ctx):
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
 def outputs_list(ctx, organization, workflow, _filter,
@@ -83,7 +83,7 @@ def outputs_list(ctx, organization, workflow, _filter,
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
     if workflow:
@@ -155,7 +155,7 @@ def outputs_list(ctx, organization, workflow, _filter,
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
 def outputs_download(ctx, organization, workflow, file_,
@@ -168,7 +168,7 @@ def outputs_download(ctx, organization, workflow, file_,
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
 

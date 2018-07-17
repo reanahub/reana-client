@@ -31,7 +31,7 @@ import tablib
 
 from ..errors import FileUploadError
 from ..api.client import UploadType
-from ..config import default_organization, default_user
+from ..config import default_organization
 from reana_commons.utils import click_table_printer
 
 
@@ -70,7 +70,7 @@ def code(ctx):
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
 def code_list(ctx, organization, workflow, _filter,
@@ -83,7 +83,7 @@ def code_list(ctx, organization, workflow, _filter,
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
 
     if workflow:
@@ -149,7 +149,7 @@ def code_list(ctx, organization, workflow, _filter,
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
 def code_upload(ctx, organization, workflow, filenames, token):
@@ -161,7 +161,7 @@ def code_upload(ctx, organization, workflow, filenames, token):
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
 
     if workflow:

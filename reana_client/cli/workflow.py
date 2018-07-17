@@ -75,7 +75,7 @@ def workflow(ctx):
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.option(
     '-v',
@@ -92,7 +92,7 @@ def workflow_list(ctx, organization, _filter, output_format, token, verbose):
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
 
@@ -175,7 +175,7 @@ def workflow_list(ctx, organization, _filter, output_format, token, verbose):
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
 def workflow_create(ctx, file, name, organization,
@@ -195,7 +195,7 @@ def workflow_create(ctx, file, name, organization,
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
     try:
@@ -250,7 +250,7 @@ def workflow_create(ctx, file, name, organization,
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
 def workflow_start(ctx, organization, workflow, token):
@@ -262,7 +262,7 @@ def workflow_start(ctx, organization, workflow, token):
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
 
@@ -321,7 +321,7 @@ def workflow_start(ctx, organization, workflow, token):
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.option(
     '-v',
@@ -339,7 +339,7 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
     if not token:
         click.echo(
             click.style('Please provide your API token, either by setting the'
-                        ' REANA_TOKEN environment variable, or by using'
+                        ' REANA_ACCESS_TOKEN environment variable, or by using'
                         ' the -t/--token flag.', fg='red'), err=True)
         sys.exit(1)
 
@@ -451,7 +451,7 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
 @click.option(
     '-t',
     '--token',
-    default=os.environ.get('REANA_TOKEN', None),
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='API token of the current user.')
 @click.pass_context
 def workflow_logs(ctx, organization, workflow, token):

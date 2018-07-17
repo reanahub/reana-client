@@ -39,3 +39,10 @@ default_organization = 'default'
 
 default_download_path = './outputs/'
 """Default path where files outputted by a workflow will be downloaded."""
+
+ERROR_MESSAGES = {
+        'missing_access_token':
+        'Please provide your access token by using'
+        ' the -at/--access-token flag, or by setting the'
+        ' REANA_ACCESS_TOKEN environment variable.'
+}

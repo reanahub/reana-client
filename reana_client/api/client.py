@@ -119,9 +119,11 @@ class Client(object):
         """Get status of previously created workflow."""
         try:
             response, http_response = self.\
-                _client.api.get_workflow_status(organization=organization,
-                                                workflow_id_or_name=workflow,
-                                                access_token=access_token).result()
+                _client.api.get_workflow_status(
+                    organization=organization,
+                    workflow_id_or_name=workflow,
+                    access_token=access_token)\
+                .result()
             if http_response.status_code == 200:
                 return response
             else:

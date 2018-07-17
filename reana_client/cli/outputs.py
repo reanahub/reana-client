@@ -74,23 +74,23 @@ def outputs(ctx):
     help='Access token of the current user.')
 @click.pass_context
 def outputs_list(ctx, organization, workflow, _filter,
-                 output_format, token):
+                 output_format, access_token):
     """List files a workflow has outputted."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not token:
+    if not access_token:
         click.echo(
-            click.style('Please provide your access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -t/--token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
         sys.exit(1)
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
             response = ctx.obj.client.get_workflow_outputs(organization,
-                                                           workflow, token)
+                                                           workflow,
+                                                           access_token)
             headers = ['name', 'size', 'last-modified']
             data = []
             for file_ in response:
@@ -159,17 +159,16 @@ def outputs_list(ctx, organization, workflow, _filter,
     help='Access token of the current user.')
 @click.pass_context
 def outputs_download(ctx, organization, workflow, file_,
-                     output_directory, token):
+                     output_directory, access_token):
     """Download file(s) workflow has outputted."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not token:
+    if not access_token:
         click.echo(
-            click.style('Please provide your access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -t/--token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
         sys.exit(1)
 
     if workflow:
@@ -179,7 +178,7 @@ def outputs_download(ctx, organization, workflow, file_,
                     ctx.obj.client.download_workflow_output_file(organization,
                                                                  workflow,
                                                                  file_name,
-                                                                 token)
+                                                                 access_token)
                 logging.info('{0} binary file downloaded ... writing to {1}'.
                              format(file_name, output_directory))
 

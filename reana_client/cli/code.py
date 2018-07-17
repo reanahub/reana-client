@@ -31,7 +31,7 @@ import tablib
 
 from ..errors import FileUploadError
 from ..api.client import UploadType
-from ..config import default_organization
+from ..config import ERROR_MESSAGES, default_organization
 from reana_commons.utils import click_table_printer
 
 
@@ -82,9 +82,8 @@ def code_list(ctx, organization, workflow, _filter,
 
     if not access_token:
         click.echo(
-            click.style('Please provide your API access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -at/--access-token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
 
     if workflow:
         try:
@@ -152,17 +151,16 @@ def code_list(ctx, organization, workflow, _filter,
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
-def code_upload(ctx, organization, workflow, filenames, token):
+def code_upload(ctx, organization, workflow, filenames, access_token):
     """Upload code file(s) to workflow workspace. Associate with a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not token:
+    if not access_token:
         click.echo(
-            click.style('Please provide your access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -t/--token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
 
     if workflow:
         for filename in filenames:
@@ -172,7 +170,7 @@ def code_upload(ctx, organization, workflow, filenames, token):
                                      workflow,
                                      filename,
                                      UploadType.code,
-                                     token)
+                                     access_token)
                 if type(response) is list:
                     for _filename in response:
                         click.echo(

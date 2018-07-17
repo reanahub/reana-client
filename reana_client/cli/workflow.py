@@ -32,7 +32,8 @@ from jsonschema.exceptions import ValidationError
 import tablib
 import yaml
 
-from ..config import default_organization, reana_yaml_default_file_path
+from ..config import ERROR_MESSAGES, default_organization, \
+    reana_yaml_default_file_path
 from ..utils import get_workflow_name_and_run_number, load_reana_spec, \
     load_workflow_spec, is_uuid_v4, workflow_uuid_or_name
 from reana_commons.utils import click_table_printer
@@ -83,21 +84,21 @@ def workflow(ctx):
     count=True,
     help='Set status information verbosity.')
 @click.pass_context
-def workflow_list(ctx, organization, _filter, output_format, token, verbose):
+def workflow_list(ctx, organization, _filter, output_format, access_token,
+                  verbose):
     """List all workflows user has."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not token:
+    if not access_token:
         click.echo(
-            click.style('Please provide your access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -t/--token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
         sys.exit(1)
 
     try:
-        response = ctx.obj.client.get_all_workflows(organization, token)
+        response = ctx.obj.client.get_all_workflows(organization, access_token)
         verbose_headers = ['id', 'user', 'organization']
         headers = ['name', 'run_number', 'created', 'status']
         if verbose:
@@ -179,7 +180,7 @@ def workflow_list(ctx, organization, _filter, output_format, token, verbose):
     help='Access token of the current user.')
 @click.pass_context
 def workflow_create(ctx, file, name, organization,
-                    skip_validation, token):
+                    skip_validation, access_token):
     """Create a REANA compatible workflow from REANA spec file."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -192,11 +193,10 @@ def workflow_create(ctx, file, name, organization,
         click.echo(
             click.style('Workflow name cannot be a valid UUIDv4', fg='red'),
             err=True)
-    if not token:
+    if not access_token:
         click.echo(
-            click.style('Please provide your access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -t/--token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
         sys.exit(1)
     try:
         reana_spec = load_reana_spec(click.format_filename(file),
@@ -220,7 +220,7 @@ def workflow_create(ctx, file, name, organization,
         response = ctx.obj.client.create_workflow(organization,
                                                   reana_spec,
                                                   name,
-                                                  token)
+                                                  access_token)
         click.echo(click.style(response['workflow_name'], fg='green'))
 
     except Exception as e:
@@ -253,17 +253,16 @@ def workflow_create(ctx, file, name, organization,
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
-def workflow_start(ctx, organization, workflow, token):
+def workflow_start(ctx, organization, workflow, access_token):
     """Start previously created workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not token:
+    if not access_token:
         click.echo(
-            click.style('Please provide your access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -t/--token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
         sys.exit(1)
 
     if workflow:
@@ -271,7 +270,7 @@ def workflow_start(ctx, organization, workflow, token):
             logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
             response = ctx.obj.client.start_workflow(organization,
                                                      workflow,
-                                                     token)
+                                                     access_token)
             click.echo(
                 click.style('{} has been started.'.format(workflow),
                             fg='green'))
@@ -330,24 +329,23 @@ def workflow_start(ctx, organization, workflow, token):
     help='Set status information verbosity.')
 @click.pass_context
 def workflow_status(ctx, organization, workflow, _filter, output_format,
-                    token, verbose):
+                    access_token, verbose):
     """Get status of previously created workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not token:
+    if not access_token:
         click.echo(
-            click.style('Please provide your access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -t/--token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
         sys.exit(1)
 
     if workflow:
         try:
             response = ctx.obj.client.get_workflow_status(organization,
                                                           workflow,
-                                                          token)
+                                                          access_token)
             verbose_headers = ['id', 'user', 'organization']
             headers = ['name', 'run_number', 'created',
                        'status', 'progress', 'command']
@@ -454,7 +452,7 @@ def workflow_status(ctx, organization, workflow, _filter, output_format,
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
-def workflow_logs(ctx, organization, workflow, token):
+def workflow_logs(ctx, organization, workflow, access_token):
     """Get status of previously created workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -463,7 +461,7 @@ def workflow_logs(ctx, organization, workflow, token):
     if workflow:
         try:
             response = ctx.obj.client.get_workflow_logs(organization,
-                                                        workflow, token)
+                                                        workflow, access_token)
             click.echo(response)
         except Exception as e:
             logging.debug(traceback.format_exc())

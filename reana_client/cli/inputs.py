@@ -29,7 +29,7 @@ import traceback
 import click
 import tablib
 
-from ..config import default_organization, default_user
+from ..config import ERROR_MESSAGES, default_organization, default_user
 from ..errors import FileUploadError
 from ..api.client import UploadType
 from reana_commons.utils import click_table_printer
@@ -74,23 +74,23 @@ def inputs(ctx):
     help='Access token of the current user.')
 @click.pass_context
 def inputs_list(ctx, organization, workflow, _filter,
-                output_format, token):
+                output_format, access_token):
     """List input files of a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not token:
+    if not access_token:
         click.echo(
-            click.style('Please provide your access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -t/--token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
         sys.exit(1)
 
     if workflow:
         try:
             response = ctx.obj.client.get_workflow_inputs(organization,
-                                                          workflow, token)
+                                                          workflow,
+                                                          access_token)
             headers = ['name', 'size', 'last-modified']
             data = []
             for file_ in response:
@@ -153,17 +153,16 @@ def inputs_list(ctx, organization, workflow, _filter,
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
-def inputs_upload(ctx, organization, workflow, filenames, token):
+def inputs_upload(ctx, organization, workflow, filenames, access_token):
     """Upload input file(s) to workflow workspace.Associate with a workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not token:
+    if not access_token:
         click.echo(
-            click.style('Please provide your access token, either by setting the'
-                        ' REANA_ACCESS_TOKEN environment variable, or by using'
-                        ' the -t/--token flag.', fg='red'), err=True)
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
         sys.exit(1)
 
     if workflow:
@@ -174,7 +173,7 @@ def inputs_upload(ctx, organization, workflow, filenames, token):
                                      workflow,
                                      filename,
                                      UploadType.inputs,
-                                     token)
+                                     access_token)
                 if response:
                     click.echo(
                         click.style('File {} was successfully uploaded.'.

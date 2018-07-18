@@ -23,9 +23,11 @@
 
 import logging
 import os
+import sys
 import traceback
 
 import click
+from requests.exceptions import ConnectionError
 
 from ..config import default_user
 
@@ -33,37 +35,54 @@ from ..config import default_user
 @click.command()
 @click.pass_context
 @click.option(
-    '-u',
-    '--user',
-    default=default_user,
-    help='User who has created the workflow.')
-def status(ctx, user):
+    '-at',
+    '--access-token',
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
+    help='Access token of the current user.')
+def status(ctx, access_token):
     """Show current status of the client session."""
     try:
-        click.echo(click.style('User: {}'.format(user), fg='green'))
         _ = ctx.obj.client.ping()
-        click.echo(click.style('REANA cluster selected: {}'.
+        click.echo(click.style('Connected to: {}'.
                    format(ctx.obj.client.server_url), fg='green'))
         workflow = os.environ.get('REANA_WORKON', None)
         if workflow:
-            click.echo(click.style('Workflow selected: {}'.
-                    format(workflow), fg='green'))
             try:
                 workflow_status_response = ctx.obj.client.get_workflow_status(
-                    user, organization, workflow)
-                click.echo(click.style('Workflow status: {}'.
-                                        format(workflow_status_response['status']),
-                                        fg='green'))
+                    workflow, access_token)
+                click.echo(click.style('Working on: {}'.
+                           format(workflow), fg='green'))
+                click.echo(click.style(
+                    'Workflow status: {}'.
+                    format(workflow_status_response['status']),
+                    fg='green'))
             except Exception as e:
                 click.echo(
-                    click.style('Could not retrieve workflow status. Error: {}'.
-                        format(str(e)), fg='red'), err=True)
+                    click.style('Could not retrieve workflow status.\n'
+                                'Error: {}'.format(str(e)), fg='red'),
+                    err=True)
+                sys.exit(1)
         else:
             click.echo(click.style('No workflow is selected currently.',
-                                    fg='green'))    
+                                   fg='green'))
+    except ConnectionError as e:
+        click.echo(
+            click.style(
+                'Could not connect to the selected '
+                'REANA cluster server at {0}.\n'
+                'Please make sure you have set your REANA_SERVER_URL'
+                ' environment variable correctly.'.
+                format(ctx.obj.client.server_url),
+                fg='red'),
+            err=True)
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
         click.echo(
-            click.style('Could not retrieve current status. Error: {}'.
-                        format(str(e)), fg='red'), err=True)
+            click.style('Could not retrieve current status.', fg='red'),
+            err=True)
+        if str(e):
+            click.echo(
+                click.style('Error: {}'.format(str(e)), fg='red'),
+                err=True)
+        sys.exit(1)

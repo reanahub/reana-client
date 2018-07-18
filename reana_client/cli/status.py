@@ -41,19 +41,26 @@ def status(ctx, user):
     """Show current status of the client session."""
     try:
         click.echo(click.style('User: {}'.format(user), fg='green'))
+        _ = ctx.obj.client.ping()
         click.echo(click.style('REANA cluster selected: {}'.
                    format(ctx.obj.client.server_url), fg='green'))
-        _ = ctx.obj.client.ping()
-        click.echo(click.style('REANA cluster status: ready', fg='green'))
         workflow = os.environ.get('REANA_WORKON', None)
-        click.echo(click.style('Workflow selected: {}'.
-                   format(workflow), fg='green'))
-        workflow_status_response = ctx.obj.client.get_workflow_status(
-            user, workflow)
-        click.echo(click.style('Workflow status: {}'.
-                               format(workflow_status_response['status']),
-                               fg='green'))
-
+        if workflow:
+            click.echo(click.style('Workflow selected: {}'.
+                    format(workflow), fg='green'))
+            try:
+                workflow_status_response = ctx.obj.client.get_workflow_status(
+                    user, organization, workflow)
+                click.echo(click.style('Workflow status: {}'.
+                                        format(workflow_status_response['status']),
+                                        fg='green'))
+            except Exception as e:
+                click.echo(
+                    click.style('Could not retrieve workflow status. Error: {}'.
+                        format(str(e)), fg='red'), err=True)
+        else:
+            click.echo(click.style('No workflow is selected currently.',
+                                    fg='green'))    
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))

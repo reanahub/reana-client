@@ -200,7 +200,8 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
             **kwargs
         )
 
-        if reana_spec['workflow']['type'] == 'cwl':
+        if reana_spec['workflow']['type'] == 'cwl' and \
+                'inputs' in reana_spec:
             with open(reana_spec['inputs']['parameters']['input']) as f:
                 reana_spec['inputs']['parameters']['input'] = yaml.load(f)
 

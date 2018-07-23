@@ -5,7 +5,7 @@
   "type": "object",
   "title": "REANA analysis specification",
   "description": "Full analysis specification including data, sofware, environment and workflow enabling reproducibility on a REANA cluster.",
-  "required": ["workflow", "environments"],
+  "required": ["workflow"],
   "properties": {
     "code": {
       "id": "/properties/code",
@@ -34,6 +34,7 @@
       "items": {
         "id": "/properties/environments/items",
         "type": "object",
+        "optional": true,
         "title": "Analysis environments.",
         "description": "Analysis environments represented by container technology and image name.",
         "properties": {
@@ -102,6 +103,7 @@
           "type": "array",
           "title": "Analysis input files.",
           "description": "List of files provided as input for a given analysis.",
+          "optional": true,
           "items": {
             "id": "/properties/inputs/properties/files/items",
             "type": "string",
@@ -112,7 +114,8 @@
             "id": "/properties/inputs/properties/parameters",
             "type": "object",
             "title": "Analysis parameters.",
-            "description": "Key value data structure which represents the analysis parameters."
+            "description": "Key value data structure which represents the analysis parameters.",
+            "optional": true
         }
       }
     },

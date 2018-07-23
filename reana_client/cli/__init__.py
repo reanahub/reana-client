@@ -73,7 +73,10 @@ def cli(ctx, loglevel):
         level=loglevel)
     ctx.obj = Config()
 
+commands = []
+commands.extend(workflow.workflow.commands.values())
+commands.extend(files.files.commands.values())
+for cmd in commands:
+    cli.add_command(cmd)
 cli.add_command(ping.ping)
-cli.add_command(workflow.workflow)
-cli.add_command(files.files)
 cli.add_command(status.status)

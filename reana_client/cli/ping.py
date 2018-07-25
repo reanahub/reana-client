@@ -34,7 +34,8 @@ def ping(ctx):
     try:
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.ping()
-        click.echo(click.style('Server is running.', fg='green'))
+        click.echo(click.style('Connected to {0} - Server is running.'.format(
+            ctx.obj.client.server_url), fg='green'))
         logging.debug('Server response:\n{}'.format(response))
 
     except Exception as e:

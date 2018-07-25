@@ -27,7 +27,7 @@ import sys
 import click
 
 from reana_client.api import Client
-from reana_client.cli import workflow, files, ping, status
+from reana_client.cli import workflow, files, ping
 
 DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \
                    '{%(pathname)s:%(lineno)d} ' \
@@ -79,4 +79,3 @@ commands.extend(files.files.commands.values())
 for cmd in commands:
     cli.add_command(cmd)
 cli.add_command(ping.ping)
-cli.add_command(status.status)

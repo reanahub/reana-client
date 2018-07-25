@@ -273,6 +273,143 @@ def workflow_start(ctx, workflow, access_token):
 
 
 @click.command(
+    'status',
+    help='Get status of a previously created workflow.')
+@click.option(
+    '-w',
+    '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
+    help='Name or UUID of the workflow whose status should be resolved. '
+         'Overrides value of REANA_WORKON.')
+@click.option(
+    '--filter',
+    '_filter',
+    multiple=True,
+    help='Filter output according to column titles (case-sensitive).')
+@click.option(
+    '--json',
+    'output_format',
+    flag_value='json',
+    default=None,
+    help='Get output in JSON format.')
+@click.option(
+    '-at',
+    '--access-token',
+    default=os.environ.get('REANA_ACCESS_TOKEN', None),
+    help='Access token of the current user.')
+@click.option(
+    '-v',
+    '--verbose',
+    count=True,
+    help='Set status information verbosity.')
+@click.pass_context
+def workflow_status(ctx, workflow, _filter, output_format,
+                    access_token, verbose):
+    """Get status of previously created workflow."""
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not access_token:
+        click.echo(
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
+        sys.exit(1)
+
+    if workflow:
+        try:
+            response = ctx.obj.client.get_workflow_status(workflow,
+                                                          access_token)
+            verbose_headers = ['id', 'user']
+            headers = ['name', 'run_number', 'created',
+                       'status', 'progress', 'command']
+            if verbose:
+                headers += verbose_headers
+            data = []
+            if isinstance(response, list):
+                for workflow in response:
+                    name, run_number = get_workflow_name_and_run_number(
+                        workflow['name'])
+                    current_command = workflow['progress']['current_command']
+                    if current_command:
+                        if current_command.startswith('bash -c "cd '):
+                            current_command = current_command[
+                                current_command.
+                                index(';') + 2:-2]
+                    else:
+                        if 'command' in headers:
+                            headers.remove('command')
+                    data.append(list(map(
+                        str,
+                        [name,
+                         run_number,
+                         workflow['created'],
+                         workflow['status'],
+                         '{0}/{1}'.
+                         format(
+                             workflow['progress']['succeeded'],
+                             workflow['progress']['total_jobs']),
+                         current_command])))
+
+                    if verbose:
+                        data[-1] += [workflow.get(k) for k in verbose_headers]
+            else:
+                name, run_number = get_workflow_name_and_run_number(
+                    response['name'])
+                current_command = response['progress'].get('current_command')
+                if current_command:
+                    if current_command.startswith('bash -c "cd '):
+                        current_command = current_command[
+                            current_command.
+                            index(';') + 2:-2]
+                else:
+                    if 'command' in headers:
+                        headers.remove('command')
+                data.append(list(
+                    map(str,
+                        [name,
+                         run_number,
+                         response['created'],
+                         response['status'],
+                         '{0}/{1}'.
+                         format(
+                             response['progress'].get('succeeded', '-'),
+                             response['progress'].get('total_jobs', '-')),
+                         current_command])))
+                if verbose:
+                    data[-1] += [response.get(k) for k in verbose_headers]
+
+            if output_format:
+                tablib_data = tablib.Dataset()
+                tablib_data.headers = headers
+                for row in data:
+                    tablib_data.append(row)
+
+                if _filter:
+                    data = data.subset(rows=None, cols=list(_filter))
+
+                click.echo(data.export(output_format))
+            else:
+                click_table_printer(headers, _filter, data)
+
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Workflow status could not be retrieved: \n{}'
+                            .format(str(e)), fg='red'),
+                err=True)
+    else:
+        click.echo(
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with REANA_WORKON '
+                        'environment variable',
+                        fg='red'),
+            err=True)
+
+
+@click.command(
     'logs',
     help='Get workflow logs.')
 @click.option(
@@ -357,4 +494,5 @@ workflow.add_command(workflow_workflows)
 workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)
 workflow.add_command(workflow_validate)
+workflow.add_command(workflow_status)
 # workflow.add_command(workflow_logs)

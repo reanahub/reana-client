@@ -308,6 +308,51 @@ def workflow_start(ctx, workflow, access_token):
 def workflow_status(ctx, workflow, _filter, output_format,
                     access_token, verbose):
     """Get status of previously created workflow."""
+    def _show_progress(succeeded_jobs, total_jobs):
+        if total_jobs:
+            return '{0}/{1}'.format(succeeded_jobs, total_jobs)
+        else:
+            return None
+
+    def _get_data_from_row(row, data, headers):
+        name, run_number = get_workflow_name_and_run_number(
+            row['name'])
+        total_jobs = row['progress'].get('total_jobs')
+        succeeded_jobs = row['progress'].get('succeeded')
+        if row['progress']['total_jobs'] > 0:
+            if 'progress' not in headers:
+                headers += ['progress']
+        current_command = ''
+        current_step_name = ''
+        if 'current_command' in row['progress'] and \
+                row['progress'].get('current_command'):
+            if 'command' not in headers:
+                headers += ['command']
+            current_command = row['progress'].\
+                get('current_command')
+            if current_command.startswith('bash -c "cd '):
+                current_command = current_command[
+                    current_command.index(';') + 2:-2]
+        if 'current_step_name' in row['progress'] and \
+                row['progress'].get('current_step_name'):
+            if 'step_name' not in headers:
+                headers += ['step']
+            current_step_name = row['progress'].\
+                get('current_step_name')
+
+        data.append(list(map(
+            str,
+            [name,
+             run_number,
+             row['created'],
+             row['status'],
+             _show_progress(succeeded_jobs, total_jobs),
+             current_command,
+             current_step_name])))
+
+        if verbose:
+            data[-1] += [workflow.get(k) for k in verbose_headers]
+
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -322,64 +367,16 @@ def workflow_status(ctx, workflow, _filter, output_format,
         try:
             response = ctx.obj.client.get_workflow_status(workflow,
                                                           access_token)
+            headers = ['name', 'run_number', 'created', 'status']
             verbose_headers = ['id', 'user']
-            headers = ['name', 'run_number', 'created',
-                       'status', 'progress', 'command']
             if verbose:
                 headers += verbose_headers
             data = []
             if isinstance(response, list):
                 for workflow in response:
-                    name, run_number = get_workflow_name_and_run_number(
-                        workflow['name'])
-                    current_command = workflow['progress']['current_command']
-                    if current_command:
-                        if current_command.startswith('bash -c "cd '):
-                            current_command = current_command[
-                                current_command.
-                                index(';') + 2:-2]
-                    else:
-                        if 'command' in headers:
-                            headers.remove('command')
-                    data.append(list(map(
-                        str,
-                        [name,
-                         run_number,
-                         workflow['created'],
-                         workflow['status'],
-                         '{0}/{1}'.
-                         format(
-                             workflow['progress']['succeeded'],
-                             workflow['progress']['total_jobs']),
-                         current_command])))
-
-                    if verbose:
-                        data[-1] += [workflow.get(k) for k in verbose_headers]
+                    _get_data_from_row(workflow, data, headers)
             else:
-                name, run_number = get_workflow_name_and_run_number(
-                    response['name'])
-                current_command = response['progress'].get('current_command')
-                if current_command:
-                    if current_command.startswith('bash -c "cd '):
-                        current_command = current_command[
-                            current_command.
-                            index(';') + 2:-2]
-                else:
-                    if 'command' in headers:
-                        headers.remove('command')
-                data.append(list(
-                    map(str,
-                        [name,
-                         run_number,
-                         response['created'],
-                         response['status'],
-                         '{0}/{1}'.
-                         format(
-                             response['progress'].get('succeeded', '-'),
-                             response['progress'].get('total_jobs', '-')),
-                         current_command])))
-                if verbose:
-                    data[-1] += [response.get(k) for k in verbose_headers]
+                _get_data_from_row(response, data, headers)
 
             if output_format:
                 tablib_data = tablib.Dataset()

@@ -312,7 +312,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
         if total_jobs:
             return '{0}/{1}'.format(succeeded_jobs, total_jobs)
         else:
-            return None
+            return '-/-'
 
     def _get_data_from_row(row, data, headers):
         name, run_number = get_workflow_name_and_run_number(
@@ -322,23 +322,6 @@ def workflow_status(ctx, workflow, _filter, output_format,
         if row['progress']['total_jobs'] > 0:
             if 'progress' not in headers:
                 headers += ['progress']
-        current_command = ''
-        current_step_name = ''
-        if 'current_command' in row['progress'] and \
-                row['progress'].get('current_command'):
-            if 'command' not in headers:
-                headers += ['command']
-            current_command = row['progress'].\
-                get('current_command')
-            if current_command.startswith('bash -c "cd '):
-                current_command = current_command[
-                    current_command.index(';') + 2:-2]
-        if 'current_step_name' in row['progress'] and \
-                row['progress'].get('current_step_name'):
-            if 'step_name' not in headers:
-                headers += ['step']
-            current_step_name = row['progress'].\
-                get('current_step_name')
 
         data.append(list(map(
             str,
@@ -346,12 +329,29 @@ def workflow_status(ctx, workflow, _filter, output_format,
              run_number,
              row['created'],
              row['status'],
-             _show_progress(succeeded_jobs, total_jobs),
-             current_command,
-             current_step_name])))
+             _show_progress(succeeded_jobs, total_jobs)])))
 
-        if verbose:
-            data[-1] += [workflow.get(k) for k in verbose_headers]
+    def add_verbose_columns(response, verbose_headers, headers, data):
+        for k in verbose_headers:
+            if k == 'command':
+                current_command = response['progress']['current_command']
+                if current_command:
+                    if current_command.startswith('bash -c "cd '):
+                        current_command = current_command[
+                            current_command.
+                            index(';') + 2:-2]
+                    data[-1] += [current_command]
+                else:
+                    if 'current_step_name' in row['progress'] and \
+                            row['progress'].get('current_step_name'):
+                        current_step_name = row['progress'].\
+                            get('current_step_name')
+                        data[-1] += [current_step_name]
+                    else:
+                        headers.remove('command')
+            else:
+                data[-1] += [response.get(k)]
+        return data
 
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -367,16 +367,23 @@ def workflow_status(ctx, workflow, _filter, output_format,
         try:
             response = ctx.obj.client.get_workflow_status(workflow,
                                                           access_token)
-            headers = ['name', 'run_number', 'created', 'status']
-            verbose_headers = ['id', 'user']
+            headers = ['name', 'run_number', 'created', 'status', 'progress']
+            verbose_headers = ['id', 'user', 'command']
             if verbose:
                 headers += verbose_headers
             data = []
             if isinstance(response, list):
                 for workflow in response:
                     _get_data_from_row(workflow, data, headers)
+                    if verbose:
+                        data = add_verbose_columns(workflow, verbose_headers,
+                                                   headers, data)
+
             else:
                 _get_data_from_row(response, data, headers)
+                if verbose:
+                    data = add_verbose_columns(response, verbose_headers,
+                                               headers, data)
 
             if output_format:
                 tablib_data = tablib.Dataset()

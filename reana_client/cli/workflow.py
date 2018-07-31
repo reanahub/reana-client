@@ -308,18 +308,26 @@ def workflow_start(ctx, workflow, access_token):
 def workflow_status(ctx, workflow, _filter, output_format,
                     access_token, verbose):
     """Get status of previously created workflow."""
-    def _show_progress(succeeded_jobs, total_jobs):
+    def show_progress(succeeded_jobs, total_jobs):
         if total_jobs:
             return '{0}/{1}'.format(succeeded_jobs, total_jobs)
         else:
             return '-/-'
 
-    def _get_data_from_row(row, data, headers):
+    def get_data_from_row(row, data, headers):
         name, run_number = get_workflow_name_and_run_number(
             row['name'])
-        total_jobs = row['progress'].get('total_jobs')
-        succeeded_jobs = row['progress'].get('succeeded')
-        if row['progress']['total_jobs'] > 0:
+        total_jobs = row['progress'].get('total')
+        if total_jobs:
+            total_jobs = total_jobs.get('total')
+        else:
+            total_jobs = 0
+        succeeded_jobs = row['progress'].get('finished')
+        if succeeded_jobs:
+            succeeded_jobs = succeeded_jobs.get('total')
+        else:
+            succeeded_jobs = 0
+        if row['progress']['total'] > 0:
             if 'progress' not in headers:
                 headers += ['progress']
 
@@ -329,7 +337,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
              run_number,
              row['created'],
              row['status'],
-             _show_progress(succeeded_jobs, total_jobs)])))
+             show_progress(succeeded_jobs, total_jobs)])))
 
     def add_verbose_columns(response, verbose_headers, headers, data):
         for k in verbose_headers:
@@ -342,9 +350,9 @@ def workflow_status(ctx, workflow, _filter, output_format,
                             index(';') + 2:-2]
                     data[-1] += [current_command]
                 else:
-                    if 'current_step_name' in row['progress'] and \
-                            row['progress'].get('current_step_name'):
-                        current_step_name = row['progress'].\
+                    if 'current_step_name' in response['progress'] and \
+                            response['progress'].get('current_step_name'):
+                        current_step_name = response['progress'].\
                             get('current_step_name')
                         data[-1] += [current_step_name]
                     else:
@@ -374,13 +382,13 @@ def workflow_status(ctx, workflow, _filter, output_format,
             data = []
             if isinstance(response, list):
                 for workflow in response:
-                    _get_data_from_row(workflow, data, headers)
+                    get_data_from_row(workflow, data, headers)
                     if verbose:
                         data = add_verbose_columns(workflow, verbose_headers,
                                                    headers, data)
 
             else:
-                _get_data_from_row(response, data, headers)
+                get_data_from_row(response, data, headers)
                 if verbose:
                     data = add_verbose_columns(response, verbose_headers,
                                                headers, data)

@@ -327,7 +327,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
             succeeded_jobs = succeeded_jobs.get('total')
         else:
             succeeded_jobs = 0
-        if row['progress']['total'] > 0:
+        if row['progress']['total'].get('total') or 0 > 0:
             if 'progress' not in headers:
                 headers += ['progress']
 

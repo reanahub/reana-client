@@ -308,13 +308,13 @@ def workflow_start(ctx, workflow, access_token):
 def workflow_status(ctx, workflow, _filter, output_format,
                     access_token, verbose):
     """Get status of previously created workflow."""
-    def show_progress(succeeded_jobs, total_jobs):
+    def render_progress(finished_jobs, total_jobs):
         if total_jobs:
-            return '{0}/{1}'.format(succeeded_jobs, total_jobs)
+            return '{0}/{1}'.format(finished_jobs, total_jobs)
         else:
             return '-/-'
 
-    def get_data_from_row(row, data, headers):
+    def add_data_from_reponse(row, data, headers):
         name, run_number = get_workflow_name_and_run_number(
             row['name'])
         total_jobs = row['progress'].get('total')
@@ -322,11 +322,11 @@ def workflow_status(ctx, workflow, _filter, output_format,
             total_jobs = total_jobs.get('total')
         else:
             total_jobs = 0
-        succeeded_jobs = row['progress'].get('finished')
-        if succeeded_jobs:
-            succeeded_jobs = succeeded_jobs.get('total')
+        finished_jobs = row['progress'].get('finished')
+        if finished_jobs:
+            finished_jobs = finished_jobs.get('total')
         else:
-            succeeded_jobs = 0
+            finished_jobs = 0
         if row['progress']['total'].get('total') or 0 > 0:
             if 'progress' not in headers:
                 headers += ['progress']
@@ -337,9 +337,11 @@ def workflow_status(ctx, workflow, _filter, output_format,
              run_number,
              row['created'],
              row['status'],
-             show_progress(succeeded_jobs, total_jobs)])))
+             render_progress(finished_jobs, total_jobs)])))
+        return data
 
-    def add_verbose_columns(response, verbose_headers, headers, data):
+    def add_verbose_data_from_response(response, verbose_headers,
+                                       headers, data):
         for k in verbose_headers:
             if k == 'command':
                 current_command = response['progress']['current_command']
@@ -377,21 +379,16 @@ def workflow_status(ctx, workflow, _filter, output_format,
                                                           access_token)
             headers = ['name', 'run_number', 'created', 'status', 'progress']
             verbose_headers = ['id', 'user', 'command']
-            if verbose:
-                headers += verbose_headers
             data = []
-            if isinstance(response, list):
-                for workflow in response:
-                    get_data_from_row(workflow, data, headers)
-                    if verbose:
-                        data = add_verbose_columns(workflow, verbose_headers,
-                                                   headers, data)
-
-            else:
-                get_data_from_row(response, data, headers)
+            if not isinstance(response, list):
+                response = [response]
+            for workflow in response:
+                add_data_from_reponse(workflow, data, headers)
                 if verbose:
-                    data = add_verbose_columns(response, verbose_headers,
-                                               headers, data)
+                    headers += verbose_headers
+                    add_verbose_data_from_response(
+                        workflow, verbose_headers,
+                        headers, data)
 
             if output_format:
                 tablib_data = tablib.Dataset()

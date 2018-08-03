@@ -166,7 +166,7 @@ def transfer_file(client, file_dict, jobfile, workflow_id):
     else:
         path = file_dict.get('location', file_dict.get('path'))
         with open(os.path.join(os.path.abspath(os.path.dirname(jobfile)),
-                               path)) as f:
+                               path), 'rb') as f:
             response = client.seed_workflow_inputs(
                 default_user,
                 workflow_id,
@@ -277,7 +277,7 @@ def upload_directory(client, spec_file, workflow_id, location, basename=None,
                              basename=basename,
                              disk_directory_name=disk_directory_name)
         elif os.path.isfile(filename):
-            with open(filename) as file_:
+            with open(filename, 'rb') as file_:
                 directory_name = filename.replace(
                     os.path.abspath(os.path.dirname(spec_file)) + "/", "")
                 if basename:
@@ -326,7 +326,6 @@ def replace_location_in_cwl_tool(spec):
     return spec
 
 
-# TODO: join with transfer_file()
 def upload_file(client, param, spec_file, workflow_id):
     """Upload single file."""
     location = param['default'].get("location", param['default'].get("path"))
@@ -338,7 +337,7 @@ def upload_file(client, param, spec_file, workflow_id):
     if path.startswith("file:///"):
         path = urllib.parse.unquote(path)[7:]
     if os.path.exists(path):
-        with open(path) as f:
+        with open(path, 'rb') as f:
             filename = path.replace(os.path.abspath(
                 os.path.dirname(spec_file)) + "/", "")
             response = client.seed_workflow_inputs(

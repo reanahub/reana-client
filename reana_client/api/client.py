@@ -357,7 +357,7 @@ class Client(object):
 
             # Check if input is an absolute path and upload file.
             else:
-                with open(path) as f:
+                with open(path, 'rb') as f:
                     fname = os.path.basename(f.name)
                     workflow_root = get_workflow_root()
                     if not path.startswith(workflow_root):

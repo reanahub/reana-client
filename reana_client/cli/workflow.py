@@ -235,8 +235,12 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
+@click.argument(
+    'parameters',
+    nargs=-1,
+)
 @click.pass_context
-def workflow_start(ctx, workflow, access_token):
+def workflow_start(ctx, workflow, access_token, parameters):
     """Start previously created workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -248,11 +252,15 @@ def workflow_start(ctx, workflow, access_token):
                         fg='red'), err=True)
         sys.exit(1)
 
+    parsed_parameters = {'parameters':
+                         dict(p.split('=') for p in parameters)}
+
     if workflow:
         try:
             logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
             response = ctx.obj.client.start_workflow(workflow,
-                                                     access_token)
+                                                     access_token,
+                                                     parsed_parameters)
             click.echo(
                 click.style('{} has been started.'.format(workflow),
                             fg='green'))

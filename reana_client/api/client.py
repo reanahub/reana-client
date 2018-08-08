@@ -162,14 +162,15 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def start_workflow(self, workflow, access_token):
+    def start_workflow(self, workflow, access_token, parameters):
         """Start a workflow."""
         try:
             (response,
              http_response) = self._client.api.set_workflow_status(
                  workflow_id_or_name=workflow,
                  status='start',
-                 access_token=access_token).result()
+                 access_token=access_token,
+                 parameters=parameters).result()
             if http_response.status_code == 200:
                 return response
             else:

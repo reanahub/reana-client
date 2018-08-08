@@ -585,13 +585,10 @@
           },
           {
             "description": "Required. New workflow status.",
-            "in": "body",
+            "in": "query",
             "name": "status",
             "required": true,
-            "schema": {
-              "description": "Required. New status.",
-              "type": "string"
-            }
+            "type": "string"
           },
           {
             "description": "Required. The API access_token of workflow owner.",
@@ -599,6 +596,15 @@
             "name": "access_token",
             "required": true,
             "type": "string"
+          },
+          {
+            "description": "Optional. Extra parameters for workflow status.",
+            "in": "body",
+            "name": "parameters",
+            "required": false,
+            "schema": {
+              "type": "object"
+            }
           }
         ],
         "produces": [

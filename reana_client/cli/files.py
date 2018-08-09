@@ -32,6 +32,7 @@ import tablib
 
 from ..config import ERROR_MESSAGES, default_user
 from ..errors import FileUploadError
+from reana_client.decorators import with_api_client
 from reana_commons.utils import click_table_printer
 
 
@@ -69,6 +70,7 @@ def files(ctx):
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
+@with_api_client
 def get_files(ctx, workflow, _filter,
               output_format, access_token):
     """List workflow workspace files."""
@@ -146,6 +148,7 @@ def get_files(ctx, workflow, _filter,
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
+@with_api_client
 def download_files(ctx, workflow, file_, output_directory, access_token):
     """Download workflow workspace file(s)."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -221,6 +224,7 @@ def download_files(ctx, workflow, file_, output_directory, access_token):
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
+@with_api_client
 def upload_files(ctx, workflow, filenames, access_token):
     """Upload file(s) to workflow workspace."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))

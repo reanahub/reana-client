@@ -28,14 +28,17 @@ import traceback
 from enum import Enum
 
 import click
-from jsonschema.exceptions import ValidationError
 import tablib
 import yaml
+from jsonschema.exceptions import ValidationError
+from reana_commons.utils import click_table_printer
+
+from reana_client.decorators import with_api_client
 
 from ..config import ERROR_MESSAGES, reana_yaml_default_file_path
-from ..utils import get_workflow_name_and_run_number, load_reana_spec, \
-    load_workflow_spec, is_uuid_v4, workflow_uuid_or_name
-from reana_commons.utils import click_table_printer
+from ..utils import (get_workflow_name_and_run_number, is_uuid_v4,
+                     load_reana_spec, load_workflow_spec,
+                     workflow_uuid_or_name)
 
 
 class _WorkflowStatus(Enum):
@@ -78,6 +81,7 @@ def workflow(ctx):
     count=True,
     help='Set status information verbosity.')
 @click.pass_context
+@with_api_client
 def workflow_workflows(ctx, _filter, output_format, access_token,
                        verbose):
     """List all workflows user has."""
@@ -168,6 +172,7 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
+@with_api_client
 def workflow_create(ctx, file, name, skip_validation, access_token):
     """Create a REANA compatible workflow from REANA spec file."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -240,6 +245,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     nargs=-1,
 )
 @click.pass_context
+@with_api_client
 def workflow_start(ctx, workflow, access_token, parameters):
     """Start previously created workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -313,6 +319,7 @@ def workflow_start(ctx, workflow, access_token, parameters):
     count=True,
     help='Set status information verbosity.')
 @click.pass_context
+@with_api_client
 def workflow_status(ctx, workflow, _filter, output_format,
                     access_token, verbose):
     """Get status of previously created workflow."""
@@ -443,6 +450,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
 @click.pass_context
+@with_api_client
 def workflow_logs(ctx, workflow, access_token):
     """Get workflow logs."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -471,7 +479,7 @@ def workflow_logs(ctx, workflow, access_token):
 
 @click.command(
     'validate',
-    help='Get workflow logs.')
+    help='Validate the REANA specification.')
 @click.option(
     '-f',
     '--file',

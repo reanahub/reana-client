@@ -26,9 +26,12 @@ import traceback
 
 import click
 
+from reana_client.decorators import with_api_client
 
-@click.command()
+
+@click.command('ping')
 @click.pass_context
+@with_api_client
 def ping(ctx):
     """Health check REANA Server."""
     try:

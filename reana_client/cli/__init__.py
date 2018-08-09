@@ -41,20 +41,7 @@ class Config(object):
 
     def __init__(self):
         """Initialize config variables."""
-        server_url = os.environ.get('REANA_SERVER_URL', None)
-
-        if not server_url:
-            logging.error(
-                'REANA client is not connected to any REANA cluster.\n'
-                'Please set REANA_SERVER_URL environment variable to '
-                'the remote REANA cluster you would like to connect to.\n'
-                'For example: export REANA_SERVER_URL=https://reana.cern.ch/')
-            sys.exit(1)
-
-        logging.info('REANA Server URL ($REANA_SERVER_URL) is: {}'
-                     .format(server_url))
-
-        self.client = Client(server_url)
+        self.client = None
 
 
 @click.group()

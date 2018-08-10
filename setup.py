@@ -68,12 +68,13 @@ install_requires = [
     'bravado>=9.0.6',
     'click>=6.7',
     'cwltool==1.0.20180326152342',
-    'yadage-schemas==0.7.16',
     'pyOpenSSL==17.3.0',  # FIXME remove once yadage-schemas solves deps.
+    'reana-commons>=0.3.0',
     'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
     'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
     'tablib>=0.12.1',
     'webcolors==1.7',  # FIXME remove once yadage-schemas solves deps.
+    'yadage-schemas==0.7.16',
 ]
 
 packages = find_packages()
@@ -109,12 +110,14 @@ setup(
     tests_require=tests_require,
     classifiers=[
         'Development Status :: 3 - Alpha',
-        'Environment :: Web Environment',
-        'Intended Audience :: Developers',
+        'Environment :: Console',
+        'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',

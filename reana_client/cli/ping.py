@@ -29,7 +29,7 @@ import click
 from reana_client.decorators import with_api_client
 
 
-@click.command('ping')
+@click.command('ping', help='Health check REANA Server.')
 @click.pass_context
 @with_api_client
 def ping(ctx):

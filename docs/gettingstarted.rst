@@ -12,25 +12,28 @@ environment:
 
 .. code-block:: console
 
-   $ mkvirtualenv reana-client -p /usr/bin/python2.7
+   $ mkvirtualenv reana-client
    $ pip install reana-client
 
 Select REANA cloud
 ------------------
 
 You can now select the REANA cloud instance where to run your analyses by
-setting the ``REANA_SERVER_URL`` variable appropriately. For example:
+setting the ``REANA_SERVER_URL`` variable appropriately and providing a valid
+access token through the environment variable ``REANA_ACCESS_TOKEN``. For
+example:
 
 .. code-block:: console
 
    $ export REANA_SERVER_URL=http://reana.cern.ch
+   $ export REANA_ACCESS_TOKEN=<ACCESS_TOKEN>
 
 Note that if you are trying to run REANA cluster locally on your laptop (and not
 only the client!), you can use:
 
 .. code-block:: console
 
-   $ eval $(reana-cluster env)
+   $ eval $(reana-cluster env --all)
 
 see the `REANA-Cluster getting started guide
 <http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_.
@@ -59,7 +62,7 @@ We can now create a new computational workflow:
 
 .. code-block:: console
 
-   $ reana-client workflow create
+   $ reana-client create
    workflow.1
 
 This created a workflow with the default name "workflow" and run number "1".
@@ -69,16 +72,16 @@ the ``-n`` argument:
 
 .. code-block:: console
 
-   $ reana-client workflow create -n myfirstdemo
+   $ reana-client create -n myfirstdemo
    myfirstdemo.1
 
 We can check the status of our previously created workflow:
 
 .. code-block:: console
 
-   $ reana-client workflow status -w workflow.1
-   NAME       RUN_NUMBER   ID                                     USER                                   ORGANIZATION   STATUS
-   workflow   1            91797125-012c-498d-8a92-b4f7e3598513   00000000-0000-0000-0000-000000000000   default        created
+   $ reana-client status -w workflow.1
+   NAME       RUN_NUMBER   CREATED               STATUS    PROGRESS
+   workflow   1            2018-08-10T07:27:15   created   -/-
 
 Note that instead of passing ``-w`` argument with the workflow name every time,
 we can define a new environment variable ``REANA_WORKON`` which specifies the
@@ -92,37 +95,38 @@ Let us upload our code:
 
 .. code-block:: console
 
-   $ reana-client code upload ./code/helloworld.py
-   /home/simko/private/project/reana/src/reana-demo-helloworld/code/helloworld.py was uploaded successfully.
+   $ reana-client upload ./code/helloworld.py
+   File code/helloworld.py was successfully uploaded.
 
 and check whether it indeed appears seeded in our workspace:
 
 .. code-block:: console
 
-   $ reana-client code list
-   NAME            SIZE   LAST-MODIFIED
-   helloworld.py   2905   2018-04-20 13:20:01.471120+00:00
+   $ reana-client list
+   NAME                 SIZE   LAST-MODIFIED
+   code/helloworld.py   2905   2018-08-10 07:29:54.034067+00:00
 
 Similarly, let us now upload the input data file:
 
 .. code-block:: console
 
-   $ reana-client inputs upload ./inputs/names.txt
-   File /home/simko/private/project/reana/src/reana-demo-helloworld/inputs/names.txt was successfully uploaded.
+   $ reana-client upload ./inputs/names.txt
+   File inputs/names.txt was successfully uploaded.
 
 and check whether it was well seeded into our input workspace:
 
 .. code-block:: console
 
-   $ reana-client inputs list
-   NAME        SIZE   LAST-MODIFIED
-   names.txt   18     2018-04-20 13:20:28.834120+00:00
+   $ reana-client list
+   NAME                 SIZE   LAST-MODIFIED
+   inputs/names.txt     18     2018-08-10 07:31:15.986705+00:00
+   code/helloworld.py   2905   2018-08-10 07:29:54.034067+00:00
 
 Now that the input data and code was uploaded, we can start the workflow execution:
 
 .. code-block:: console
 
-   $ reana-client workflow start
+   $ reana-client start
    workflow.1 has been started.
 
 Let us enquire about its running status; we may see that it is still in the
@@ -130,41 +134,43 @@ Let us enquire about its running status; we may see that it is still in the
 
 .. code-block:: console
 
-   $ reana-client workflow status
-   NAME       RUN_NUMBER   ID                                     USER                                   ORGANIZATION   STATUS
-   workflow   1            91797125-012c-498d-8a92-b4f7e3598513   00000000-0000-0000-0000-000000000000   default        running
+   $ reana-client status
+   NAME       RUN_NUMBER   CREATED               STATUS    PROGRESS
+   workflow   1            2018-08-10T07:27:15   running   0/1
 
 After a few minutes, the workflow should be finished:
 
 .. code-block:: console
 
-   $ reana-client workflow status
-   NAME       RUN_NUMBER   ID                                     USER                                   ORGANIZATION   STATUS
-   workflow   1            91797125-012c-498d-8a92-b4f7e3598513   00000000-0000-0000-0000-000000000000   default        finished
+   $ reana-client status
+   NAME       RUN_NUMBER   CREATED               STATUS     PROGRESS
+   workflow   1            2018-08-10T07:27:15   finished   1/1
 
 We can now check the list of output files:
 
 .. code-block:: console
 
-   $ reana-client outputs list
+   $ reana-client list
    NAME                                    SIZE   LAST-MODIFIED
-   helloworld/greetings.txt                32     2018-04-20 13:22:38.460119+00:00
-   _yadage/yadage_snapshot_backend.json    590    2018-04-20 13:22:38.460119+00:00
-   _yadage/yadage_snapshot_workflow.json   9267   2018-04-20 13:22:38.460119+00:00
-   _yadage/yadage_template.json            1099   2018-04-20 13:22:38.460119+00:00
+   helloworld/greetings.txt                32     2018-08-10 07:33:51.885092+00:00
+   _yadage/yadage_snapshot_backend.json    576    2018-08-10 07:33:59.698738+00:00
+   _yadage/yadage_snapshot_workflow.json   9163   2018-08-10 07:33:59.698738+00:00
+   _yadage/yadage_template.json            1099   2018-08-10 07:32:26.684325+00:00
+   inputs/names.txt                        18     2018-08-10 07:31:15.986705+00:00
+   code/helloworld.py                      2905   2018-08-10 07:29:54.034067+00:00
 
 and retrieve the resulting output file:
 
 .. code-block:: console
 
-   $ reana-client outputs download helloworld/greetings.txt
-   File helloworld/greetings.txt downloaded to ./outputs/
+   $ reana-client download helloworld/greetings.txt
+   File helloworld/greetings.txt downloaded to /home/reana/reanahub/reana-demo-helloworld.
 
 Let us see whether we got the expected output:
 
 .. code-block:: console
 
-   $ cat outputs/helloworld/greetings.txt
+   $ cat helloworld/greetings.txt
    Hello John Doe!
    Hello Jane Doe!
 

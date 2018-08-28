@@ -195,21 +195,6 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
         reana_spec = load_reana_spec(click.format_filename(file),
                                      skip_validation)
 
-        kwargs = {}
-        if reana_spec['workflow']['type'] == 'serial':
-            kwargs['specification'] = reana_spec['workflow'].\
-                get('specification')
-        reana_spec['workflow']['spec'] = load_workflow_spec(
-            reana_spec['workflow']['type'],
-            reana_spec['workflow'].get('file'),
-            **kwargs
-        )
-
-        if reana_spec['workflow']['type'] == 'cwl' and \
-                'inputs' in reana_spec:
-            with open(reana_spec['inputs']['parameters']['input']) as f:
-                reana_spec['inputs']['parameters']['input'] = yaml.load(f)
-
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.create_workflow(reana_spec,
                                                   name,

@@ -146,6 +146,23 @@ def load_reana_spec(filepath, skip_validation=False):
                          .format(filepath=filepath))
             _validate_reana_yaml(reana_yaml)
 
+
+        kwargs = {}
+        if reana_yaml['workflow']['type'] == 'serial':
+            kwargs['specification'] = reana_yaml['workflow'].\
+                get('specification')
+        reana_yaml['workflow']['spec'] = load_workflow_spec(
+            reana_yaml['workflow']['type'],
+            reana_yaml['workflow'].get('file'),
+            **kwargs
+        )
+
+        if reana_yaml['workflow']['type'] == 'cwl' and \
+                'inputs' in reana_yaml:
+            with open(reana_yaml['inputs']['parameters']['input']) as f:
+                reana_yaml['inputs']['parameters']['input'] = yaml.load(f)
+
+
         return reana_yaml
     except IOError as e:
         logging.info(

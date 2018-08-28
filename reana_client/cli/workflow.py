@@ -412,9 +412,10 @@ def workflow_status(ctx, workflow, _filter, output_format,
                     tablib_data.append(row)
 
                 if _filter:
-                    data = data.subset(rows=None, cols=list(_filter))
+                    tablib_data = tablib_data.subset(rows=None,
+                                                     cols=list(_filter))
 
-                click.echo(data.export(output_format))
+                click.echo(tablib_data.export(output_format))
             else:
                 click_table_printer(headers, _filter, data)
 

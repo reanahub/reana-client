@@ -32,6 +32,7 @@ import yadageschemas
 import yaml
 from cwltool.main import main
 from jsonschema import ValidationError, validate
+from reana_commons.serial import serial_load
 from six import StringIO
 
 from reana_client.config import reana_yaml_schema_file_path
@@ -74,43 +75,6 @@ def cwl_load(workflow_file):
     return json.loads(value)
 
 
-serial_workflow_schema = {
-    "steps": {
-        "type": "array",
-        "items": {
-            "type": "object",
-            "properties": {
-                "environment": {
-                    "type": "string",
-                    "title": "The Environment Schema ",
-                },
-                "commands": {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "title": "The 0th Schema ",
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-def serial_load(workflow_file, specification):
-    """Validate and return REANA serial workflow specification.
-
-    :param workflow_file: A specification file compliant with
-        REANA serial workflow specification.
-    :returns: A dictionary which represents the valid serial workflow.
-    """
-    if not specification:
-        with open(workflow_file, 'r') as f:
-            specification = json.loads(f.read())
-    validate(specification, serial_workflow_schema)
-    return specification
-
-
 workflow_load = {
     'yadage': yadage_load,
     'cwl': cwl_load,
@@ -146,11 +110,13 @@ def load_reana_spec(filepath, skip_validation=False):
                          .format(filepath=filepath))
             _validate_reana_yaml(reana_yaml)
 
-
         kwargs = {}
         if reana_yaml['workflow']['type'] == 'serial':
             kwargs['specification'] = reana_yaml['workflow'].\
                 get('specification')
+            kwargs['parameters'] = \
+                reana_yaml.get('inputs', {}).get('parameters', {})
+
         reana_yaml['workflow']['spec'] = load_workflow_spec(
             reana_yaml['workflow']['type'],
             reana_yaml['workflow'].get('file'),
@@ -161,7 +127,6 @@ def load_reana_spec(filepath, skip_validation=False):
                 'inputs' in reana_yaml:
             with open(reana_yaml['inputs']['parameters']['input']) as f:
                 reana_yaml['inputs']['parameters']['input'] = yaml.load(f)
-
 
         return reana_yaml
     except IOError as e:

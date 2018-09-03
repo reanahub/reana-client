@@ -212,7 +212,14 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
 
 @click.command(
     'start',
-    help='Start previously created workflow.')
+    help="""
+    Start previously created workflow.
+
+    The workflow execution can be further influenced by setting operational
+    prameters using `-p` or `--parameter` option.  The option can be
+    repetitive. For example, to disable caching for the Serial workflow
+    engine, you can set ``-p CACHING=false``.
+    """)
 @click.option(
     '-w',
     '--workflow',
@@ -225,13 +232,15 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     '--access-token',
     default=os.environ.get('REANA_ACCESS_TOKEN', None),
     help='Access token of the current user.')
-@click.argument(
-    'parameters',
-    nargs=-1,
+@click.option(
+    '-p', '--parameter',
+    multiple=True,
+    help='Optional operational parameters for the workflow execution. '
+         'E.g. CACHING=false.',
 )
 @click.pass_context
 @with_api_client
-def workflow_start(ctx, workflow, access_token, parameters):
+def workflow_start(ctx, workflow, access_token, parameter):  # noqa: D301
     """Start previously created workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -244,7 +253,7 @@ def workflow_start(ctx, workflow, access_token, parameters):
         sys.exit(1)
 
     parsed_parameters = {'parameters':
-                         dict(p.split('=') for p in parameters)}
+                         dict(p.split('=') for p in parameter)}
 
     if workflow:
         try:

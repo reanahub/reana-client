@@ -69,7 +69,7 @@ install_requires = [
     'click>=6.7',
     'cwltool==1.0.20180326152342',
     'pyOpenSSL==17.3.0',  # FIXME remove once yadage-schemas solves deps.
-    'reana-commons>=0.3.0',
+    'reana-commons>=0.3.1,<0.4',
     'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
     'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
     'tablib>=0.12.1',

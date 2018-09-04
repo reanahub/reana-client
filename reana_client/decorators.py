@@ -31,7 +31,7 @@ from reana_client.api import Client
 
 
 def with_api_client(f):
-    """Decorator to inject the REANA Server API client to a Click command."""
+    """Decorator to inject the REANA server API client to a Click command."""
     def wrapper(*args, **kwargs):
         """Initialize config for API client.
 
@@ -53,7 +53,7 @@ def with_api_client(f):
                     'REANA_SERVER_URL=https://reana.cern.ch/')
                 sys.exit(1)
 
-            logging.info('REANA Server URL ($REANA_SERVER_URL) is: {}'
+            logging.info('REANA server URL ($REANA_SERVER_URL) is: {}'
                          .format(server_url))
             ctx.obj.client = Client(server_url)
         else:

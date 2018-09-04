@@ -38,7 +38,7 @@ class Client(object):
     """REANA API client code."""
 
     def __init__(self, server_url):
-        """Create a OpenAPI client for REANA Server."""
+        """Create a OpenAPI client for REANA server."""
         json_spec = self._get_spec('reana_server.json')
         self._client = SwaggerClient.from_spec(
             json_spec,
@@ -60,7 +60,7 @@ class Client(object):
         return json_spec
 
     def ping(self):
-        """Health check REANA Server."""
+        """Health check REANA server."""
         try:
             response, http_response = self._client.api.get_api_ping().result()
             if http_response.status_code == 200:
@@ -73,7 +73,7 @@ class Client(object):
 
         except HTTPError as e:
             logging.debug(
-                'REANA Server health check failed: '
+                'REANA server health check failed: '
                 '\nStatus: {}\nReason: {}\n'
                 'Message: {}'.format(e.response.status_code,
                                      e.response.reason,
@@ -312,7 +312,7 @@ class Client(object):
             raise e
 
     def upload_to_server(self, workflow, paths, access_token):
-        """Upload file or directory to REANA-Server.
+        """Upload file or directory to REANA server.
 
         Shared e.g. by `code upload` and `inputs upload`.
 

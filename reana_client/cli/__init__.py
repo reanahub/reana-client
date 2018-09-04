@@ -53,7 +53,7 @@ class Config(object):
     default='WARNING')
 @click.pass_context
 def cli(ctx, loglevel):
-    """REANA Client for interacting with REANA Server."""
+    """REANA client for interacting with REANA server."""
     logging.basicConfig(
         format=DEBUG_LOG_FORMAT if loglevel == 'DEBUG' else LOG_FORMAT,
         stream=sys.stderr,

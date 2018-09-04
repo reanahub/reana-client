@@ -20,7 +20,7 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 
-"""Version information for REANA-client.
+"""Version information for REANA-Client.
 
 This file is imported by ``reana_client.__init__`` and parsed by
 ``setup.py``.

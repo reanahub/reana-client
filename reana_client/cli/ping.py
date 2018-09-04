@@ -29,11 +29,11 @@ import click
 from reana_client.decorators import with_api_client
 
 
-@click.command('ping', help='Health check REANA Server.')
+@click.command('ping', help='Health check REANA server.')
 @click.pass_context
 @with_api_client
 def ping(ctx):
-    """Health check REANA Server."""
+    """Health check REANA server."""
     try:
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
         response = ctx.obj.client.ping()

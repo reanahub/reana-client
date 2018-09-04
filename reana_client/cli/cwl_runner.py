@@ -52,7 +52,7 @@ def cwl_runner(client, quiet, outdir, processfile, jobfile):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
     server_url = os.environ.get('REANA_SERVER_URL', 'http://reana.cern.ch')
 
-    logging.info('REANA Server URL ($REANA_SERVER_URL) is: {}'
+    logging.info('REANA server URL ($REANA_SERVER_URL) is: {}'
                  .format(server_url))
 
     client = Client(server_url)

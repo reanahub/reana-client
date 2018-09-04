@@ -165,7 +165,7 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
     '--skip-validation',
     is_flag=True,
     help="If set, specifications file is not validated before "
-         "submitting it's contents to REANA Server.")
+         "submitting it's contents to REANA server.")
 @click.option(
     '-at',
     '--access-token',

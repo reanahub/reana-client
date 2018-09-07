@@ -218,7 +218,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     The workflow execution can be further influenced by setting operational
     prameters using `-p` or `--parameter` option.  The option can be
     repetitive. For example, to disable caching for the Serial workflow
-    engine, you can set ``-p CACHING=false``.
+    engine, you can set ``-p CACHE=off``.
     """)
 @click.option(
     '-w',
@@ -236,7 +236,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     '-p', '--parameter',
     multiple=True,
     help='Optional operational parameters for the workflow execution. '
-         'E.g. CACHING=false.',
+         'E.g. CACHE=off.',
 )
 @click.pass_context
 @with_api_client

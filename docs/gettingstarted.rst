@@ -19,24 +19,32 @@ Select REANA cloud
 ------------------
 
 You can now select the REANA cloud instance where to run your analyses by
-setting the ``REANA_SERVER_URL`` variable appropriately and providing a valid
-access token through the environment variable ``REANA_ACCESS_TOKEN``. For
-example:
+setting the ``REANA_SERVER_URL`` variable appropriately. You also have to
+provide a valid access token through the environment variable
+``REANA_ACCESS_TOKEN``. For example:
 
 .. code-block:: console
 
-   $ export REANA_SERVER_URL=http://reana.cern.ch
-   $ export REANA_ACCESS_TOKEN=<ACCESS_TOKEN>
+   $ export REANA_SERVER_URL=https://reana.cern.ch
+   $ export REANA_ACCESS_TOKEN=XXXXXXX
 
-Note that if you are trying to run REANA cluster locally on your laptop (and not
-only the client!), you can use:
+The access token should have been given to you by the administrators of the
+REANA cloud instance you are using.
 
-.. code-block:: console
+.. admonition:: Hint for developers
 
-   $ eval $(reana-cluster env --all)
+    Note that if you are running REANA cluster locally on your laptop -- i.e.
+    you are yourself the administrator of your REANA cloud instance -- then you
+    can use:
 
-see the `REANA-Cluster getting started guide
-<http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_.
+    .. code-block:: console
+
+       $ eval $(reana-cluster env --include-admin-token)
+
+    which will set both environment variables for you. Please see the
+    `REANA-Cluster's Getting Started
+    <http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_ guide
+    for more information.
 
 Run example analysis
 --------------------
@@ -104,14 +112,14 @@ and check whether it indeed appears seeded in our workspace:
 
    $ reana-client list
    NAME                 SIZE   LAST-MODIFIED
-   code/helloworld.py   2905   2018-08-10 07:29:54.034067+00:00
+   code/helloworld.py   2905   2018-08-10T07:29:54
 
 Similarly, let us now upload the input data file:
 
 .. code-block:: console
 
-   $ reana-client upload ./inputs/names.txt
-   File inputs/names.txt was successfully uploaded.
+   $ reana-client upload ./data/names.txt
+   File data/names.txt was successfully uploaded.
 
 and check whether it was well seeded into our input workspace:
 
@@ -119,8 +127,8 @@ and check whether it was well seeded into our input workspace:
 
    $ reana-client list
    NAME                 SIZE   LAST-MODIFIED
-   inputs/names.txt     18     2018-08-10 07:31:15.986705+00:00
-   code/helloworld.py   2905   2018-08-10 07:29:54.034067+00:00
+   data/names.txt         18   2018-08-10T07:31:15
+   code/helloworld.py   2905   2018-08-10T07:29:54
 
 Now that the input data and code was uploaded, we can start the workflow execution:
 
@@ -151,30 +159,25 @@ We can now check the list of output files:
 .. code-block:: console
 
    $ reana-client list
-   NAME                                    SIZE   LAST-MODIFIED
-   helloworld/greetings.txt                32     2018-08-10 07:33:51.885092+00:00
-   _yadage/yadage_snapshot_backend.json    576    2018-08-10 07:33:59.698738+00:00
-   _yadage/yadage_snapshot_workflow.json   9163   2018-08-10 07:33:59.698738+00:00
-   _yadage/yadage_template.json            1099   2018-08-10 07:32:26.684325+00:00
-   inputs/names.txt                        18     2018-08-10 07:31:15.986705+00:00
-   code/helloworld.py                      2905   2018-08-10 07:29:54.034067+00:00
+   NAME                    SIZE   LAST-MODIFIED
+   code/helloworld.py      2905   2018-08-06T13:58:21
+   data/names.txt            18   2018-08-06T13:59:59
+   results/greetings.txt     32   2018-08-06T14:01:02
 
 and retrieve the resulting output file:
 
 .. code-block:: console
 
-   $ reana-client download helloworld/greetings.txt
-   File helloworld/greetings.txt downloaded to /home/reana/reanahub/reana-demo-helloworld.
+   $ reana-client download results/greetings.txt
+   File results/greetings.txt downloaded to /home/reana/reanahub/reana-demo-helloworld.
 
 Let us see whether we got the expected output:
 
 .. code-block:: console
 
    $ cat helloworld/greetings.txt
-   Hello John Doe!
    Hello Jane Doe!
-
-Everything is well; the workflow was well executed.
+   Hello John Doe!
 
 Next steps
 ----------

@@ -14,8 +14,19 @@ instance your client should connect and a valid token. For example:
 
 .. code-block:: console
 
-   $ export REANA_SERVER_URL=http://reana.cern.ch
-   $ export REANA_ACCESS_TOKEN=<ACCESS_TOKEN>
+   $ export REANA_SERVER_URL=https://reana.cern.ch
+
+REANA_ACCESS_TOKEN
+~~~~~~~~~~~~~~~~~~
+
+You should specify valid access token for the REANA cloud instance you would
+like to use. For example:
+
+.. code-block:: console
+
+   $ export REANA_ACCESS_TOKEN=XXXXXXX
+
+The token should have been given to you by the REANA cluster administrators.
 
 REANA_WORKON
 ~~~~~~~~~~~~

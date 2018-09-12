@@ -206,12 +206,12 @@ def download_files(ctx, workflow, file_, output_directory, access_token):
 
 @click.command(
     'upload',
-    help='Upload one of more files to the workflow workspace.\n'
+    help='Upload files and directories to the workflow workspace.\n'
          'If a symbolic link is provided, it is resolved and\n'
          'a hard copy is uploaded.')
 @click.argument(
     'filenames',
-    metavar='FILE(s)',
+    metavar='SOURCE',
     type=click.Path(exists=True, resolve_path=True),
     nargs=-1)
 @click.option(
@@ -228,7 +228,7 @@ def download_files(ctx, workflow, file_, output_directory, access_token):
 @click.pass_context
 @with_api_client
 def upload_files(ctx, workflow, filenames, access_token):
-    """Upload file(s) to workflow workspace."""
+    """Upload files and directories to workflow workspace."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))

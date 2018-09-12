@@ -206,7 +206,9 @@ def download_files(ctx, workflow, file_, output_directory, access_token):
 
 @click.command(
     'upload',
-    help='Upload one of more files to the workflow workspace.')
+    help='Upload one of more files to the workflow workspace.\n'
+         'If a symbolic link is provided, it is resolved and\n'
+         'a hard copy is uploaded.')
 @click.argument(
     'filenames',
     metavar='FILE(s)',
@@ -245,9 +247,16 @@ def upload_files(ctx, workflow, filenames, access_token):
                                      filename,
                                      access_token)
                 for file_ in response:
-                    click.echo(
-                        click.style('File {} was successfully uploaded.'.
-                                    format(file_), fg='green'))
+                    if file_.startswith('symlink:'):
+                        click.echo(
+                            click.style('Symlink resolved to {}. Uploaded'
+                                        ' hard copy.'.
+                                        format(file_[len('symlink:'):]),
+                                        fg='green'))
+                    else:
+                        click.echo(
+                            click.style('File {} was successfully uploaded.'.
+                                        format(file_), fg='green'))
             except FileUploadError as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))

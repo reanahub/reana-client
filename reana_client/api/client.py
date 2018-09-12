@@ -353,11 +353,20 @@ class Client(object):
                         next_uploaded_files = self.upload_to_server(
                             workflow, os.path.join(root, next_path),
                             access_token)
-                        uploaded_files.extend(next_uploaded_files)
+                        if next_uploaded_files:
+                            uploaded_files.extend(next_uploaded_files)
                 return uploaded_files
 
             # Check if input is an absolute path and upload file.
             else:
+                symlink = False
+                if os.path.islink(path):
+                    path = os.path.realpath(path)
+                    logging.info(
+                        'Symlink {} found, uploading'
+                        ' hard copy.'.
+                        format(path))
+                    symlink = True
                 with open(path, 'rb') as f:
                     fname = os.path.basename(f.name)
                     workflow_root = get_workflow_root()
@@ -382,6 +391,8 @@ class Client(object):
                                                     save_path, access_token)
                         logging.info("File '{}' was successfully "
                                      "uploaded.".format(fname))
+                        if symlink:
+                            save_path = 'symlink:{}'.format(save_path)
                         return [save_path]
                     except Exception as e:
                         logging.debug(traceback.format_exc())

@@ -61,8 +61,31 @@ and set ``REANA_WORKON`` to the one you would like to work on.
 Usage
 -----
 
+Overview
+~~~~~~~~
+
 Please see the :ref:`gettingstarted` section for a basic ``reana-client`` use
 case scenario.
+
+Uploading analysis assets
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Uploading files or directories to an analysis workspace is simple as:
+
+.. code-block:: console
+
+   $ reana-client upload file1 file2 directory1
+   File file1 was successfully uploaded.
+   File file2 was successfully uploaded.
+   File directory1/file3 was successfully uploaded.
+
+Directory structures are maintained, i.e.
+directory1 exists in the workspace.
+
+Note that symbolic links are resolved at the moment of upload 
+so that a hard copy of the link target is uploaded to the cloud
+storage workspace. The link is not maintained throughout the 
+workflow execution.
 
 Examples
 --------

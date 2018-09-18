@@ -32,6 +32,7 @@ import tablib
 
 from ..config import ERROR_MESSAGES, default_user
 from ..errors import FileUploadError
+from ..utils import get_workflow_root, load_reana_spec
 from reana_client.decorators import with_api_client
 from reana_commons.utils import click_table_printer
 
@@ -160,6 +161,13 @@ def download_files(ctx, workflow, file_, output_directory, access_token):
             click.style(ERROR_MESSAGES['missing_access_token'],
                         fg='red'), err=True)
         sys.exit(1)
+
+    if not file_:
+        reana_spec = load_reana_spec(os.path.join(get_workflow_root(),
+                                     'reana.yaml'),
+                                     False)
+        if 'outputs' in reana_spec:
+            file_ = reana_spec['outputs'].get('files') or []
 
     if workflow:
         for file_name in file_:

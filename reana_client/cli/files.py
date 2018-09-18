@@ -130,7 +130,7 @@ def get_files(ctx, workflow, _filter,
     'download',
     help='Download one or more files.')
 @click.argument(
-    'file_',
+    'filenames',
     metavar='FILE',
     nargs=-1)
 @click.option(
@@ -150,7 +150,7 @@ def get_files(ctx, workflow, _filter,
     help='Access token of the current user.')
 @click.pass_context
 @with_api_client
-def download_files(ctx, workflow, file_, output_directory, access_token):
+def download_files(ctx, workflow, filenames, output_directory, access_token):
     """Download workflow workspace file(s)."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -162,15 +162,15 @@ def download_files(ctx, workflow, file_, output_directory, access_token):
                         fg='red'), err=True)
         sys.exit(1)
 
-    if not file_:
+    if not filenames:
         reana_spec = load_reana_spec(os.path.join(get_workflow_root(),
                                      'reana.yaml'),
                                      False)
         if 'outputs' in reana_spec:
-            file_ = reana_spec['outputs'].get('files') or []
+            filenames = reana_spec['outputs'].get('files') or []
 
     if workflow:
-        for file_name in file_:
+        for file_name in filenames:
             try:
                 binary_file = \
                     ctx.obj.client.download_file(workflow,
@@ -247,6 +247,18 @@ def upload_files(ctx, workflow, filenames, access_token):
             err=True)
         sys.exit(1)
 
+    if not filenames:
+        reana_spec = load_reana_spec(os.path.join(get_workflow_root(),
+                                     'reana.yaml'),
+                                     False)
+        if 'inputs' in reana_spec:
+            filenames = []
+            filenames += [os.path.join(get_workflow_root(), f)
+                          for f in reana_spec['inputs'].get('files') or []]
+            filenames += [os.path.join(get_workflow_root(), d)
+                          for d in reana_spec['inputs'].
+                          get('directories') or []]
+
     if workflow:
         for filename in filenames:
             try:
@@ -265,6 +277,15 @@ def upload_files(ctx, workflow, filenames, access_token):
                         click.echo(
                             click.style('File {} was successfully uploaded.'.
                                         format(file_), fg='green'))
+            except FileNotFoundError as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(
+                    click.style(
+                        'File {0} could not be uploaded: {0} does not exist.'.
+                        format(filename),
+                        fg='red'),
+                    err=True)
             except FileUploadError as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))

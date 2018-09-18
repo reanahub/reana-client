@@ -55,6 +55,9 @@ def with_api_client(f):
 
             logging.info('REANA server URL ($REANA_SERVER_URL) is: {}'
                          .format(server_url))
+            if ctx.obj is None:
+                from reana_client.cli import Config
+                ctx.obj = Config()
             ctx.obj.client = Client(server_url)
         else:
             raise Exception(

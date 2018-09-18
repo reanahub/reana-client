@@ -30,9 +30,10 @@ import click
 
 import tablib
 
-from ..config import ERROR_MESSAGES, default_user
-from ..errors import FileUploadError
-from ..utils import get_workflow_root, load_reana_spec
+from reana_client.config import ERROR_MESSAGES, default_user
+from reana_client.errors import FileUploadError
+from reana_client.utils import get_workflow_root, load_reana_spec
+from reana_client.cli.utils import add_access_token_options
 from reana_client.decorators import with_api_client
 from reana_commons.utils import click_table_printer
 
@@ -65,11 +66,7 @@ def files(ctx):
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
-@click.option(
-    '-at',
-    '--access-token',
-    default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='Access token of the current user.')
+@add_access_token_options
 @click.pass_context
 @with_api_client
 def get_files(ctx, workflow, _filter,
@@ -146,11 +143,7 @@ def get_files(ctx, workflow, _filter,
     '--output-directory',
     default=os.getcwd(),
     help='Path to the directory where files  will be downloaded.')
-@click.option(
-    '-at',
-    '--access-token',
-    default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='Access token of the current user.')
+@add_access_token_options
 @click.pass_context
 @with_api_client
 def download_files(ctx, workflow, filenames, output_directory, access_token):
@@ -232,11 +225,7 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow you are uploading files for. '
          'Overrides value of $REANA_WORKON.')
-@click.option(
-    '-t',
-    '--access-token',
-    default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='Access token of the current user.')
+@add_access_token_options
 @click.pass_context
 @with_api_client
 def upload_files(ctx, workflow, filenames, access_token):

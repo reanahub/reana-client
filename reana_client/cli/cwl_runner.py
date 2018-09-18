@@ -35,8 +35,10 @@ from bravado.exception import HTTPServerError
 
 from reana_client.api import Client
 from reana_client.config import default_user
+from reana_client.decorators import with_api_client
 from reana_client.utils import load_workflow_spec
 from reana_client.version import __version__
+from reana_client.cli.utils import add_access_token_options
 
 
 @click.command()
@@ -45,17 +47,13 @@ from reana_client.version import __version__
               help='No diagnostic output')
 @click.option('--outdir', type=click.Path(),
               help='Output directory, defaults to the current directory')
+@add_access_token_options
 @click.argument('processfile', required=False)
 @click.argument('jobfile')
 @click.pass_context
-def cwl_runner(client, quiet, outdir, processfile, jobfile):
+@with_api_client
+def cwl_runner(ctx, quiet, outdir, processfile, jobfile, access_token):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
-    server_url = os.environ.get('REANA_SERVER_URL', 'http://reana.cern.ch')
-
-    logging.info('REANA server URL ($REANA_SERVER_URL) is: {}'
-                 .format(server_url))
-
-    client = Client(server_url)
     logging.basicConfig(
         format='[%(levelname)s] %(message)s',
         stream=sys.stderr,
@@ -85,30 +83,33 @@ def cwl_runner(client, quiet, outdir, processfile, jobfile):
             reana_spec['inputs']['parameters'] = {'input': job}
         reana_spec['workflow']['spec'] = replace_location_in_cwl_spec(
             reana_spec['workflow']['spec'])
-        logging.info('Connecting to {0}'.format(client.server_url))
-        response = client.create_workflow(default_user,
-                                          reana_spec,
-                                          'cwl-runner')
-        logging.error(response)
 
+        logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
+        response = ctx.obj.client.create_workflow(reana_spec, 'cwl-test',
+                                                  access_token)
+        logging.error(response)
+        workflow_name = response['workflow_name']
         workflow_id = response['workflow_id']
+        logging.info('Workflow {0}/{1} has been created.'.format(
+            workflow_name, workflow_id))
         upload_files_from_cwl_spec(
-            client, reana_spec['workflow']['spec'], processfile, workflow_id)
+            ctx.obj.client, reana_spec['workflow']['spec'], processfile,
+            workflow_id)
         if reana_spec['inputs']['parameters']['input']:
             upload_files(
-                client, reana_spec['inputs']['parameters']['input'],
+                ctx.obj.client, reana_spec['inputs']['parameters']['input'],
                 jobfile, workflow_id)
 
-        response = client.start_workflow(default_user,
-                                         workflow_id)
+        response = ctx.obj.client.start_workflow(
+            workflow_id, access_token, reana_spec['inputs']['parameters'])
         logging.error(response)
 
         first_logs = ""
         while True:
             sleep(1)
             logging.error('Polling workflow logs')
-            response = client.get_workflow_logs(default_user,
-                                                workflow_id)
+            response = ctx.obj.client.get_workflow_logs(workflow_id,
+                                                        access_token)
             logs = response['logs']
             if logs != first_logs:
 
@@ -167,11 +168,11 @@ def transfer_file(client, file_dict, jobfile, workflow_id):
         path = file_dict.get('location', file_dict.get('path'))
         with open(os.path.join(os.path.abspath(os.path.dirname(jobfile)),
                                path), 'rb') as f:
-            response = client.seed_workflow_inputs(
-                default_user,
+            response = client.upload_file(
                 workflow_id,
                 f,
-                path)
+                path,
+                access_token)
             logging.error(response)
             logging.error("Transferred file: {0}".format(f.name))
     """
@@ -238,7 +239,7 @@ def upload_files_from_cwl_tool(client, spec, spec_file, workflow_id):
                         upload_file(client, param, spec_file, workflow_id)
                 elif param.get('default') and type(param['default']) is dict:
                     if (param['default']
-                       .get("type", param['default'].get("class")) == "File"):
+                            .get("type", param['default'].get("class")) == "File"):
                         upload_file(client, param, spec_file, workflow_id)
 
 
@@ -283,11 +284,11 @@ def upload_directory(client, spec_file, workflow_id, location, basename=None,
                 if basename:
                     directory_name = directory_name.replace(
                         disk_directory_name, basename)
-                response = client.seed_workflow_inputs(
-                    default_user,
+                response = client.upload_file(
                     workflow_id,
                     file_,
-                    directory_name)
+                    directory_name,
+                    access_token)
                 logging.error(response)
                 logging.error("Transferred file: {0}".format(file_.name))
 
@@ -340,11 +341,15 @@ def upload_file(client, param, spec_file, workflow_id):
         with open(path, 'rb') as f:
             filename = path.replace(os.path.abspath(
                 os.path.dirname(spec_file)) + "/", "")
-            response = client.seed_workflow_inputs(
-                default_user,
+            response = ctx.obj.client.\
+                upload_to_server(workflow_id,
+                                 filename,
+                                 access_token)
+            response = client.upload_file(
                 workflow_id,
                 f,
-                filename)
+                filename,
+                access_token)
             logging.error(response)
             logging.error("Transferred file: {0}".format(f.name))
 

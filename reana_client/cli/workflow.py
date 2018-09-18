@@ -35,10 +35,11 @@ from reana_commons.utils import click_table_printer
 
 from reana_client.decorators import with_api_client
 
-from ..config import ERROR_MESSAGES, reana_yaml_default_file_path
-from ..utils import (get_workflow_name_and_run_number, is_uuid_v4,
-                     load_reana_spec, load_workflow_spec,
-                     workflow_uuid_or_name)
+from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
+from reana_client.utils import (get_workflow_name_and_run_number, is_uuid_v4,
+                                load_reana_spec, load_workflow_spec,
+                                workflow_uuid_or_name)
+from reana_client.cli.utils import add_access_token_options
 
 
 class _WorkflowStatus(Enum):
@@ -70,11 +71,7 @@ def workflow(ctx):
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
-@click.option(
-    '-at',
-    '--access-token',
-    default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='Access token of the current user.')
+@add_access_token_options
 @click.option(
     '-v',
     '--verbose',
@@ -166,11 +163,7 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
     is_flag=True,
     help="If set, specifications file is not validated before "
          "submitting it's contents to REANA server.")
-@click.option(
-    '-at',
-    '--access-token',
-    default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='Access token of the current user.')
+@add_access_token_options
 @click.pass_context
 @with_api_client
 def workflow_create(ctx, file, name, skip_validation, access_token):
@@ -227,11 +220,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow to be started. '
          'Overrides value of REANA_WORKON.')
-@click.option(
-    '-at',
-    '--access-token',
-    default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='Access token of the current user.')
+@add_access_token_options
 @click.option(
     '-p', '--parameter',
     multiple=True,
@@ -302,11 +291,7 @@ def workflow_start(ctx, workflow, access_token, parameter):  # noqa: D301
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
-@click.option(
-    '-at',
-    '--access-token',
-    default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='Access token of the current user.')
+@add_access_token_options
 @click.option(
     '-v',
     '--verbose',
@@ -439,11 +424,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose logs should be fetched. '
          'Overrides value of REANA_WORKON.')
-@click.option(
-    '-at',
-    '--access-token',
-    default=os.environ.get('REANA_ACCESS_TOKEN', None),
-    help='Access token of the current user.')
+@add_access_token_options
 @click.pass_context
 @with_api_client
 def workflow_logs(ctx, workflow, access_token):

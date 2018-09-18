@@ -219,12 +219,13 @@ class Client(object):
         except Exception as e:
             raise e
 
-    def get_workflow_logs(self, workflow_id):
+    def get_workflow_logs(self, workflow_id, access_token):
         """Get logs from a workflow engine."""
         try:
             (response,
              http_response) = self._client.api.get_workflow_logs(
-                 workflow_id_or_name=workflow_id).result()
+                 workflow_id_or_name=workflow_id,
+                 access_token=access_token).result()
 
             if http_response.status_code == 200:
                 return response

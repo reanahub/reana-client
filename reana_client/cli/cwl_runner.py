@@ -21,24 +21,78 @@
 # submit itself to any jurisdiction.
 """CWL v1.0 interface CLI implementation."""
 
+import io
 import logging
 import os
 import re
 import sys
 import traceback
-from time import sleep
 import urllib
+from time import sleep
 
 import click
 import yaml
 from bravado.exception import HTTPServerError
+from cwltool.context import LoadingContext
+from cwltool.load_tool import fetch_document
+from cwltool.main import printdeps
+from cwltool.workflow import findfiles
 
 from reana_client.api import Client
+from reana_client.cli.utils import add_access_token_options
 from reana_client.config import default_user
 from reana_client.decorators import with_api_client
 from reana_client.utils import load_workflow_spec
 from reana_client.version import __version__
-from reana_client.cli.utils import add_access_token_options
+
+
+PY3 = sys.version_info > (3,)
+
+
+def get_file_dependencies_obj(cwl_obj, basedir):
+    """Return a dictionary which contains the CWL workflow file dependencies.
+
+    :param cwl_obj: A CWL tool or job which might contain file dependencies.
+    :param basedir: Workflow base dir.
+    :returns: A dictionary composed of valid CWL file dependencies.
+    """
+    # Load de document
+    loading_context = LoadingContext()
+    document_loader, workflow_obj, uri = fetch_document(
+        cwl_obj, resolver=loading_context.resolver,
+        fetcher_constructor=loading_context.fetcher_constructor)
+    in_memory_buffer = io.StringIO() if PY3 else io.BytesIO()
+    # Get dependencies
+    printdeps(workflow_obj, document_loader, in_memory_buffer, 'primary', uri,
+              basedir=basedir)
+    file_dependencies_obj = yaml.load(in_memory_buffer.getvalue())
+    in_memory_buffer.close()
+    return file_dependencies_obj
+
+
+def list_cwl_workflow_files(cwl_obj, files=None):
+    """Recursively find file locations in a nested CWL file dependendies.
+
+    :param cwl_obj: A valid CWL file dependency dictionary.
+    :param files: List of discovered files.
+    :returns: A list with the relative path to the files which the workflow
+        depends on.
+    """
+    if files is None:
+        files = []
+
+    if isinstance(cwl_obj, dict):
+        if cwl_obj.get('class') == 'File':
+            files.append(cwl_obj.get('location'))
+            list_cwl_workflow_files(
+                cwl_obj.get('secondaryFiles', None), files)
+        elif cwl_obj.get('class') == 'Directory':
+            for child in cwl_obj.get('listing'):
+                list_cwl_workflow_files(child, files)
+    elif isinstance(cwl_obj, list):
+        for cwl_obj_sibling in cwl_obj:
+            list_cwl_workflow_files(cwl_obj_sibling, files)
+    return files
 
 
 @click.command()
@@ -47,18 +101,23 @@ from reana_client.cli.utils import add_access_token_options
               help='No diagnostic output')
 @click.option('--outdir', type=click.Path(),
               help='Output directory, defaults to the current directory')
+@click.option('--basedir', type=click.Path(),
+              help='Base directory.')
 @add_access_token_options
 @click.argument('processfile', required=False)
 @click.argument('jobfile')
 @click.pass_context
 @with_api_client
-def cwl_runner(ctx, quiet, outdir, processfile, jobfile, access_token):
+def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
+               access_token):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
     logging.basicConfig(
         format='[%(levelname)s] %(message)s',
         stream=sys.stderr,
         level=logging.INFO if quiet else logging.DEBUG)
     try:
+        basedir = basedir or os.path.abspath(
+            os.path.dirname(processfile))
         if processfile:
             with open(jobfile) as f:
                 reana_spec = {
@@ -92,13 +151,15 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile, access_token):
         workflow_id = response['workflow_id']
         logging.info('Workflow {0}/{1} has been created.'.format(
             workflow_name, workflow_id))
-        upload_files_from_cwl_spec(
-            ctx.obj.client, reana_spec['workflow']['spec'], processfile,
-            workflow_id)
-        if reana_spec['inputs']['parameters']['input']:
-            upload_files(
-                ctx.obj.client, reana_spec['inputs']['parameters']['input'],
-                jobfile, workflow_id)
+
+        file_dependencies_list = []
+        for cwlobj in [processfile, jobfile]:
+            file_dependencies_list.append(
+                get_file_dependencies_obj(cwlobj, basedir))
+        files_to_upload = list_cwl_workflow_files(file_dependencies_list)
+        for file_path in files_to_upload:
+            ctx.obj.client.upload_to_server(workflow_id, file_path,
+                                            access_token)
 
         response = ctx.obj.client.start_workflow(
             workflow_id, access_token, reana_spec['inputs']['parameters'])
@@ -137,112 +198,6 @@ def cwl_runner(ctx, quiet, outdir, processfile, jobfile, access_token):
         logging.error(traceback.print_exc())
 
 
-def upload_files(client, input_structure, jobfile, workflow_id):
-    """Recursively find and upload input files and directories from CWL job."""
-    if type(input_structure) is dict:
-        if type(input_structure) is dict and \
-           input_structure.get('class', None) == 'File':
-            transfer_file(client, input_structure, jobfile, workflow_id)
-        elif (type(input_structure) is dict and
-              input_structure.get('class', None) == 'Directory'):
-            upload_directory(client, jobfile, workflow_id,
-                             input_structure.get("location"))
-        else:
-            for parameter, value in input_structure.items():
-                if type(value) is dict and value.get('class', None) == 'File':
-                    transfer_file(client, value, jobfile, workflow_id)
-                elif type(value) is dict:
-                    upload_files(client, value, jobfile, workflow_id)
-                elif type(value) is list:
-                    upload_files(client, value, jobfile, workflow_id)
-    elif type(input_structure) is list:
-        for item in input_structure:
-            upload_files(client, item, jobfile, workflow_id)
-
-
-def transfer_file(client, file_dict, jobfile, workflow_id):
-    """Upload single file and all secondary files."""
-    if file_dict.get("contents"):
-        pass
-    else:
-        path = file_dict.get('location', file_dict.get('path'))
-        with open(os.path.join(os.path.abspath(os.path.dirname(jobfile)),
-                               path), 'rb') as f:
-            response = client.upload_file(
-                workflow_id,
-                f,
-                path,
-                access_token)
-            logging.error(response)
-            logging.error("Transferred file: {0}".format(f.name))
-    """
-    Example of CWL parameter structure (.yml format):
-
-    input_parameter:
-      class: File
-      location: hello.tar
-      secondaryFiles:
-        - class: File
-          location: index.py
-        - class: Directory
-          basename: xtestdir
-          location: testdir
-    """
-    if file_dict.get("secondaryFiles"):
-        for f in file_dict["secondaryFiles"]:
-            if f['class'] == 'File':
-                transfer_file(client, f, jobfile, workflow_id)
-            elif f['class'] == 'Directory':
-                upload_directory(client, jobfile, workflow_id, f.get(
-                    "location"), f.get("basename", None))
-
-
-def upload_files_from_cwl_spec(client, spec, spec_file, workflow_id):
-    """Collect and upload files from cwl workflow.
-
-    Traverse through normalized (packed) cwl workflow to collect and upload all
-    file inputs.
-    """
-    if spec.get('$graph'):
-        for tool in spec['$graph']:
-            upload_files_from_cwl_tool(client, tool, spec_file, workflow_id)
-    elif spec.get('inputs'):
-        upload_files_from_cwl_tool(client, spec, spec_file, workflow_id)
-    else:
-        logging.error("No file input sources detected")
-        pass
-
-
-def upload_files_from_cwl_tool(client, spec, spec_file, workflow_id):
-    """Collect and upload files from a cwl workflow step.
-
-    Traverse through tool inputs and workflow steps to collect and upload all
-    file inputs.
-    """
-    if spec['inputs']:
-        for param in spec['inputs']:
-            if param['type'] == "File":
-                if param.get('default', ''):
-                    upload_file(client, param, spec_file, workflow_id)
-            elif param.get('secondaryFiles'):
-                extensions = {ext for ext in param['secondaryFiles']}
-                directory = os.path.abspath(os.path.dirname(spec_file))
-                for file in os.listdir(directory):
-                    if any(file.endswith(ext) for ext in extensions):
-                        transfer_file(client, {"location": os.path.join(file)},
-                                      spec_file, workflow_id)
-    if spec.get("steps"):
-        for tool in spec['steps']:
-            for param in tool['in']:
-                if param.get('type', param.get('class')) == "File":
-                    if param.get('default', ''):
-                        upload_file(client, param, spec_file, workflow_id)
-                elif param.get('default') and type(param['default']) is dict:
-                    if (param['default']
-                            .get("type", param['default'].get("class")) == "File"):
-                        upload_file(client, param, spec_file, workflow_id)
-
-
 def replace_location_in_cwl_spec(spec):
     """Replace absolute paths with relative in a workflow.
 
@@ -259,38 +214,6 @@ def replace_location_in_cwl_spec(spec):
         return replace_location_in_cwl_tool(spec)
     else:
         return spec
-
-
-def upload_directory(client, spec_file, workflow_id, location, basename=None,
-                     disk_directory_name=None):
-    """Recursively upload directory as an input to a workflow."""
-    if not os.path.isabs(location):
-        disk_directory_name = location
-        location = os.path.join(os.path.abspath(
-            os.path.dirname(spec_file)), location)
-    else:
-        disk_directory_name = disk_directory_name
-    for f in os.listdir(location):
-        filename = os.path.abspath(os.path.join(location, f))
-        if os.path.isdir(filename):
-            upload_directory(client, spec_file, workflow_id,
-                             os.path.abspath(filename),
-                             basename=basename,
-                             disk_directory_name=disk_directory_name)
-        elif os.path.isfile(filename):
-            with open(filename, 'rb') as file_:
-                directory_name = filename.replace(
-                    os.path.abspath(os.path.dirname(spec_file)) + "/", "")
-                if basename:
-                    directory_name = directory_name.replace(
-                        disk_directory_name, basename)
-                response = client.upload_file(
-                    workflow_id,
-                    file_,
-                    directory_name,
-                    access_token)
-                logging.error(response)
-                logging.error("Transferred file: {0}".format(file_.name))
 
 
 def replace_location_in_cwl_tool(spec):
@@ -325,33 +248,6 @@ def replace_location_in_cwl_tool(spec):
             steps.append(tool)
         spec['steps'] = steps
     return spec
-
-
-def upload_file(client, param, spec_file, workflow_id):
-    """Upload single file."""
-    location = param['default'].get("location", param['default'].get("path"))
-    if os.path.isabs(location):
-        path = location
-    else:
-        path = os.path.join(os.path.abspath(
-            os.path.dirname(spec_file)), location)
-    if path.startswith("file:///"):
-        path = urllib.parse.unquote(path)[7:]
-    if os.path.exists(path):
-        with open(path, 'rb') as f:
-            filename = path.replace(os.path.abspath(
-                os.path.dirname(spec_file)) + "/", "")
-            response = ctx.obj.client.\
-                upload_to_server(workflow_id,
-                                 filename,
-                                 access_token)
-            response = client.upload_file(
-                workflow_id,
-                f,
-                filename,
-                access_token)
-            logging.error(response)
-            logging.error("Transferred file: {0}".format(f.name))
 
 
 if __name__ == "__main__":

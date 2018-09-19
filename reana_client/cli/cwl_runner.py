@@ -70,31 +70,6 @@ def get_file_dependencies_obj(cwl_obj, basedir):
     return file_dependencies_obj
 
 
-def list_cwl_workflow_files(cwl_obj, files=None):
-    """Recursively find file locations in a nested CWL file dependendies.
-
-    :param cwl_obj: A valid CWL file dependency dictionary.
-    :param files: List of discovered files.
-    :returns: A list with the relative path to the files which the workflow
-        depends on.
-    """
-    if files is None:
-        files = []
-
-    if isinstance(cwl_obj, dict):
-        if cwl_obj.get('class') == 'File':
-            files.append(cwl_obj.get('location'))
-            list_cwl_workflow_files(
-                cwl_obj.get('secondaryFiles', None), files)
-        elif cwl_obj.get('class') == 'Directory':
-            for child in cwl_obj.get('listing'):
-                list_cwl_workflow_files(child, files)
-    elif isinstance(cwl_obj, list):
-        for cwl_obj_sibling in cwl_obj:
-            list_cwl_workflow_files(cwl_obj_sibling, files)
-    return files
-
-
 @click.command()
 @click.version_option(version=__version__)
 @click.option('--quiet', is_flag=True,
@@ -156,10 +131,14 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
         for cwlobj in [processfile, jobfile]:
             file_dependencies_list.append(
                 get_file_dependencies_obj(cwlobj, basedir))
-        files_to_upload = list_cwl_workflow_files(file_dependencies_list)
-        for file_path in files_to_upload:
-            ctx.obj.client.upload_to_server(workflow_id, file_path,
-                                            access_token)
+        files_to_upload = findfiles(file_dependencies_list)
+        for cwl_file_object in files_to_upload:
+            file_path = cwl_file_object.get('location')
+            abs_file_path = os.path.join(basedir, file_path)
+            with open(abs_file_path, 'r') as f:
+                ctx.obj.client.upload_file(workflow_id, f, file_path,
+                                           access_token)
+                logging.error('File {} uploaded.'.format(file_path))
 
         response = ctx.obj.client.start_workflow(
             workflow_id, access_token, reana_spec['inputs']['parameters'])

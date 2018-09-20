@@ -79,6 +79,15 @@ Uploading files or directories to an analysis workspace is simple as:
    File file2 was successfully uploaded.
    File directory1/file3 was successfully uploaded.
 
+If you want to upload all input files defined in the reana.yaml of the analysis,
+you can just run:
+
+.. code-block:: console
+
+   $ reana-client upload
+   File file1 was successfully uploaded.
+   File file2 was successfully uploaded.
+
 Directory structures are maintained, i.e.
 directory1 exists in the workspace.
 
@@ -86,6 +95,25 @@ Note that symbolic links are resolved at the moment of upload
 so that a hard copy of the link target is uploaded to the cloud
 storage workspace. The link is not maintained throughout the 
 workflow execution.
+
+Downloading outputs
+~~~~~~~~~~~~~~~~~~~
+
+Downloading files from an analysis workspace works in the same way:
+
+.. code-block:: console
+
+   $ reana-client download result.png
+   File plot.png downloaded to /myfirstanalysis.
+
+In the same way you can download all outputs defined in the reana.yaml
+file of the analysis, by just running:
+
+.. code-block:: console
+
+   $ reana-client download
+
+Note that downloading directories is not yet supported.
 
 Examples
 --------

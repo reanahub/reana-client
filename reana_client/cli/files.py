@@ -128,10 +128,13 @@ def get_files(ctx, workflow, _filter,
 
 @click.command(
     'download',
-    help='Download one or more files.')
+    help='Download all output files declared in the reana.yaml'
+         'specification or download files listed as '
+         'FILE command-line arguments. Note that downloading directories'
+         ' is not yet supported.')
 @click.argument(
     'filenames',
-    metavar='FILE',
+    metavar='FILES',
     nargs=-1)
 @click.option(
     '-w',
@@ -214,12 +217,13 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
 
 @click.command(
     'upload',
-    help='Upload files and directories to the workflow workspace.\n'
-         'If a symbolic link is provided, it is resolved and\n'
-         'a hard copy is uploaded.')
+    help='Upload all input sources declared in the reana.yaml'
+         'specification or upload files and directories listed as '
+         'SOURCE command-line arguments. If a symbolic link is provided,'
+         ' it is resolved and a hard copy is uploaded.')
 @click.argument(
     'filenames',
-    metavar='SOURCE',
+    metavar='SOURCES',
     type=click.Path(exists=True, resolve_path=True),
     nargs=-1)
 @click.option(

@@ -163,10 +163,16 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
         try:
             out = re.search("success{[\S\s]*",
                             logs).group().replace("success", "")
+            import ast
+            import json
+            json_output = json.dumps(ast.literal_eval(str(out)))
         except AttributeError:
             logging.error("Workflow execution failed")
             sys.exit(1)
-        sys.stdout.write(out)
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            sys.exit(1)
+        sys.stdout.write(json_output)
         sys.stdout.write("\n")
         sys.stdout.flush()
 

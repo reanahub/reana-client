@@ -28,4 +28,4 @@ This file is imported by ``reana_client.__init__`` and parsed by
 
 from __future__ import absolute_import, print_function
 
-__version__ = "0.3.1.dev20180905"
+__version__ = "0.3.1"

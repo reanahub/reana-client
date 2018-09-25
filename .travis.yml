@@ -28,17 +28,29 @@ language: python
 cache:
   - pip
 
-env:
-  - REQUIREMENTS=lowest EXTRAS=all
-  - REQUIREMENTS=release EXTRAS=all
-  - REQUIREMENTS=devel EXTRAS=all
-
 matrix:
   fast_finish: true
   include:
     - python: 2.7
+      env: REQUIREMENTS=devel EXTRAS=all
+    - python: 2.7
+      env: REQUIREMENTS=lowest EXTRAS=all
+    - python: 2.7
+      env: REQUIREMENTS=release EXTRAS=all
     - python: 3.6
+      env: REQUIREMENTS=devel EXTRAS=all
+    - python: 3.6
+      env: REQUIREMENTS=lowest EXTRAS=all
+    - python: 3.6
+      env: REQUIREMENTS=release EXTRAS=all
     - python: 3.7
+      env: REQUIREMENTS=devel EXTRAS=all
+      dist: xenial
+    - python: 3.7
+      env: REQUIREMENTS=lowest EXTRAS=all
+      dist: xenial
+    - python: 3.7
+      env: REQUIREMENTS=release EXTRAS=all
       dist: xenial
 
 before_install:

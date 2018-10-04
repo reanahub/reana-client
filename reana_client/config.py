@@ -7,6 +7,8 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client configuration."""
 
+import os
+
 import pkg_resources
 
 reana_yaml_default_file_path = './reana.yaml'  # e.g. `./.reana.yaml`
@@ -26,3 +28,10 @@ ERROR_MESSAGES = {
         ' the -at/--access-token flag, or by setting the'
         ' REANA_ACCESS_TOKEN environment variable.'
 }
+
+COMPONENTS_DATA = {
+    'reana-server': (
+        os.getenv('REANA_SERVER_URL', None),
+        'reana_server.json'),
+}
+"""REANA Server address."""

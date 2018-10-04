@@ -14,6 +14,7 @@ import sys
 from click.core import Context
 
 from reana_client.api import Client
+from reana_client.config import COMPONENTS_DATA
 
 
 def with_api_client(f):
@@ -41,10 +42,8 @@ def with_api_client(f):
 
             logging.info('REANA server URL ($REANA_SERVER_URL) is: {}'
                          .format(server_url))
-            if ctx.obj is None:
-                from reana_client.cli import Config
-                ctx.obj = Config()
-            ctx.obj.client = Client(server_url)
+            ctx.obj.client = Client('reana_client',
+                                    COMPONENTS_DATA['reana-server'])
         else:
             raise Exception(
                 'This decorator should be used after click.pass_context.')

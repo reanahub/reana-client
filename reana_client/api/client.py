@@ -14,36 +14,14 @@ import logging
 import os
 
 import pkg_resources
-from bravado.client import SwaggerClient
 from bravado.exception import HTTPError
+from reana_commons.api_client import BaseAPIClient
 from reana_client.errors import FileUploadError
 from reana_client.utils import get_workflow_root
 
 
-class Client(object):
+class Client(BaseAPIClient):
     """REANA API client code."""
-
-    def __init__(self, server_url):
-        """Create a OpenAPI client for REANA server."""
-        json_spec = self._get_spec('reana_server.json')
-        self._client = SwaggerClient.from_spec(
-            json_spec,
-            config={'also_return_response': True})
-        self._client.swagger_spec.api_url = server_url
-        self.server_url = server_url
-
-    def _get_spec(self, spec_file):
-        """Get json specification from package data."""
-        spec_file_path = os.path.join(
-            pkg_resources.
-            resource_filename(
-                'reana_client',
-                'openapi_connections'),
-            spec_file)
-
-        with open(spec_file_path) as f:
-            json_spec = json.load(f)
-        return json_spec
 
     def ping(self):
         """Health check REANA server."""

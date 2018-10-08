@@ -42,8 +42,7 @@ def with_api_client(f):
 
             logging.info('REANA server URL ($REANA_SERVER_URL) is: {}'
                          .format(server_url))
-            ctx.obj.client = Client('reana_client',
-                                    COMPONENTS_DATA['reana-server'])
+            ctx.obj.client = Client('reana-server')
         else:
             raise Exception(
                 'This decorator should be used after click.pass_context.')

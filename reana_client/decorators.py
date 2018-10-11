@@ -14,7 +14,6 @@ import sys
 from click.core import Context
 
 from reana_client.api import Client
-from reana_client.config import COMPONENTS_DATA
 
 
 def with_api_client(f):

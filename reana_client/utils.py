@@ -103,7 +103,7 @@ def load_reana_spec(filepath, skip_validation=False):
             kwargs['parameters'] = \
                 reana_yaml.get('inputs', {}).get('parameters', {})
 
-        reana_yaml['workflow']['spec'] = load_workflow_spec(
+        reana_yaml['workflow']['specification'] = load_workflow_spec(
             reana_yaml['workflow']['type'],
             reana_yaml['workflow'].get('file'),
             **kwargs

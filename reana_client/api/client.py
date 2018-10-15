@@ -98,13 +98,13 @@ class Client(BaseAPIClient):
         except Exception as e:
             raise e
 
-    def create_workflow(self, reana_spec, name, access_token):
+    def create_workflow(self, reana_specification, name, access_token):
         """Create a workflow."""
         try:
             (response,
              http_response) = self._client.api.create_workflow(
-                 reana_spec=json.loads(json.dumps(
-                     reana_spec, sort_keys=True)),
+                 reana_specification=json.loads(json.dumps(
+                     reana_specification, sort_keys=True)),
                  workflow_name=name,
                  access_token=access_token).result()
             if http_response.status_code == 201:

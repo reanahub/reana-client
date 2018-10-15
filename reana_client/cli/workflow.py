@@ -171,11 +171,10 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
                         fg='red'), err=True)
         sys.exit(1)
     try:
-        reana_spec = load_reana_spec(click.format_filename(file),
-                                     skip_validation)
-
+        reana_specification = load_reana_spec(click.format_filename(file),
+                                              skip_validation)
         logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-        response = ctx.obj.client.create_workflow(reana_spec,
+        response = ctx.obj.client.create_workflow(reana_specification,
                                                   name,
                                                   access_token)
         click.echo(click.style(response['workflow_name'], fg='green'))

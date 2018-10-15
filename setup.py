@@ -50,7 +50,7 @@ setup_requires = [
 ]
 
 install_requires = [
-    'click>=6.7,<6.8',
+    'click>=7,<8',
     'cwltool==1.0.20180912090223',
     'pyOpenSSL==17.3.0',  # FIXME remove once yadage-schemas solves deps.
     'reana-commons>=0.4.0.dev20181012,<0.5.0',

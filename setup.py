@@ -22,7 +22,6 @@ tests_require = [
     'check-manifest>=0.25',
     'coverage>=4.0',
     'docutils>=0.14',
-    'httpretty>=0.8',
     'isort>=4.2.2',
     'pydocstyle>=1.0.0',
     'pytest-cache>=1.0',

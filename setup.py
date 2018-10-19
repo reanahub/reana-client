@@ -27,7 +27,8 @@ tests_require = [
     'pytest-cache>=1.0',
     'pytest-cov>=1.8.0',
     'pytest-pep8>=1.0.6',
-    'pytest>=2.8.0,<3.0.0'
+    'pytest-reana>=0.4.0.dev20181016,<0.5.0',
+    'pytest>=3.8.0,<4.0.0'
 ]
 
 extras_require = {

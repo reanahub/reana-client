@@ -49,7 +49,6 @@ class Client(BaseAPIClient):
     def get_workflows(self, access_token):
         """List all existing workflows."""
         try:
-
             response, http_response = self._client.api.\
                 get_workflows(access_token=access_token).result()
             if http_response.status_code == 200:

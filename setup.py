@@ -24,10 +24,11 @@ tests_require = [
     'docutils>=0.14',
     'isort>=4.2.2',
     'pydocstyle>=1.0.0',
+    'pytest>=3.8.0,<4.0.0',
     'pytest-cache>=1.0',
     'pytest-cov>=1.8.0',
     'pytest-pep8>=1.0.6',
-    'pytest>=2.8.0,<3.0.0'
+    'pytest-reana>=0.4.0.dev20181105,<0.5.0',
 ]
 
 extras_require = {
@@ -53,7 +54,7 @@ install_requires = [
     'click>=7,<8',
     'cwltool==1.0.20180912090223',
     'pyOpenSSL==17.3.0',  # FIXME remove once yadage-schemas solves deps.
-    'reana-commons>=0.4.0.dev20181017,<0.5.0',
+    'reana-commons>=0.4.0.dev20181105,<0.5.0',
     'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
     'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
     'tablib>=0.12.1,<0.13',

@@ -11,6 +11,7 @@ import logging
 import os
 import sys
 
+import click
 from click.core import Context
 
 from reana_client.api import Client
@@ -31,17 +32,20 @@ def with_api_client(f):
             server_url = os.environ.get('REANA_SERVER_URL', None)
 
             if not server_url:
-                logging.error(
+                click.secho(
                     'REANA client is not connected to any REANA cluster.\n'
                     'Please set REANA_SERVER_URL environment variable to '
                     'the remote REANA cluster you would like to connect to.\n'
                     'For example: export '
-                    'REANA_SERVER_URL=https://reana.cern.ch/')
+                    'REANA_SERVER_URL=https://reana.cern.ch/',
+                    fg='red',
+                    err=True)
                 sys.exit(1)
 
             logging.info('REANA server URL ($REANA_SERVER_URL) is: {}'
                          .format(server_url))
-            ctx.obj.client = Client('reana-server')
+            if not ctx.obj.client:
+                ctx.obj.client = Client('reana-server')
         else:
             raise Exception(
                 'This decorator should be used after click.pass_context.')

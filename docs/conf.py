@@ -203,3 +203,8 @@ texinfo_documents = [
      author, 'reana', 'One line description of project.',
      'Miscellaneous'),
 ]
+
+# Intersphinx configuration
+intersphinx_mapping = {
+    'bravado': ('https://bravado.readthedocs.io/en/stable/', None),
+}

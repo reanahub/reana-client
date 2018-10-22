@@ -13,6 +13,8 @@ from click.testing import CliRunner
 from reana_client.cli import cli
 
 
-def test_ping():
+def test_ping(click_config_obj):
     """Test ping command."""
-    assert True
+    runner = CliRunner()
+    result = runner.invoke(cli, ['ping'], obj=click_config_obj)
+    assert result.exit_code == 0

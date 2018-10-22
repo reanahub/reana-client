@@ -25,9 +25,13 @@ LOG_FORMAT = '[%(levelname)s] %(message)s'
 class Config(object):
     """Configuration object to share across commands."""
 
-    def __init__(self):
-        """Initialize config variables."""
-        self.client = None
+    def __init__(self, api_client=None):
+        """Initialize config variables.
+
+        :param api_client: An instance of
+            :class:`bravado.client.SwaggerClient`.
+        """
+        self.client = api_client
 
 
 @click.group()
@@ -38,13 +42,14 @@ class Config(object):
     type=click.Choice(['DEBUG', 'INFO', 'WARNING']),
     default='WARNING')
 @click.pass_context
-def cli(ctx, loglevel):
+@click.pass_obj
+def cli(obj, ctx, loglevel):
     """REANA client for interacting with REANA server."""
     logging.basicConfig(
         format=DEBUG_LOG_FORMAT if loglevel == 'DEBUG' else LOG_FORMAT,
         stream=sys.stderr,
         level=loglevel)
-    ctx.obj = Config()
+    ctx.obj = obj if obj else Config()
 
 commands = []
 commands.extend(workflow.workflow.commands.values())

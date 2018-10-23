@@ -11,6 +11,9 @@ cloning it from GitHub, you can use:
 
 .. code-block:: console
 
-    $ mkvirtualenv reana-client-latest
+    $ # create new virtual environment
+    $ virtualenv ~/.virtualenvs/myreana
+    $ source ~/.virtualenvs/myreana/bin/activate
+    $ # install reana-commons and reana-client
     $ pip install git+git://github.com/reanahub/reana-commons.git@master#egg=reana-commons
     $ pip install git+git://github.com/reanahub/reana-client.git@master#egg=reana-client

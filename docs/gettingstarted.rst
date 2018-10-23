@@ -12,7 +12,10 @@ environment:
 
 .. code-block:: console
 
-   $ mkvirtualenv reana-client
+   $ # create new virtual environment
+   $ virtualenv ~/.virtualenvs/myreana
+   $ source ~/.virtualenvs/myreana/bin/activate
+   $ # install reana-client
    $ pip install reana-client
 
 Select REANA cloud

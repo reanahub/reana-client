@@ -61,16 +61,22 @@ def workflow(ctx):
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
-@add_access_token_options
+@click.option(
+    '--all',
+    'show_all',
+    count=True,
+    help='Show all workflows including deleted ones.'
+)
 @click.option(
     '-v',
     '--verbose',
     count=True,
     help='Set status information verbosity.')
+@add_access_token_options
 @click.pass_context
 @with_api_client
 def workflow_workflows(ctx, _filter, output_format, access_token,
-                       verbose):
+                       show_all, verbose):
     """List all workflows user has."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -90,6 +96,8 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
             headers += verbose_headers
         data = []
         for workflow in response:
+            if workflow['status'] == 'deleted' and not show_all:
+                continue
             name, run_number = get_workflow_name_and_run_number(
                 workflow['name'])
             data.append(list(map(str, [name,
@@ -432,13 +440,6 @@ def workflow_status(ctx, workflow, _filter, output_format,
                 click.style('Workflow status could not be retrieved: \n{}'
                             .format(str(e)), fg='red'),
                 err=True)
-    else:
-        click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with REANA_WORKON '
-                        'environment variable',
-                        fg='red'),
-            err=True)
 
 
 @click.command(
@@ -471,13 +472,6 @@ def workflow_logs(ctx, workflow, access_token):
                 click.style('Workflow logs could not be retrieved: \n{}'
                             .format(str(e)), fg='red'),
                 err=True)
-    else:
-        click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with REANA_WORKON '
-                        'environment variable',
-                        fg='red'),
-            err=True)
 
 
 @click.command(
@@ -584,10 +578,66 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
                options=options)
 
 
+@click.command(
+    'delete',
+    help='Delete a workflow run.')
+@click.option(
+    '-A',
+    '--all',
+    'all_runs',
+    count=True,
+    help='Delete all runs of a given workflow.')
+@click.option(
+    '--hard',
+    'hard_delete',
+    count=True,
+    help='Completely remove workflow run data and workspace from REANA.')
+@click.option(
+    '-w',
+    '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
+    help='Name and run number to be deleted. '
+         'Overrides value of REANA_WORKON.')
+@add_access_token_options
+@click.pass_context
+@with_api_client
+def workflow_delete(ctx, workflow, all_runs, hard_delete, access_token):
+    """Delete a workflow run given the workflow name and run number."""
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not access_token:
+        click.echo(
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
+        sys.exit(1)
+
+    if workflow:
+        try:
+            logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
+            response = ctx.obj.client.delete_workflow(workflow,
+                                                      all_runs,
+                                                      hard_delete,
+                                                      access_token)
+            click.secho('{} has been deleted.'.format(workflow),
+                        fg='green')
+
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Workflow could not be deleted: \n{}'
+                            .format(str(e)), fg='red'),
+                err=True)
+
+
 workflow.add_command(workflow_workflows)
 workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)
 workflow.add_command(workflow_validate)
 workflow.add_command(workflow_status)
 workflow.add_command(workflow_run)
+workflow.add_command(workflow_delete)
 # workflow.add_command(workflow_logs)

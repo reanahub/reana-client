@@ -364,6 +364,7 @@ class Client(BaseAPIClient):
                         logging.info("Something went wrong while uploading {}".
                                      format(fname))
 
+
     def get_workflow_parameters(self, workflow, access_token):
         """Get parameters of previously created workflow."""
         try:
@@ -383,6 +384,37 @@ class Client(BaseAPIClient):
         except HTTPError as e:
             logging.debug(
                 'Workflow parameters could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e
+
+
+    def delete_workflow(self, workflow, all_runs, hard_delete, access_token):
+        """Delete a workflow."""
+        try:
+            parameters = {'all_runs': all_runs,
+                          'hard_delete': hard_delete}
+            (response,
+             http_response) = self._client.api.set_workflow_status(
+                 workflow_id_or_name=workflow,
+                 status='deleted',
+                 access_token=access_token,
+                 parameters=parameters).result()
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            logging.debug(
+                'Workflow run could not be deleted: '
                 '\nStatus: {}\nReason: {}\n'
                 'Message: {}'.format(e.response.status_code,
                                      e.response.reason,

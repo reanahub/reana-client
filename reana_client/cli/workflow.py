@@ -15,7 +15,6 @@ from enum import Enum
 
 import click
 import tablib
-import yaml
 from jsonschema.exceptions import ValidationError
 from reana_commons.utils import click_table_printer
 
@@ -23,9 +22,9 @@ from reana_client.decorators import with_api_client
 
 from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
 from reana_client.utils import (get_workflow_name_and_run_number, is_uuid_v4,
-                                load_reana_spec, load_workflow_spec,
-                                workflow_uuid_or_name)
+                                load_reana_spec, workflow_uuid_or_name)
 from reana_client.cli.utils import add_access_token_options
+from reana_client.cli.files import upload_files
 
 
 class _WorkflowStatus(Enum):
@@ -178,7 +177,9 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
                                                   name,
                                                   access_token)
         click.echo(click.style(response['workflow_name'], fg='green'))
-
+        # check if command is called from wrapper command
+        if 'invoked_by_subcommand' in ctx.parent.__dict__:
+            ctx.parent.workflow_name = response['workflow_name']
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -186,6 +187,8 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
             click.style('Workflow could not be created: \n{}'
                         .format(str(e)), fg='red'),
             err=True)
+        if 'invoked_by_subcommand' in ctx.parent.__dict__:
+            sys.exit(1)
 
 
 @click.command(
@@ -246,6 +249,8 @@ def workflow_start(ctx, workflow, access_token, parameter):  # noqa: D301
                 click.style('Workflow could not be started: \n{}'
                             .format(str(e)), fg='red'),
                 err=True)
+            if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                sys.exit(1)
     else:
         click.echo(
             click.style('Workflow name must be provided either with '
@@ -477,9 +482,67 @@ def workflow_validate(ctx, file):
             err=True)
 
 
+@click.command(
+    'run',
+    help='Create, upload and start the REANA workflow.')
+@click.option(
+    '-f',
+    '--file',
+    type=click.Path(exists=True, resolve_path=True),
+    default=reana_yaml_default_file_path,
+    help='REANA specifications file describing the workflow and '
+         'context which REANA should execute.')
+@click.argument(
+    'filenames',
+    metavar='SOURCES',
+    type=click.Path(exists=True, resolve_path=True),
+    nargs=-1)
+@click.option(
+    '-n',
+    '--name',
+    default='',
+    help='Name of the workflow.')
+@click.option(
+    '--skip-validation',
+    is_flag=True,
+    help="If set, specifications file is not validated before "
+         "submitting it's contents to REANA server.")
+@click.option(
+    '-p', '--parameter',
+    multiple=True,
+    help='Optional operational parameters for the workflow execution. '
+         'E.g. CACHE=off.',
+)
+@add_access_token_options
+@click.pass_context
+def workflow_run(ctx, file, filenames, name, skip_validation,
+                 access_token, parameter):
+    """Wrapper command for create, upload and start a workflow."""
+    # set context parameters for subcommand
+    ctx.invoked_by_subcommand = True
+    ctx.workflow_name = ""
+    click.secho('[INFO] Creating a workflow...', bold=True)
+    ctx.invoke(workflow_create,
+               file=file,
+               name=name,
+               skip_validation=skip_validation,
+               access_token=access_token)
+    click.secho('[INFO] Uploading files...', bold=True)
+    ctx.invoke(upload_files,
+               workflow=ctx.workflow_name,
+               filenames=filenames,
+               access_token=access_token)
+    click.secho('[INFO] Starting workflow...', bold=True)
+    ctx.invoke(workflow_start,
+               workflow=ctx.workflow_name,
+               access_token=access_token,
+               parameter=parameter)
+
+
 workflow.add_command(workflow_workflows)
 workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)
 workflow.add_command(workflow_validate)
 workflow.add_command(workflow_status)
+workflow.add_command(workflow_run)
 # workflow.add_command(workflow_logs)

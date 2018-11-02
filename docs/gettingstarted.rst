@@ -57,7 +57,7 @@ Let us take `reana-demo-helloworld
 analysis to run on our REANA cloud.
 
 Please familiarise yourself with the structure of ``reana-demo-helloworld``
-GitHub repository and how it specifies the analusis code, data, environment, and
+GitHub repository and how it specifies the analysis code, data, environment, and
 the computation workflow to produce the analysis output. The ``reana-client``
 usage scenario will be identical in submitting any complex research data
 computational workflows.

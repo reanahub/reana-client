@@ -11,6 +11,7 @@
 import json
 
 from click.testing import CliRunner
+from mock import patch
 
 from reana_client.cli import Config, cli
 
@@ -209,3 +210,25 @@ def test_get_workflow_status_ok(mock_base_api_client):
     assert isinstance(json_response, list)
     assert len(json_response) == 1
     assert json_response[0]['name'] in response['name']
+
+
+@patch('reana_client.cli.workflow.workflow_create')
+@patch('reana_client.cli.workflow.upload_files')
+@patch('reana_client.cli.workflow.workflow_start')
+def test_run(workflow_start_mock,
+             upload_file_mock,
+             workflow_create_mock,
+             create_yaml_workflow_schema):
+    """Test run command, if wrapped commands are called."""
+    reana_workflow_schema = "reana.yaml"
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with open(reana_workflow_schema, 'w') as f:
+            f.write(create_yaml_workflow_schema)
+        result = runner.invoke(
+            cli,
+            ['run', '-f', reana_workflow_schema],
+        )
+    assert workflow_create_mock.called is True
+    assert upload_file_mock.called is True
+    assert workflow_start_mock.called is True

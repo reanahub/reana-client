@@ -265,6 +265,8 @@ def upload_files(ctx, workflow, filenames, access_token):
                         format(filename),
                         fg='red'),
                     err=True)
+                if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                    sys.exit(1)
             except FileUploadError as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
@@ -274,6 +276,8 @@ def upload_files(ctx, workflow, filenames, access_token):
                         format(filename, str(e)),
                         fg='red'),
                     err=True)
+                if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                    sys.exit(1)
             except Exception as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
@@ -283,7 +287,8 @@ def upload_files(ctx, workflow, filenames, access_token):
                         format(filename),
                         fg='red'),
                     err=True)
-
+                if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                    sys.exit(1)
     else:
         click.echo(
             click.style('Workflow name must be provided either with '

@@ -91,9 +91,9 @@ you can just run:
 Directory structures are maintained, i.e.
 directory1 exists in the workspace.
 
-Note that symbolic links are resolved at the moment of upload 
+Note that symbolic links are resolved at the moment of upload
 so that a hard copy of the link target is uploaded to the cloud
-storage workspace. The link is not maintained throughout the 
+storage workspace. The link is not maintained throughout the
 workflow execution.
 
 Downloading outputs
@@ -114,6 +114,30 @@ file of the analysis, by just running:
    $ reana-client download
 
 Note that downloading directories is not yet supported.
+
+Running analysis
+~~~~~~~~~~~~~~~~
+
+If you have fully working analysis with ``reana.yaml``, you can run the workflow
+easily via the ``run`` wrapper command, which will create a new workflow, upload
+analysis inputs, and start the workflow run.
+
+.. code-block:: console
+
+   $ vim reana.yaml
+   $ reana-client run -n myanalysis
+   [INFO] Creating a workflow...
+   myanalysis.1
+   [INFO] Uploading files...
+   File code/helloworld.py was successfully uploaded.
+   File data/names.txt was successfully uploaded.
+   [INFO] Starting workflow...
+   myanalysis.1 has been started.
+   $ export REANA_WORKON=myanalysis
+   $ reana-client status
+   NAME         RUN_NUMBER   CREATED               STATUS    PROGRESS
+   myanalysis   1            2018-11-07T12:45:18   running   1/1
+   $ reana-client download results/plot.png
 
 Examples
 --------

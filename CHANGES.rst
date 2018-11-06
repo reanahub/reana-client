@@ -1,15 +1,21 @@
 Changes
 =======
 
+Version 0.4.0 (2018-11-07)
+--------------------------
+
+- Enhances test suite and increases code coverage.
+- Changes license to MIT.
+
 Version 0.3.1 (2018-09-25)
 --------------------------
 
-* Amends upload and download commands that will now upload/download all the
+- Amends upload and download commands that will now upload/download all the
   files specified in ``reana.yaml`` in case no arguments are provided.
-* Fixes ``status`` command's JSON output mode.
-* Upgrades CWL reference implementation to version ``1.0.20180912090223``.
-* Renames Serial workflow operational parameter from ``CACHING``to ``CACHE``.
-* Adds support for Python 3.7.
+- Fixes ``status`` command's JSON output mode.
+- Upgrades CWL reference implementation to version ``1.0.20180912090223``.
+- Renames Serial workflow operational parameter from ``CACHING``to ``CACHE``.
+- Adds support for Python 3.7.
 
 Version 0.3.0 (2018-08-10)
 --------------------------

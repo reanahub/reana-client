@@ -40,7 +40,7 @@ def create_yaml_workflow_schema():
     """Return dummy yaml workflow schema."""
     reana_yaml_schema = \
         '''
-        version: 0.3.0
+        version: 0.4.0
         inputs:
           files:
             - code/helloworld.py

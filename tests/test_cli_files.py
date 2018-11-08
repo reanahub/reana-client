@@ -89,6 +89,7 @@ def test_download_file(mock_base_api_client):
     file_md5 = hashlib.md5(open(file, 'rb').read()).hexdigest()
     assert file_md5 == response_md5
     assert message in result.output
+    os.remove(file)
 
 
 def test_upload_file(mock_base_api_client, create_yaml_workflow_schema):

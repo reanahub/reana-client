@@ -364,7 +364,6 @@ class Client(BaseAPIClient):
                         logging.info("Something went wrong while uploading {}".
                                      format(fname))
 
-
     def get_workflow_parameters(self, workflow, access_token):
         """Get parameters of previously created workflow."""
         try:
@@ -392,18 +391,20 @@ class Client(BaseAPIClient):
         except Exception as e:
             raise e
 
-
-    def delete_workflow(self, workflow, all_runs, hard_delete, access_token):
+    def delete_workflow(self, workflow, all_runs, hard_delete,
+                        workspace, access_token):
         """Delete a workflow."""
         try:
-            parameters = {'all_runs': all_runs,
-                          'hard_delete': hard_delete}
+            parameters = {'all_runs': True if all_runs == 1 else False,
+                          'hard_delete': True if hard_delete == 1 else False,
+                          'workspace': True if hard_delete == 1 or
+                          workspace == 1 else False}
             (response,
              http_response) = self._client.api.set_workflow_status(
-                 workflow_id_or_name=workflow,
-                 status='deleted',
-                 access_token=access_token,
-                 parameters=parameters).result()
+                workflow_id_or_name=workflow,
+                status='deleted',
+                access_token=access_token,
+                parameters=parameters).result()
             if http_response.status_code == 200:
                 return response
             else:

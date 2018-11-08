@@ -154,6 +154,48 @@ analysis inputs, and start the workflow run.
    myanalysis   1            2018-11-07T12:45:18   running   1/1
    $ reana-client download results/plot.png
 
+Deleting workflows
+~~~~~~~~~~~~~~~~~~
+
+You can mark a workflow as deleted with:
+
+.. code-block:: console
+
+   $ reana-client delete
+
+Passing no argument will mark the workflow selected by your REANA_WORKON
+variable as deleted. To specify a different workflow than your
+currently selected one use the -w/--workflow flag and set the workflow name
+and run number.
+If e.g. workflow run number 123 of your analysis failed, you can delete it
+as follows:
+
+.. code-block:: console
+
+   $ reana-client delete --workflow=myanalysis.123
+
+After simple deletion the workspace can be accessed to retrieve files uploaded
+there. If you are sure the workspace can also be deleted pass the
+--include-workspace flag.
+
+.. code-block:: console
+
+   $ reana-client delete --workflow=myanalysis.123 --include-workspace
+
+To delete all runs of a given workflow, pass the --include-all-runs flag and
+run:
+
+.. code-block:: console
+
+   $ reana-client delete --workflow=myanalysis --include-all-runs
+
+and to completely remove a workflow run and its workspace from REANA
+pass the --include-records flag:
+
+.. code-block:: console
+
+   $ reana-client delete --workflow=myanalysis.1 --include-records
+
 Examples
 --------
 

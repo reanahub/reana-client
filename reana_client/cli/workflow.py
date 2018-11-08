@@ -580,18 +580,33 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
 
 @click.command(
     'delete',
-    help='Delete a workflow run.')
+    help='Delete a workflow run. By default removes all cached'
+         ' information of the given workflow and hides it from'
+         ' the workflow list.\n'
+         'Workspaces of deleted workflows'
+         ' are accessible to retrieve files, to remove the workspace'
+         ' too pass --include-workspace flag.\n'
+         'By passing --include-all-runs all workflows with the same'
+         ' will be deleted.\n'
+         'The --include-records flag will delete'
+         ' all workflow data from the database and remove its workspace.')
 @click.option(
-    '-A',
-    '--all',
+    '--include-all-runs',
     'all_runs',
     count=True,
     help='Delete all runs of a given workflow.')
 @click.option(
-    '--hard',
+    '--include-workspace',
+    'workspace',
+    count=True,
+    help='Delete workflow workspace from REANA.')
+@click.option(
+    '--include-records',
     'hard_delete',
     count=True,
-    help='Completely remove workflow run data and workspace from REANA.')
+    help='Delete all records of workflow, including database entries and'
+         ' workspace.'
+)
 @click.option(
     '-w',
     '--workflow',
@@ -602,7 +617,8 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
 @add_access_token_options
 @click.pass_context
 @with_api_client
-def workflow_delete(ctx, workflow, all_runs, hard_delete, access_token):
+def workflow_delete(ctx, workflow, all_runs, workspace,
+                    hard_delete, access_token):
     """Delete a workflow run given the workflow name and run number."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -620,8 +636,14 @@ def workflow_delete(ctx, workflow, all_runs, hard_delete, access_token):
             response = ctx.obj.client.delete_workflow(workflow,
                                                       all_runs,
                                                       hard_delete,
+                                                      workspace,
                                                       access_token)
-            click.secho('{} has been deleted.'.format(workflow),
+            if all_runs:
+                message = 'All workflows named \'{}\' have been deleted.'.\
+                    format(workflow.split('.')[0])
+            else:
+                message = '{} has been deleted.'.format(workflow)
+            click.secho(message,
                         fg='green')
 
         except Exception as e:

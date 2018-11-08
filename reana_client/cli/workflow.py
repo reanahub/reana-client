@@ -26,6 +26,11 @@ from reana_client.utils import (get_workflow_name_and_run_number, is_uuid_v4,
 from reana_client.cli.utils import add_access_token_options
 from reana_client.cli.files import upload_files
 
+from reana_client.cli.files import upload_files
+
+from reana_db.database import Session
+from reana_db.models import Workflow
+
 
 class _WorkflowStatus(Enum):
     created = 0
@@ -196,10 +201,11 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     help="""
     Start previously created workflow.
 
-    The workflow execution can be further influenced by setting operational
-    prameters using `-p` or `--parameter` option.  The option can be
-    repetitive. For example, to disable caching for the Serial workflow
-    engine, you can set ``-p CACHE=off``.
+    The workflow execution can be further influenced by setting input prameters
+    using `-p` or `--parameters` flag or by setting operational options using
+    `-o` or `--options`.  The input parameters and operational options can be
+    repetitive. For example, to disable caching for the Serial workflow engine,
+    you can set ``-o CACHE=off``.
     """)
 @click.option(
     '-w',
@@ -210,14 +216,22 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
          'Overrides value of REANA_WORKON.')
 @add_access_token_options
 @click.option(
-    '-p', '--parameter',
+    '-p', '--parameter', 'parameters',
     multiple=True,
-    help='Optional operational parameters for the workflow execution. '
+    help='Additional input parameters to override '
+         'original ones from reana.yaml. '
+         'E.g. -p myparam1=myval1 -p myparam2=myval2.',
+)
+@click.option(
+    '-o', '--option', 'options',
+    multiple=True,
+    help='Additional operatioal options for the workflow execution. '
          'E.g. CACHE=off.',
 )
 @click.pass_context
 @with_api_client
-def workflow_start(ctx, workflow, access_token, parameter):  # noqa: D301
+def workflow_start(ctx, workflow, access_token,
+                   parameters, options):  # noqa: D301
     """Start previously created workflow."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -229,10 +243,33 @@ def workflow_start(ctx, workflow, access_token, parameter):  # noqa: D301
                         fg='red'), err=True)
         sys.exit(1)
 
-    parsed_parameters = {'parameters':
-                         dict(p.split('=') for p in parameter)}
+    parsed_parameters = {'input_parameters':
+                         dict(p.split('=') for p in parameters)}
+    parsed_parameters['operational_options'] = \
+        dict(p.split('=') for p in options)
 
     if workflow:
+        if parameters:
+            try:
+                response =  \
+                    ctx.obj.client.get_workflow_parameters(workflow,
+                                                           access_token)
+                parsed_input_parameters =  \
+                    dict(parsed_parameters['input_parameters'])
+                for parameter in parsed_input_parameters.keys():
+                    if parameter not in response['parameters']:
+                        click.echo(
+                            click.style('Given parameter - {0}, is not in '
+                                        'reana.yaml'.format(parameter),
+                                        fg='red'),
+                            err=True)
+                        del parsed_parameters['input_parameters'][parameter]
+            except Exception as e:
+                click.echo(
+                    click.style('Could not apply given input parameters: '
+                                '{0} \n{1}'.format(parameters, str(e))),
+                    err=True)
+
         try:
             logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
             response = ctx.obj.client.start_workflow(workflow,
@@ -510,7 +547,7 @@ def workflow_validate(ctx, file):
 @click.option(
     '-p', '--parameter',
     multiple=True,
-    help='Optional operational parameters for the workflow execution. '
+    help='Optional operational options for the workflow execution. '
          'E.g. CACHE=off.',
 )
 @add_access_token_options

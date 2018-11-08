@@ -96,6 +96,21 @@ so that a hard copy of the link target is uploaded to the cloud
 storage workspace. The link is not maintained throughout the
 workflow execution.
 
+Overriding default input parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to run a workflow with different input parameters than the ones in
+``reana.yaml``, you can do it by running `reana-client start` with flag ``-p``
+and specifying parameters that you want to override.
+
+Note that parameters passed with ``-p`` flag must exist in reana.yaml.
+Non-existing parameters will be skipped.
+
+.. code-block:: console
+
+   $ reana-client start -p myparam1=myval1 -p myparam2=myval2
+   workflow.1 has been started.
+
 Downloading outputs
 ~~~~~~~~~~~~~~~~~~~
 

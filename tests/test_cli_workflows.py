@@ -232,3 +232,29 @@ def test_run(workflow_start_mock,
     assert workflow_create_mock.called is True
     assert upload_file_mock.called is True
     assert workflow_start_mock.called is True
+
+
+def test_workflow_input_parameters(mock_base_api_client):
+    """Test if not existing input parameters from CLI are applied."""
+    status_code = 200
+    response = {'id': 'd9304bdf-0d19-45d9-ae87-d5fd18059193',
+                'name': 'workflow.19',
+                'parameters': {'helloworld': 'code/helloworld.py',
+                               'inputfile': 'data/names.txt',
+                               'outputfile': 'results/greetings.txt',
+                               'sleeptime': 2}}
+    env = {'REANA_SERVER_URL': 'localhost'}
+    mocked_api_client = mock_base_api_client(status_code,
+                                             response,
+                                             'reana-server')
+    parameter = "Debug"
+    expected_message = '{0}, is not in reana.yaml'.format(parameter)
+    config = Config(mocked_api_client)
+    reana_token = '000000'
+    runner = CliRunner(env=env)
+    result = runner.invoke(
+        cli,
+        ['start', '-at', reana_token, '-w workflow.19',
+         '-p {0}=True'.format(parameter)],
+        obj=config)
+    assert expected_message in result.output

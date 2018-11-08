@@ -26,7 +26,7 @@ class Client(BaseAPIClient):
     def ping(self):
         """Health check REANA server."""
         try:
-            response, http_response = self._client.api.get_api_ping().result()
+            response, http_response = self._client.api.ping().result()
             if http_response.status_code == 200:
                 return response['message']
             else:
@@ -363,3 +363,30 @@ class Client(BaseAPIClient):
                         logging.debug(str(e))
                         logging.info("Something went wrong while uploading {}".
                                      format(fname))
+
+    def get_workflow_parameters(self, workflow, access_token):
+        """Get parameters of previously created workflow."""
+        try:
+            response, http_response = self.\
+                _client.api.get_workflow_parameters(
+                    workflow_id_or_name=workflow,
+                    access_token=access_token)\
+                .result()
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            logging.debug(
+                'Workflow parameters could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e

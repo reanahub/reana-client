@@ -702,6 +702,63 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
                 err=True)
 
 
+@click.command(
+    'diff',
+    help='Show differences between two workflows.')
+@click.option(
+    '-a',
+    '--workflow-a',
+    default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
+    help='Name or UUID of the first workflow to be compared. '
+         'Overrides value of REANA_WORKON.')
+@click.option(
+    '-b',
+    '--workflow-b',
+    callback=workflow_uuid_or_name,
+    help='Name or UUID of the second workflow to be compared. '
+         'Overrides value of REANA_WORKON.')
+@click.option(
+    '--full',
+    is_flag=True,
+    help="If set, differences in the contents of the files in the two"
+         "workspaces are shown.")
+@add_access_token_options
+@click.pass_context
+def workflow_diff(ctx, workflow_a, workflow_b, full, access_token):
+    """Show diff between two worklows."""
+    def _render_diff(asset, workflow_a, workflow_b):
+        print(asset)
+        print(workflow_a)
+        print(workflow_b)
+
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+    try:
+        response = ctx.obj.client.diff_workflows(workflow_a,
+                                                 workflow_b,
+                                                 full,
+                                                 access_token)
+        for diff in response:
+            _render_diff(diff['asset'], diff['a'], diff['b'])
+
+    except ValidationError as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(click.style('{0} is not a valid REANA specification:\n{1}'
+                               .format(click.format_filename(file),
+                                       e.message),
+                               fg='red'), err=True)
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style('Something went wrong when trying to validate {}'
+                        .format(file), fg='red'),
+            err=True)
+
+
 workflow.add_command(workflow_workflows)
 workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)

@@ -126,9 +126,10 @@ def get_files(ctx, workflow, _filter,
     help='Name or UUID of that workflow where files should downloaded from. '
          'Overrides value of REANA_WORKON.')
 @click.option(
+    '-o',
     '--output-directory',
     default=os.getcwd(),
-    help='Path to the directory where files  will be downloaded.')
+    help='Path to the directory where files will be downloaded.')
 @add_access_token_options
 @click.pass_context
 @with_api_client
@@ -167,11 +168,10 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
 
                 with open(outputs_file_path, 'wb') as f:
                     f.write(binary_file)
-                click.echo(
-                    click.style(
-                        'File {0} downloaded to {1}.'.format(
-                            file_name, output_directory),
-                        fg='green'))
+                click.secho(
+                    'File {0} downloaded to {1}.'.format(
+                        file_name, output_directory),
+                    fg='green')
             except OSError as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))

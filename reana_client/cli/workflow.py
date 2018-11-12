@@ -8,6 +8,7 @@
 """REANA client workflow related commands."""
 
 import logging
+import json
 import os
 import sys
 import traceback
@@ -18,9 +19,8 @@ import tablib
 from jsonschema.exceptions import ValidationError
 from reana_commons.utils import click_table_printer
 
-from reana_client.decorators import with_api_client
-
 from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
+from reana_client.decorators import with_api_client
 from reana_client.utils import (get_workflow_name_and_run_number, is_uuid_v4,
                                 load_reana_spec, workflow_uuid_or_name)
 from reana_client.cli.utils import add_access_token_options
@@ -719,43 +719,50 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
     help='Name or UUID of the second workflow to be compared. '
          'Overrides value of REANA_WORKON.')
 @click.option(
-    '--full',
+    '--brief',
     is_flag=True,
     help="If set, differences in the contents of the files in the two"
          "workspaces are shown.")
 @add_access_token_options
 @click.pass_context
-def workflow_diff(ctx, workflow_a, workflow_b, full, access_token):
+@with_api_client
+def workflow_diff(ctx, workflow_a, workflow_b, brief, access_token):
     """Show diff between two worklows."""
-    def _render_diff(asset, workflow_a, workflow_b):
-        print(asset)
-        print(workflow_a)
-        print(workflow_b)
-
+    import ipdb
+    ipdb.set_trace()
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
     try:
         response = ctx.obj.client.diff_workflows(workflow_a,
                                                  workflow_b,
-                                                 full,
+                                                 brief,
                                                  access_token)
-        for diff in response:
-            _render_diff(diff['asset'], diff['a'], diff['b'])
+        if response.get('reana_specification'):
+            click.echo('differences in reana specification:'.upper())
+            for line in json.loads(response['reana_specification']):
+                line_color = None
+                if line[0] == '@':
+                    line_color = 'cyan'
+                elif line[0] == '-':
+                    line_color = 'red'
+                elif line[0] == '+':
+                    line_color = 'green'
+                click.secho(line, fg=line_color)
+        click.echo('')  # Leave 1 line for separation
+        if response.get('workspace_listing'):
+            click.echo('differences in workspace listings:'.upper())
+            for workspace in response['workspace_listing']:
+                for _diff in response['workspace_listing'][workspace]:
+                    click.echo('Only in workspace {0}: {1}'.format(workspace,
+                                                                   _diff))
 
-    except ValidationError as e:
-        logging.debug(traceback.format_exc())
-        logging.debug(str(e))
-        click.echo(click.style('{0} is not a valid REANA specification:\n{1}'
-                               .format(click.format_filename(file),
-                                       e.message),
-                               fg='red'), err=True)
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
         click.echo(
-            click.style('Something went wrong when trying to validate {}'
-                        .format(file), fg='red'),
+            click.style('Something went wrong when trying to get diff.',
+                        fg='red'),
             err=True)
 
 
@@ -767,4 +774,5 @@ workflow.add_command(workflow_status)
 workflow.add_command(workflow_stop)
 workflow.add_command(workflow_run)
 workflow.add_command(workflow_delete)
+workflow.add_command(workflow_diff)
 # workflow.add_command(workflow_logs)

@@ -485,3 +485,44 @@ class Client(BaseAPIClient):
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
+
+    def diff_workflows(self, workflow_id_a, workflow_id_b,
+                       brief, access_token):
+        """Return the list of differences between two workflows.
+
+        :param workflow_id_a: UUID which identifies the first workflow.
+        :param workflow_id_b: UUID which identifies the second workflow.
+        :param brief: Flag specifying desired detail in diff.
+        :param access_token: API token of user requesting diff.
+        :returns: A list of dictionaries composed by `asset`, `type`, `lines,
+            `a` and `b`. Asset refers to the workflow asset where a
+            difference was found, type refers to the asset type, lines refer
+            to the lines of the file where the differences are and a, b fields
+            are the actual lines that differ.
+        """
+        try:
+            (response,
+             http_response) = self._client.api.get_workflow_diff(
+                 workflow_id_or_name_a=workflow_id_a,
+                 workflow_id_or_name_b=workflow_id_b,
+                 brief=brief,
+                 access_token=access_token).result()
+
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            logging.debug(
+                'File list could not be retrieved: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e

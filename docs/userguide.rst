@@ -196,6 +196,25 @@ pass the --include-records flag:
 
    $ reana-client delete --workflow=myanalysis.1 --include-records
 
+Stopping workflows
+~~~~~~~~~~~~~~~~~~
+
+You can stop a workflow with:
+
+.. code-block:: console
+
+    $ reana-client stop --force
+
+The workflow assigned to REANA_WORKON variable will be stopped. To specify a
+different workflow than your currently selected one use the -w/--workflow flag
+and set the workflow name or UUID.
+
+.. code-block:: console
+
+    $ reana-client stop --force --workflow=otherworkflow.1
+
+Note that currently only force stop is implemented.
+
 Examples
 --------
 

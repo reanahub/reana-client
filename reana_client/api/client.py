@@ -423,3 +423,30 @@ class Client(BaseAPIClient):
             raise Exception(e.response.json()['message'])
         except Exception as e:
             raise e
+
+    def stop_workflow(self, workflow, force_stop, access_token):
+        """Stop a workflow."""
+        try:
+            parameters = {'force_stop': force_stop}
+            (response, http_response) = self._client.api.set_workflow_status(
+                workflow_id_or_name=workflow,
+                status='stopped',
+                access_token=access_token,
+                parameters=parameters).result()
+            if http_response.status_code == 200:
+                return response
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+        except HTTPError as e:
+            logging.debug(
+                'Workflow run could not be stopped: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e

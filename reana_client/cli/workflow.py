@@ -514,6 +514,53 @@ def workflow_validate(ctx, file):
 
 
 @click.command(
+    'stop',
+    help='Stop a running workflow')
+@click.option(
+    '--force',
+    'force_stop',
+    is_flag=True,
+    default=False,
+    help='Stop a workflow without waiting for jobs to finish.')
+@click.option(
+    '-w',
+    '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
+    help='Name and run number to be stopped. '
+         'Overrides value of REANA_WORKON.')
+@add_access_token_options
+@click.pass_context
+@with_api_client
+def workflow_stop(ctx, workflow, force_stop, access_token):
+    """Stop given workflow."""
+    if not force_stop:
+        click.secho('Graceful stop not implement yet. If you really want to '
+                    'stop your workflow without waiting for jobs to finish'
+                    ' use: --force option', fg='red')
+        raise click.Abort()
+
+    if not access_token:
+        click.secho(
+            ERROR_MESSAGES['missing_access_token'], fg='red', err=True)
+        sys.exit(1)
+
+    if workflow:
+        try:
+            logging.info(
+                'Sending a request to stop workflow {}'.format(workflow))
+            response = ctx.obj.client.stop_workflow(workflow,
+                                                    force_stop,
+                                                    access_token)
+            click.secho('{} has been stopped.'.format(workflow), fg='green')
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.secho('Workflow could not be stopped: \n{}'.format(str(e)),
+                        fg='red', err=True)
+
+
+@click.command(
     'run',
     help='Create, upload and start the REANA workflow.')
 @click.option(
@@ -660,6 +707,7 @@ workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)
 workflow.add_command(workflow_validate)
 workflow.add_command(workflow_status)
+workflow.add_command(workflow_stop)
 workflow.add_command(workflow_run)
 workflow.add_command(workflow_delete)
 # workflow.add_command(workflow_logs)

@@ -545,15 +545,22 @@ def workflow_validate(ctx, file):
     help="If set, specifications file is not validated before "
          "submitting it's contents to REANA server.")
 @click.option(
-    '-p', '--parameter',
+    '-p', '--parameter', 'parameters',
     multiple=True,
-    help='Optional operational options for the workflow execution. '
+    help='Additional input parameters to override '
+         'original ones from reana.yaml. '
+         'E.g. -p myparam1=myval1 -p myparam2=myval2.',
+)
+@click.option(
+    '-o', '--option', 'options',
+    multiple=True,
+    help='Additional operatioal options for the workflow execution. '
          'E.g. CACHE=off.',
 )
 @add_access_token_options
 @click.pass_context
 def workflow_run(ctx, file, filenames, name, skip_validation,
-                 access_token, parameter):
+                 access_token, parameters, options):
     """Wrapper command for create, upload and start a workflow."""
     # set context parameters for subcommand
     ctx.invoked_by_subcommand = True
@@ -573,7 +580,8 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
     ctx.invoke(workflow_start,
                workflow=ctx.workflow_name,
                access_token=access_token,
-               parameter=parameter)
+               parameters=parameters,
+               options=options)
 
 
 workflow.add_command(workflow_workflows)

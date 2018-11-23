@@ -239,6 +239,7 @@ def test_workflow_input_parameters(mock_base_api_client):
     status_code = 200
     response = {'id': 'd9304bdf-0d19-45d9-ae87-d5fd18059193',
                 'name': 'workflow.19',
+                'type': 'serial',
                 'parameters': {'helloworld': 'code/helloworld.py',
                                'inputfile': 'data/names.txt',
                                'outputfile': 'results/greetings.txt',

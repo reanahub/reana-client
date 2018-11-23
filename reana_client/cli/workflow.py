@@ -22,7 +22,10 @@ from reana_commons.utils import click_table_printer
 from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
 from reana_client.decorators import with_api_client
 from reana_client.utils import (get_workflow_name_and_run_number, is_uuid_v4,
-                                load_reana_spec, workflow_uuid_or_name)
+                                load_reana_spec, workflow_uuid_or_name,
+                                validate_cwl_operational_options,
+                                validate_serial_operational_options,
+                                validate_input_parameters)
 from reana_client.cli.utils import add_access_token_options
 from reana_client.cli.files import upload_files
 
@@ -234,7 +237,8 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     '-o', '--option', 'options',
     multiple=True,
     help='Additional operatioal options for the workflow execution. '
-         'E.g. CACHE=off.',
+         'E.g. CACHE=off. (workflow engine - serial) '
+         'E.g. --debug (workflow engine - cwl)',
 )
 @click.pass_context
 @with_api_client
@@ -250,28 +254,26 @@ def workflow_start(ctx, workflow, access_token,
             click.style(ERROR_MESSAGES['missing_access_token'],
                         fg='red'), err=True)
         sys.exit(1)
-
     parsed_parameters = {'input_parameters':
                          dict(p.split('=') for p in parameters)}
-    parsed_parameters['operational_options'] = \
-        dict(p.split('=') for p in options)
-
+    parsed_parameters['operational_options'] = ' '.join(options).split()
     if workflow:
-        if parameters:
+        if parameters or options:
             try:
                 response =  \
                     ctx.obj.client.get_workflow_parameters(workflow,
                                                            access_token)
-                parsed_input_parameters =  \
-                    dict(parsed_parameters['input_parameters'])
-                for parameter in parsed_input_parameters.keys():
-                    if parameter not in response['parameters']:
-                        click.echo(
-                            click.style('Given parameter - {0}, is not in '
-                                        'reana.yaml'.format(parameter),
-                                        fg='red'),
-                            err=True)
-                        del parsed_parameters['input_parameters'][parameter]
+                if response['type'] == 'cwl':
+                    validate_cwl_operational_options(
+                        parsed_parameters['operational_options'])
+                if response['type'] == 'serial':
+                    parsed_parameters['operational_options'] = \
+                        validate_serial_operational_options(
+                            parsed_parameters['operational_options'])
+                parsed_parameters['input_parameters'] = \
+                    validate_input_parameters(
+                        parsed_parameters['input_parameters'],
+                        response['parameters'])
             except Exception as e:
                 click.echo(
                     click.style('Could not apply given input parameters: '

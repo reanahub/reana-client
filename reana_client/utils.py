@@ -10,6 +10,7 @@
 import json
 import logging
 import os
+import subprocess
 import sys
 from uuid import UUID
 
@@ -108,12 +109,10 @@ def load_reana_spec(filepath, skip_validation=False):
             reana_yaml['workflow'].get('file'),
             **kwargs
         )
-
         if reana_yaml['workflow']['type'] == 'cwl' and \
                 'inputs' in reana_yaml:
             with open(reana_yaml['inputs']['parameters']['input']) as f:
                 reana_yaml['inputs']['parameters']['input'] = yaml.load(f)
-
         return reana_yaml
     except IOError as e:
         logging.info(
@@ -215,3 +214,46 @@ def get_workflow_root():
                 workflow_root = parent_dir
     workflow_root += '/'
     return workflow_root
+
+
+def validate_cwl_operational_options(operational_options):
+    """Validate cwl operational options."""
+    forbidden_args = ['--debug', '--tmpdir-prefix', '--tmp-outdir-prefix'
+                      '--default-container', '--outdir']
+    for option in operational_options:
+        if option in forbidden_args:
+            click.echo('Operational option {0} are not allowed. \n'
+                       .format(operational_options), err=True)
+            sys.exit(1)
+    cmd = 'cwltool --version {0}'.format(' '.join(operational_options))
+    try:
+        subprocess.check_call(cmd, shell=True)
+    except subprocess.CalledProcessError as err:
+        click.echo('Operational options {0} are not valid. \n'
+                   '{1}'.format(operational_options, err), err=True)
+        sys.exit(1)
+
+
+def validate_serial_operational_options(operational_options):
+    """Return validated serial operational options."""
+    try:
+        operational_options = {'input_parameters':
+                               dict(p.split('=') for p in operational_options)}
+    except Exception as err:
+        click.echo('Operational options {0} are not valid. \n'
+                   '{1}'.format(operational_options, err), err=True)
+        sys.exit(1)
+
+
+def validate_input_parameters(live_parameters, original_parameters):
+    """Return validated input parameters."""
+    parsed_input_parameters = dict(live_parameters)
+    for parameter in parsed_input_parameters.keys():
+        if parameter not in original_parameters:
+            click.echo(
+                click.style('Given parameter - {0}, is not in '
+                            'reana.yaml'.format(parameter),
+                            fg='red'),
+                err=True)
+            del live_parameters[parameter]
+    return live_parameters

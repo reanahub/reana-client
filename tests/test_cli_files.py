@@ -117,3 +117,54 @@ def test_upload_file(mock_base_api_client, create_yaml_workflow_schema):
         )
         assert result.exit_code == 0
         assert message in result.output
+
+
+def test_delete_file(mock_base_api_client):
+    """Test delete file."""
+    status_code = 200
+    reana_token = '000000'
+    env = {'REANA_SERVER_URL': 'localhost'}
+    filename1 = 'file1'
+    filename2 = 'problematic_file'
+    filename2_error_message = '{} could not be deleted.'.format(filename2)
+    response = {'deleted': {filename1: {'size': 19}},
+                'failed': {filename2: {'error': filename2_error_message}}}
+    message1 = 'file1 was successfully deleted'
+    mocked_api_client = mock_base_api_client(status_code,
+                                             response,
+                                             'reana-server')
+    config = Config(mocked_api_client)
+    runner = CliRunner(env=env)
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            cli,
+            ['remove', '-at', reana_token,
+             '--workflow', 'mytest.1', filename1],
+            obj=config
+        )
+        assert result.exit_code == 0
+        assert message1 in result.output
+        assert filename2_error_message in result.output
+
+
+def test_delete_non_existing_file(mock_base_api_client):
+    """Test delete non existing file."""
+    status_code = 200
+    reana_token = '000000'
+    env = {'REANA_SERVER_URL': 'localhost'}
+    filename = 'file11'
+    response = {'deleted': {}, 'failed': {}}
+    message = '{} did not match any existing file.'.format(filename)
+    mocked_api_client = mock_base_api_client(status_code,
+                                             response,
+                                             'reana-server')
+    config = Config(mocked_api_client)
+    runner = CliRunner(env=env)
+    with runner.isolated_filesystem():
+        result = runner.invoke(
+            cli,
+            ['remove', '-at', reana_token, '--workflow', 'mytest.1', filename],
+            obj=config
+        )
+        assert result.exit_code == 0
+        assert message in result.output

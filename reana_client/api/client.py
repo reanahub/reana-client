@@ -16,7 +16,7 @@ import os
 import pkg_resources
 from bravado.exception import HTTPError
 from reana_commons.api_client import BaseAPIClient
-from reana_client.errors import FileUploadError
+from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import get_workflow_root
 
 
@@ -235,6 +235,41 @@ class Client(BaseAPIClient):
         except HTTPError as e:
             logging.debug(
                 'Output file could not be downloaded: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+            raise Exception(e.response.json()['message'])
+        except Exception as e:
+            raise e
+
+    def delete_file(self, workflow_id, file_name, access_token):
+        """Delete the requested file if it exists.
+
+        :param workflow_id: UUID which identifies the workflow.
+        :param file_name: File name or path to the file requested.
+        """
+        try:
+            (response,
+             http_response) = self._client.api.delete_file(
+                 workflow_id_or_name=workflow_id,
+                 file_name=file_name,
+                 access_token=access_token).result()
+            if http_response.status_code == 200 and (response['deleted'] or
+               response['failed']):
+                return response
+            elif not (response['deleted'] or response['failed']):
+                raise FileDeletionError('{} did not match any existing '
+                                        'file.'.format(file_name))
+            else:
+                raise Exception(
+                    "Expected status code 200 but replied with "
+                    "{status_code}".format(
+                        status_code=http_response.status_code))
+
+        except HTTPError as e:
+            logging.debug(
+                'File could not be downloaded: '
                 '\nStatus: {}\nReason: {}\n'
                 'Message: {}'.format(e.response.status_code,
                                      e.response.reason,

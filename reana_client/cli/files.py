@@ -17,7 +17,7 @@ import click
 import tablib
 
 from reana_client.config import ERROR_MESSAGES, default_user
-from reana_client.errors import FileUploadError
+from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import get_workflow_root, load_reana_spec
 from reana_client.cli.utils import add_access_token_options
 from reana_client.decorators import with_api_client
@@ -298,6 +298,82 @@ def upload_files(ctx, workflow, filenames, access_token):
             err=True)
 
 
+@click.command(
+    'remove',
+    help='Delete the specified file or pattern.')
+@click.argument(
+    'filenames',
+    metavar='SOURCES',
+    nargs=-1)
+@click.option(
+    '-w',
+    '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    help='Name or UUID of the workflow you are deleting files for. '
+         'Overrides value of $REANA_WORKON.')
+@add_access_token_options
+@click.pass_context
+@with_api_client
+def delete_files(ctx, workflow, filenames, access_token):
+    """Delete files contained in the workflow workspace."""
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not access_token:
+        click.echo(
+            click.style(ERROR_MESSAGES['missing_access_token'], fg='red'),
+            err=True)
+        sys.exit(1)
+
+    if workflow:
+        for filename in filenames:
+            try:
+                response = ctx.obj.client.\
+                    delete_file(workflow,
+                                filename,
+                                access_token)
+
+                freed_space = 0
+                for file_ in response['deleted']:
+                    freed_space += response['deleted'][file_]['size']
+                    click.echo(click.style(
+                        'File {} was successfully deleted.'.
+                        format(file_), fg='green'))
+                for file_ in response['failed']:
+                    click.echo(
+                        click.style(
+                            'Something went wrong while deleting {}.\n{}'.
+                            format(file_, response['failed'][file_]['error']),
+                            fg='red'), err=True)
+                if freed_space:
+                    click.echo(click.style('{} bytes freed up.'.format(
+                        freed_space), fg='green'))
+            except FileDeletionError as e:
+                click.echo(click.style(str(e), fg='red'), err=True)
+                if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                    sys.exit(1)
+            except Exception as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(
+                    click.style(
+                        'Something went wrong while deleting {}'.
+                        format(filename),
+                        fg='red'),
+                    err=True)
+                if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                    sys.exit(1)
+    else:
+        click.echo(
+            click.style('Workflow name must be provided either with '
+                        '`--workflow` option or with REANA_WORKON '
+                        'environment variable',
+                        fg='red'),
+            err=True)
+
+
 files.add_command(get_files)
 files.add_command(download_files)
 files.add_command(upload_files)
+files.add_command(delete_files)

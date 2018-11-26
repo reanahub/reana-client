@@ -96,6 +96,31 @@ so that a hard copy of the link target is uploaded to the cloud
 storage workspace. The link is not maintained throughout the
 workflow execution.
 
+
+Deleting analysis assets
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The deletion of files contained in the analysis workspace is possible through
+the ``remove`` command:
+
+.. code-block:: console
+
+   $ reana-client remove file1
+   File file1 was successfully deleted.
+   19 bytes freed up.
+
+If you want to delete more than one file at once it is possible to use
+globbing:
+
+.. code-block:: console
+
+   $ reana-client remove '**/file*'
+   File file1 was successfully deleted.
+   File file2 was successfully deleted.
+   File directory1/file3 was successfully deleted.
+   240 bytes freed up.
+
+
 Overriding default input parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -11,3 +11,7 @@
 
 class FileUploadError(Exception):
     """File upload didn't succeed."""
+
+
+class FileDeletionError(Exception):
+    """File deletion didn't succeed."""

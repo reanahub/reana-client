@@ -74,10 +74,10 @@ Uploading files or directories to an analysis workspace is simple as:
 
 .. code-block:: console
 
-   $ reana-client upload file1 file2 directory1
-   File file1 was successfully uploaded.
-   File file2 was successfully uploaded.
-   File directory1/file3 was successfully uploaded.
+   $ reana-client upload mydata.csv mycode.C mytmp
+   File mydata.csv was successfully uploaded.
+   File mycode.C was successfully uploaded.
+   File mytmp/myfiltereddata.csv was successfully uploaded.
 
 If you want to upload all input files defined in the reana.yaml of the analysis,
 you can just run:
@@ -85,11 +85,11 @@ you can just run:
 .. code-block:: console
 
    $ reana-client upload
-   File file1 was successfully uploaded.
-   File file2 was successfully uploaded.
+   File mydata.csv was successfully uploaded.
+   File mycode.C was successfully uploaded.
 
 Directory structures are maintained, i.e.
-directory1 exists in the workspace.
+mytmp exists in the workspace.
 
 Note that symbolic links are resolved at the moment of upload
 so that a hard copy of the link target is uploaded to the cloud
@@ -105,20 +105,19 @@ the ``remove`` command:
 
 .. code-block:: console
 
-   $ reana-client remove file1
-   File file1 was successfully deleted.
-   19 bytes freed up.
+   $ reana-client remove mydata.csv
+   File mydata.csv was successfully deleted.
+   25356 bytes freed up.
 
 If you want to delete more than one file at once it is possible to use
 globbing:
 
 .. code-block:: console
 
-   $ reana-client remove '**/file*'
-   File file1 was successfully deleted.
-   File file2 was successfully deleted.
-   File directory1/file3 was successfully deleted.
-   240 bytes freed up.
+   $ reana-client remove '**/*.csv'
+   File mydata.csv was successfully deleted.
+   File mytmp/myfiltereddata.csv was successfully deleted.
+   79736 bytes freed up.
 
 
 Overriding default input parameters

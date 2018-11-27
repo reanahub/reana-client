@@ -40,7 +40,7 @@ def files(ctx):
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow whose files should be listed. '
-         'Overrides value of REANA_WORKON.')
+         'Overrides value of REANA_WORKON environment variable.')
 @click.option(
     '--filter',
     '_filter',
@@ -124,7 +124,7 @@ def get_files(ctx, workflow, _filter,
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of that workflow where files should downloaded from. '
-         'Overrides value of REANA_WORKON.')
+         'Overrides value of REANA_WORKON environment variable.')
 @click.option(
     '-o',
     '--output-directory',
@@ -210,7 +210,7 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow you are uploading files for. '
-         'Overrides value of $REANA_WORKON.')
+         'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
 @with_api_client
@@ -310,7 +310,7 @@ def upload_files(ctx, workflow, filenames, access_token):
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
     help='Name or UUID of the workflow you are deleting files for. '
-         'Overrides value of $REANA_WORKON.')
+         'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
 @with_api_client

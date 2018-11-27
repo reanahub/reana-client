@@ -221,7 +221,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow to be started. '
-         'Overrides value of REANA_WORKON.')
+         'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.option(
     '-p', '--parameter', 'parameters',
@@ -314,7 +314,7 @@ def workflow_start(ctx, workflow, access_token,
     default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose status should be resolved. '
-         'Overrides value of REANA_WORKON.')
+         'Overrides value of REANA_WORKON environment variable.')
 @click.option(
     '--filter',
     '_filter',
@@ -451,7 +451,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
     default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose logs should be fetched. '
-         'Overrides value of REANA_WORKON.')
+         'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
 @with_api_client
@@ -528,7 +528,7 @@ def workflow_validate(ctx, file):
     default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
     help='Name and run number to be stopped. '
-         'Overrides value of REANA_WORKON.')
+         'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
 @with_api_client
@@ -660,7 +660,7 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
     default=os.environ.get('REANA_WORKON', None),
     callback=workflow_uuid_or_name,
     help='Name and run number to be deleted. '
-         'Overrides value of REANA_WORKON.')
+         'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
 @with_api_client

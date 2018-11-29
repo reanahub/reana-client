@@ -705,64 +705,77 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
 @click.command(
     'diff',
     help='Show differences between two workflows.')
-@click.option(
-    '-a',
-    '--workflow-a',
+@click.argument(
+    'workflow_a',
     default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the first workflow to be compared. '
-         'Overrides value of REANA_WORKON.')
+    callback=workflow_uuid_or_name)
+@click.argument(
+    'workflow_b',
+    callback=workflow_uuid_or_name)
 @click.option(
-    '-b',
-    '--workflow-b',
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the second workflow to be compared. '
-         'Overrides value of REANA_WORKON.')
-@click.option(
+    '-q',
     '--brief',
     is_flag=True,
-    help="If set, differences in the contents of the files in the two"
+    help="If not set, differences in the contents of the files in the two"
          "workspaces are shown.")
+@click.option(
+    '-u',
+    '-U',
+    '--unified',
+    'context_lines',
+    type=int,
+    default=5,
+    help="Sets number of context lines for workspace diff output.")
 @add_access_token_options
 @click.pass_context
 @with_api_client
-def workflow_diff(ctx, workflow_a, workflow_b, brief, access_token):
+def workflow_diff(ctx, workflow_a, workflow_b, brief,
+                  access_token, context_lines):
     """Show diff between two worklows."""
-    import ipdb
-    ipdb.set_trace()
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    def print_color_diff(lines):
+        for line in lines:
+            line_color = None
+            if line[0] == '@':
+                line_color = 'cyan'
+            elif line[0] == '-':
+                line_color = 'red'
+            elif line[0] == '+':
+                line_color = 'green'
+            click.secho(line, fg=line_color)
     try:
         response = ctx.obj.client.diff_workflows(workflow_a,
                                                  workflow_b,
                                                  brief,
-                                                 access_token)
+                                                 access_token,
+                                                 str(context_lines))
         if response.get('reana_specification'):
-            click.echo('differences in reana specification:'.upper())
-            for line in json.loads(response['reana_specification']):
-                line_color = None
-                if line[0] == '@':
-                    line_color = 'cyan'
-                elif line[0] == '-':
-                    line_color = 'red'
-                elif line[0] == '+':
-                    line_color = 'green'
-                click.secho(line, fg=line_color)
+            specification_diff = json.loads(response['reana_specification'])
+            nonempty_sections = {k: v for k, v in specification_diff.items()
+                                 if v}
+            if nonempty_sections:
+                click.echo('differences in reana specification:'.upper())
+            else:
+                click.echo('No differences in reana specifications.')
+            for section, content in nonempty_sections.items():
+                click.echo('In {}:'.format(section))
+                print_color_diff(content)
         click.echo('')  # Leave 1 line for separation
         if response.get('workspace_listing'):
+            workspace_diff = json.loads(response.get('workspace_listing')).\
+                splitlines()
             click.echo('differences in workspace listings:'.upper())
-            for workspace in response['workspace_listing']:
-                for _diff in response['workspace_listing'][workspace]:
-                    click.echo('Only in workspace {0}: {1}'.format(workspace,
-                                                                   _diff))
+            print_color_diff(workspace_diff)
 
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
         click.echo(
-            click.style('Something went wrong when trying to get diff.',
-                        fg='red'),
+            click.style('Something went wrong when trying to get diff:\n{}'.
+                        format(str(e)), fg='red'),
             err=True)
 
 

@@ -487,14 +487,16 @@ class Client(BaseAPIClient):
             raise e
 
     def diff_workflows(self, workflow_id_a, workflow_id_b,
-                       brief, access_token):
+                       brief, access_token, context_lines):
         """Return the list of differences between two workflows.
 
         :param workflow_id_a: UUID which identifies the first workflow.
         :param workflow_id_b: UUID which identifies the second workflow.
         :param brief: Flag specifying desired detail in diff.
+        :param context_lines: Optional parameter to set the number of
+                              context lines shown in the diff output.
         :param access_token: API token of user requesting diff.
-        :returns: A list of dictionaries composed by `asset`, `type`, `lines,
+        :returns: A list of dictionaries composed by `asset`, `type`, `lines`,
             `a` and `b`. Asset refers to the workflow asset where a
             difference was found, type refers to the asset type, lines refer
             to the lines of the file where the differences are and a, b fields
@@ -506,6 +508,7 @@ class Client(BaseAPIClient):
                  workflow_id_or_name_a=workflow_id_a,
                  workflow_id_or_name_b=workflow_id_b,
                  brief=brief,
+                 context_lines=context_lines,
                  access_token=access_token).result()
 
             if http_response.status_code == 200:

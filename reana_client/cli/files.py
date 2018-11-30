@@ -13,14 +13,17 @@ import sys
 import traceback
 
 import click
-
 import tablib
 
+from reana_client.api.client import delete_file, download_file, \
+    current_rs_api_client
+from reana_client.api.client import list_files
+from reana_client.api.client import upload_to_server
+from reana_client.cli.utils import add_access_token_options
 from reana_client.config import ERROR_MESSAGES, default_user
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import get_workflow_root, load_reana_spec
-from reana_client.cli.utils import add_access_token_options
-from reana_client.decorators import with_api_client
+from reana_commons.errors import MissingAPIClientConfiguration
 from reana_commons.utils import click_table_printer
 
 
@@ -54,13 +57,21 @@ def files(ctx):
     help='Get output in JSON format.')
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def get_files(ctx, workflow, _filter,
               output_format, access_token):
     """List workflow workspace files."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    try:
+        _url = current_rs_api_client.swagger_spec.api_url
+    except MissingAPIClientConfiguration as e:
+        click.secho(
+            'REANA client is not connected to any REANA cluster.',
+            fg='red', err=True
+        )
+        sys.exit(1)
 
     if not access_token:
         click.echo(
@@ -70,7 +81,7 @@ def get_files(ctx, workflow, _filter,
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
-            response = ctx.obj.client.get_files(workflow, access_token)
+            response = list_files(workflow, access_token)
             headers = ['name', 'size', 'last-modified']
             data = []
             for file_ in response:
@@ -132,7 +143,6 @@ def get_files(ctx, workflow, _filter,
     help='Path to the directory where files will be downloaded.')
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def download_files(ctx, workflow, filenames, output_directory, access_token):
     """Download workflow workspace file(s)."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -155,10 +165,10 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
     if workflow:
         for file_name in filenames:
             try:
-                binary_file = \
-                    ctx.obj.client.download_file(workflow,
-                                                 file_name,
-                                                 access_token)
+                binary_file = download_file(workflow,
+                                            file_name,
+                                            access_token)
+
                 logging.info('{0} binary file downloaded ... writing to {1}'.
                              format(file_name, output_directory))
 
@@ -213,7 +223,6 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
          'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def upload_files(ctx, workflow, filenames, access_token):
     """Upload files and directories to workflow workspace."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -241,10 +250,9 @@ def upload_files(ctx, workflow, filenames, access_token):
     if workflow:
         for filename in filenames:
             try:
-                response = ctx.obj.client.\
-                    upload_to_server(workflow,
-                                     filename,
-                                     access_token)
+                response = upload_to_server(workflow,
+                                            filename,
+                                            access_token)
                 for file_ in response:
                     if file_.startswith('symlink:'):
                         click.echo(
@@ -313,7 +321,6 @@ def upload_files(ctx, workflow, filenames, access_token):
          'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def delete_files(ctx, workflow, filenames, access_token):
     """Delete files contained in the workflow workspace."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -329,11 +336,7 @@ def delete_files(ctx, workflow, filenames, access_token):
     if workflow:
         for filename in filenames:
             try:
-                response = ctx.obj.client.\
-                    delete_file(workflow,
-                                filename,
-                                access_token)
-
+                response = delete_file(workflow, filename, access_token)
                 freed_space = 0
                 for file_ in response['deleted']:
                     freed_space += response['deleted'][file_]['size']

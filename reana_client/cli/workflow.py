@@ -7,8 +7,8 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client workflow related commands."""
 
-import logging
 import json
+import logging
 import os
 import sys
 import traceback
@@ -17,22 +17,26 @@ from enum import Enum
 import click
 import tablib
 from jsonschema.exceptions import ValidationError
-from reana_commons.utils import click_table_printer
-
-from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
-from reana_client.decorators import with_api_client
-from reana_client.utils import (get_workflow_name_and_run_number, is_uuid_v4,
-                                load_reana_spec, workflow_uuid_or_name,
-                                validate_cwl_operational_options,
-                                validate_serial_operational_options,
-                                validate_input_parameters)
-from reana_client.cli.utils import add_access_token_options
-from reana_client.cli.files import upload_files
-
-from reana_client.cli.files import upload_files
-
 from reana_db.database import Session
 from reana_db.models import Workflow
+
+from reana_client.api.client import (create_workflow, current_rs_api_client,
+                                     delete_workflow, diff_workflows,
+                                     get_workflow_logs,
+                                     get_workflow_parameters,
+                                     get_workflow_status, get_workflows,
+                                     start_workflow, stop_workflow)
+from reana_client.cli.files import upload_files
+from reana_client.cli.utils import add_access_token_options
+from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
+from reana_client.utils import (get_workflow_name_and_run_number, is_uuid_v4,
+                                load_reana_spec,
+                                validate_cwl_operational_options,
+                                validate_input_parameters,
+                                validate_serial_operational_options,
+                                workflow_uuid_or_name)
+from reana_commons.errors import MissingAPIClientConfiguration
+from reana_commons.utils import click_table_printer
 
 
 class _WorkflowStatus(Enum):
@@ -77,7 +81,6 @@ def workflow(ctx):
     help='Set status information verbosity.')
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def workflow_workflows(ctx, _filter, output_format, access_token,
                        show_all, verbose):
     """List all workflows user has."""
@@ -85,6 +88,14 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
+    try:
+        _url = current_rs_api_client.swagger_spec.api_url
+    except MissingAPIClientConfiguration as e:
+        click.secho(
+            'REANA client is not connected to any REANA cluster.',
+            fg='red', err=True
+        )
+        sys.exit(1)
     if not access_token:
         click.echo(
             click.style(ERROR_MESSAGES['missing_access_token'],
@@ -92,7 +103,7 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
         sys.exit(1)
 
     try:
-        response = ctx.obj.client.get_workflows(access_token)
+        response = get_workflows(access_token)
         verbose_headers = ['id', 'user']
         headers = ['name', 'run_number', 'created', 'status']
         if verbose:
@@ -166,7 +177,6 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
          "submitting it's contents to REANA server.")
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def workflow_create(ctx, file, name, skip_validation, access_token):
     """Create a REANA compatible workflow from REANA spec file."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -188,10 +198,11 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     try:
         reana_specification = load_reana_spec(click.format_filename(file),
                                               skip_validation)
-        logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-        response = ctx.obj.client.create_workflow(reana_specification,
-                                                  name,
-                                                  access_token)
+        logging.info('Connecting to {0}'.format(
+            current_rs_api_client.swagger_spec.api_url))
+        response = create_workflow(reana_specification,
+                                   name,
+                                   access_token)
         click.echo(click.style(response['workflow_name'], fg='green'))
         # check if command is called from wrapper command
         if 'invoked_by_subcommand' in ctx.parent.__dict__:
@@ -241,7 +252,6 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
          'E.g. --debug (workflow engine - cwl)',
 )
 @click.pass_context
-@with_api_client
 def workflow_start(ctx, workflow, access_token,
                    parameters, options):  # noqa: D301
     """Start previously created workflow."""
@@ -260,9 +270,7 @@ def workflow_start(ctx, workflow, access_token,
     if workflow:
         if parameters or options:
             try:
-                response =  \
-                    ctx.obj.client.get_workflow_parameters(workflow,
-                                                           access_token)
+                response = get_workflow_parameters(workflow, access_token)
                 if response['type'] == 'cwl':
                     validate_cwl_operational_options(
                         parsed_parameters['operational_options'])
@@ -281,10 +289,11 @@ def workflow_start(ctx, workflow, access_token,
                     err=True)
 
         try:
-            logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-            response = ctx.obj.client.start_workflow(workflow,
-                                                     access_token,
-                                                     parsed_parameters)
+            logging.info('Connecting to {0}'.format(
+                current_rs_api_client.swagger_spec.api_url))
+            response = start_workflow(workflow,
+                                      access_token,
+                                      parsed_parameters)
             click.echo(
                 click.style('{} has been started.'.format(workflow),
                             fg='green'))
@@ -335,7 +344,6 @@ def workflow_start(ctx, workflow, access_token,
     count=True,
     help='Set status information verbosity.')
 @click.pass_context
-@with_api_client
 def workflow_status(ctx, workflow, _filter, output_format,
                     access_token, verbose):
     """Get status of previously created workflow."""
@@ -406,8 +414,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
 
     if workflow:
         try:
-            response = ctx.obj.client.get_workflow_status(workflow,
-                                                          access_token)
+            response = get_workflow_status(workflow, access_token)
             headers = ['name', 'run_number', 'created', 'status', 'progress']
             verbose_headers = ['id', 'user', 'command']
             data = []
@@ -456,7 +463,6 @@ def workflow_status(ctx, workflow, _filter, output_format,
          'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def workflow_logs(ctx, workflow, access_token):
     """Get workflow logs."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
@@ -465,7 +471,7 @@ def workflow_logs(ctx, workflow, access_token):
 
     if workflow:
         try:
-            response = ctx.obj.client.get_workflow_logs(workflow, access_token)
+            response = get_workflow_logs(workflow, access_token)
             click.echo(response)
         except Exception as e:
             logging.debug(traceback.format_exc())
@@ -533,7 +539,6 @@ def workflow_validate(ctx, file):
          'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def workflow_stop(ctx, workflow, force_stop, access_token):
     """Stop given workflow."""
     if not force_stop:
@@ -551,9 +556,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):
         try:
             logging.info(
                 'Sending a request to stop workflow {}'.format(workflow))
-            response = ctx.obj.client.stop_workflow(workflow,
-                                                    force_stop,
-                                                    access_token)
+            response = stop_workflow(workflow, force_stop, access_token)
             click.secho('{} has been stopped.'.format(workflow), fg='green')
         except Exception as e:
             logging.debug(traceback.format_exc())
@@ -665,7 +668,6 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
          'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def workflow_delete(ctx, workflow, all_runs, workspace,
                     hard_delete, access_token):
     """Delete a workflow run given the workflow name and run number."""
@@ -681,12 +683,13 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
 
     if workflow:
         try:
-            logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-            response = ctx.obj.client.delete_workflow(workflow,
-                                                      all_runs,
-                                                      hard_delete,
-                                                      workspace,
-                                                      access_token)
+            logging.info('Connecting to {0}'.format(
+                current_rs_api_client.swagger_spec.api_url))
+            response = delete_workflow(workflow,
+                                       all_runs,
+                                       hard_delete,
+                                       workspace,
+                                       access_token)
             if all_runs:
                 message = 'All workflows named \'{}\' have been deleted.'.\
                     format(workflow.split('.')[0])
@@ -730,7 +733,6 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
     help="Sets number of context lines for workspace diff output.")
 @add_access_token_options
 @click.pass_context
-@with_api_client
 def workflow_diff(ctx, workflow_a, workflow_b, brief,
                   access_token, context_lines):
     """Show diff between two worklows."""
@@ -749,11 +751,8 @@ def workflow_diff(ctx, workflow_a, workflow_b, brief,
                 line_color = 'green'
             click.secho(line, fg=line_color)
     try:
-        response = ctx.obj.client.diff_workflows(workflow_a,
-                                                 workflow_b,
-                                                 brief,
-                                                 access_token,
-                                                 str(context_lines))
+        response = diff_workflows(workflow_a, workflow_b, brief, access_token,
+                                  str(context_lines))
         if response.get('reana_specification'):
             specification_diff = json.loads(response['reana_specification'])
             nonempty_sections = {k: v for k, v in specification_diff.items()

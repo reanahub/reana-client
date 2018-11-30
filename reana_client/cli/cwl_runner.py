@@ -24,13 +24,13 @@ from cwltool.load_tool import fetch_document
 from cwltool.main import printdeps
 from cwltool.workflow import findfiles
 
-from reana_client.api import Client
+from reana_client.api.client import (create_workflow, current_rs_api_client,
+                                     get_workflow_logs, start_workflow,
+                                     upload_file)
 from reana_client.cli.utils import add_access_token_options
 from reana_client.config import default_user
-from reana_client.decorators import with_api_client
 from reana_client.utils import load_workflow_spec
 from reana_client.version import __version__
-
 
 PY3 = sys.version_info > (3,)
 
@@ -68,7 +68,6 @@ def get_file_dependencies_obj(cwl_obj, basedir):
 @click.argument('processfile', required=False)
 @click.argument('jobfile')
 @click.pass_context
-@with_api_client
 def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
                access_token):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
@@ -104,9 +103,9 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
         reana_spec['workflow']['spec'] = replace_location_in_cwl_spec(
             reana_spec['workflow']['spec'])
 
-        logging.info('Connecting to {0}'.format(ctx.obj.client.server_url))
-        response = ctx.obj.client.create_workflow(reana_spec, 'cwl-test',
-                                                  access_token)
+        logging.info('Connecting to {0}'.format(
+            current_rs_api_client.swagger_spec.api_url))
+        response = create_workflow(reana_spec, 'cwl-test', access_token)
         logging.error(response)
         workflow_name = response['workflow_name']
         workflow_id = response['workflow_id']
@@ -122,11 +121,10 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
             file_path = cwl_file_object.get('location')
             abs_file_path = os.path.join(basedir, file_path)
             with open(abs_file_path, 'r') as f:
-                ctx.obj.client.upload_file(workflow_id, f, file_path,
-                                           access_token)
+                upload_file(workflow_id, f, file_path, access_token)
                 logging.error('File {} uploaded.'.format(file_path))
 
-        response = ctx.obj.client.start_workflow(
+        response = start_workflow(
             workflow_id, access_token, reana_spec['inputs']['parameters'])
         logging.error(response)
 
@@ -134,8 +132,7 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
         while True:
             sleep(1)
             logging.error('Polling workflow logs')
-            response = ctx.obj.client.get_workflow_logs(workflow_id,
-                                                        access_token)
+            response = get_workflow_logs(workflow_id, access_token)
             logs = response['logs']
             if logs != first_logs:
 

@@ -9,5 +9,3 @@
 """Python api for connecting to REANA server."""
 
 from __future__ import absolute_import, print_function
-
-from .client import Client

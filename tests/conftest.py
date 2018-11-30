@@ -11,28 +11,6 @@
 from __future__ import absolute_import, print_function
 
 import pytest
-from mock import Mock
-from pytest_reana.test_utils import make_mock_api_client
-
-from reana_client.api.client import Client
-
-
-@pytest.fixture()
-def mock_base_api_client():
-    """Create mocked api client."""
-    def _make_mock_api_client(status_code=200,
-                              response=None,
-                              component='reana-server'):
-        mock_http_response, mock_response = Mock(), Mock()
-        mock_http_response.status_code = status_code
-        mock_http_response.raw_bytes = str(response).encode()
-        mock_response = response
-        reana_server_client = make_mock_api_client(
-            component)(mock_response, mock_http_response)
-        reana_client_server_api = Client(component)
-        reana_client_server_api._client = reana_server_client
-        return reana_client_server_api
-    return _make_mock_api_client
 
 
 @pytest.fixture()

@@ -11,9 +11,10 @@
 import json
 
 from click.testing import CliRunner
-from mock import patch
+from mock import Mock, patch
+from pytest_reana.test_utils import make_mock_api_client
 
-from reana_client.cli import Config, cli
+from reana_client.cli import cli
 
 
 def test_workflows_server_not_connected():
@@ -30,12 +31,12 @@ def test_workflows_no_token():
     env = {'REANA_SERVER_URL': 'localhost'}
     runner = CliRunner(env=env)
     result = runner.invoke(cli, ['workflows'])
-    message = 'Please provide your access token'
+    message = 'Please provide your access token by using the -at'
     assert result.exit_code == 1
     assert message in result.output
 
 
-def test_workflows_server_ok(mock_base_api_client):
+def test_workflows_server_ok():
     """Test workflows command when server is reachable."""
     response = [
         {
@@ -47,20 +48,24 @@ def test_workflows_server_ok(mock_base_api_client):
         }
     ]
     status_code = 200
-    mocked_api_client = mock_base_api_client(status_code,
-                                             response,
-                                             'reana-server')
-    config = Config(mocked_api_client)
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
     env = {'REANA_SERVER_URL': 'localhost', 'REANA_WORKON': 'mytest.1'}
     reana_token = '000000'
     runner = CliRunner(env=env)
-    result = runner.invoke(cli, ['workflows', '-at', reana_token], obj=config)
-    message = 'RUN_NUMBER'
-    assert result.exit_code == 0
-    assert message in result.output
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            result = runner.invoke(cli, ['workflows', '-at', reana_token])
+            message = 'RUN_NUMBER'
+            assert result.exit_code == 0
+            assert message in result.output
 
 
-def test_workflows_valid_json(mock_base_api_client):
+def test_workflows_valid_json():
     """Test workflows command with --json and -v flags."""
     response = [
         {
@@ -72,26 +77,30 @@ def test_workflows_valid_json(mock_base_api_client):
         }
     ]
     status_code = 200
-    mocked_api_client = mock_base_api_client(status_code,
-                                             response,
-                                             'reana-server')
-    config = Config(mocked_api_client)
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
     env = {'REANA_SERVER_URL': 'localhost'}
     reana_token = '000000'
     runner = CliRunner(env=env)
-    result = runner.invoke(cli,
-                           ['workflows', '-v', '-at', reana_token, '--json'],
-                           obj=config)
-    json_response = json.loads(result.output)
-    assert result.exit_code == 0
-    assert isinstance(json_response, list)
-    assert len(json_response) == 1
-    assert 'name' in json_response[0]
-    assert 'run_number' in json_response[0]
-    assert 'created' in json_response[0]
-    assert 'status' in json_response[0]
-    assert 'id' in json_response[0]
-    assert 'user' in json_response[0]
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            result = runner.invoke(cli,
+                                   ['workflows', '-v', '-at',
+                                    reana_token, '--json'])
+            json_response = json.loads(result.output)
+            assert result.exit_code == 0
+            assert isinstance(json_response, list)
+            assert len(json_response) == 1
+            assert 'name' in json_response[0]
+            assert 'run_number' in json_response[0]
+            assert 'created' in json_response[0]
+            assert 'status' in json_response[0]
+            assert 'id' in json_response[0]
+            assert 'user' in json_response[0]
 
 
 def test_workflow_create_failed():
@@ -103,8 +112,7 @@ def test_workflow_create_failed():
     assert result.exit_code == 2
 
 
-def test_workflow_create_successful(mock_base_api_client,
-                                    create_yaml_workflow_schema):
+def test_workflow_create_successful(create_yaml_workflow_schema):
     """Test workflow create when creation is successfull."""
     status_code = 201
     response = {
@@ -114,24 +122,27 @@ def test_workflow_create_successful(mock_base_api_client,
     }
     env = {'REANA_SERVER_URL': 'localhost'}
     reana_token = '000000'
-    mocked_api_client = mock_base_api_client(status_code,
-                                             response,
-                                             'reana-server')
-    config = Config(mocked_api_client)
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
     runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        with open('reana.yaml', 'w') as f:
-            f.write(create_yaml_workflow_schema)
-        result = runner.invoke(
-            cli,
-            ['create', '-at', reana_token, '--skip-validation'],
-            obj=config
-        )
-        assert result.exit_code == 0
-        assert response["workflow_name"] in result.output
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            with runner.isolated_filesystem():
+                with open('reana.yaml', 'w') as f:
+                    f.write(create_yaml_workflow_schema)
+                result = runner.invoke(
+                    cli,
+                    ['create', '-at', reana_token, '--skip-validation']
+                )
+                assert result.exit_code == 0
+                assert response["workflow_name"] in result.output
 
 
-def test_workflow_start_successful(mock_base_api_client):
+def test_workflow_start_successful():
     """Test workflow start when creation is successfull."""
     response = {
         "status": "created",
@@ -141,21 +152,24 @@ def test_workflow_start_successful(mock_base_api_client):
         "user": "00000000-0000-0000-0000-000000000000"
     }
     status_code = 200
-    mocked_api_client = mock_base_api_client(status_code,
-                                             response,
-                                             'reana-server')
-    config = Config(mocked_api_client)
-    env = {'REANA_SERVER_URL': 'localhost'}
     reana_token = '000000'
     message = 'mytest.1 has been started'
+    mock_http_response = Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {'REANA_SERVER_URL': 'localhost'}
     runner = CliRunner(env=env)
-    result = runner.invoke(
-        cli,
-        ['start', '-at', reana_token, '-w', response["workflow_name"]],
-        obj=config
-    )
-    assert result.exit_code == 0
-    assert message in result.output
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            result = runner.invoke(
+                cli,
+                ['start', '-at', reana_token, '-w', response["workflow_name"]]
+            )
+            assert result.exit_code == 0
+            assert message in result.output
 
 
 def test_workflows_validate(create_yaml_workflow_schema):
@@ -173,7 +187,7 @@ def test_workflows_validate(create_yaml_workflow_schema):
         assert message in result.output
 
 
-def test_get_workflow_status_ok(mock_base_api_client):
+def test_get_workflow_status_ok():
     """Test workflow status."""
     status_code = 200
     response = {
@@ -193,23 +207,27 @@ def test_get_workflow_status_ok(mock_base_api_client):
         'status': 'running',
         'user': '00000000-0000-0000-0000-000000000000'
     }
-    mocked_api_client = mock_base_api_client(status_code,
-                                             response,
-                                             'reana-server')
-    config = Config(mocked_api_client)
     env = {'REANA_SERVER_URL': 'localhost'}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
     reana_token = '000000'
     runner = CliRunner(env=env)
-    result = runner.invoke(
-        cli,
-        ['status', '-at', reana_token, '--json', '-v', '-w', response['name']],
-        obj=config
-    )
-    json_response = json.loads(result.output)
-    assert result.exit_code == 0
-    assert isinstance(json_response, list)
-    assert len(json_response) == 1
-    assert json_response[0]['name'] in response['name']
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            result = runner.invoke(
+                cli,
+                ['status', '-at', reana_token, '--json', '-v', '-w',
+                 response['name']]
+            )
+            json_response = json.loads(result.output)
+            assert result.exit_code == 0
+            assert isinstance(json_response, list)
+            assert len(json_response) == 1
+            assert json_response[0]['name'] in response['name']
 
 
 @patch('reana_client.cli.workflow.workflow_create')
@@ -234,7 +252,7 @@ def test_run(workflow_start_mock,
     assert workflow_start_mock.called is True
 
 
-def test_workflow_input_parameters(mock_base_api_client):
+def test_workflow_input_parameters():
     """Test if not existing input parameters from CLI are applied."""
     status_code = 200
     response = {'id': 'd9304bdf-0d19-45d9-ae87-d5fd18059193',
@@ -245,17 +263,21 @@ def test_workflow_input_parameters(mock_base_api_client):
                                'outputfile': 'results/greetings.txt',
                                'sleeptime': 2}}
     env = {'REANA_SERVER_URL': 'localhost'}
-    mocked_api_client = mock_base_api_client(status_code,
-                                             response,
-                                             'reana-server')
-    parameter = "Debug"
-    expected_message = '{0}, is not in reana.yaml'.format(parameter)
-    config = Config(mocked_api_client)
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
     reana_token = '000000'
     runner = CliRunner(env=env)
-    result = runner.invoke(
-        cli,
-        ['start', '-at', reana_token, '-w workflow.19',
-         '-p {0}=True'.format(parameter)],
-        obj=config)
-    assert expected_message in result.output
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            parameter = "Debug"
+            expected_message = '{0}, is not in reana.yaml'.format(parameter)
+            result = runner.invoke(
+                cli,
+                ['start', '-at', reana_token, '-w workflow.19',
+                 '-p {0}=True'.format(parameter)]
+            )
+            assert expected_message in result.output

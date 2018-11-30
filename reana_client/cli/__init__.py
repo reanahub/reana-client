@@ -12,7 +12,6 @@ import sys
 
 import click
 
-from reana_client.api import Client
 from reana_client.cli import workflow, files, ping
 
 DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \

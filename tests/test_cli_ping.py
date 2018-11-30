@@ -9,8 +9,10 @@
 """REANA client ping tests."""
 
 from click.testing import CliRunner
+from mock import Mock, patch
+from pytest_reana.test_utils import make_mock_api_client
 
-from reana_client.cli import Config, cli
+from reana_client.cli import cli
 
 
 def test_ping_server_not_set():
@@ -30,16 +32,21 @@ def test_ping_server_not_reachable():
     assert message in result.output
 
 
-def test_ping_ok(mock_base_api_client):
+def test_ping_ok():
     """Test ping server is set and reachable."""
     env = {'REANA_SERVER_URL': 'localhost'}
     status_code = 200
     response = {"status": 200, "message": "OK"}
-    mocked_api_client = mock_base_api_client(status_code,
-                                             response,
-                                             'reana-server')
-    config = Config(mocked_api_client)
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
     runner = CliRunner(env=env)
-    result = runner.invoke(cli, ['ping'], obj=config)
-    message = 'Server is running'
-    assert message in result.output
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+
+            result = runner.invoke(cli, ['ping'])
+            message = 'Server is running'
+            assert message in result.output

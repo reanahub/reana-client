@@ -465,7 +465,7 @@ class Client(BaseAPIClient):
             parameters = {'force_stop': force_stop}
             (response, http_response) = self._client.api.set_workflow_status(
                 workflow_id_or_name=workflow,
-                status='stopped',
+                status='stop',
                 access_token=access_token,
                 parameters=parameters).result()
             if http_response.status_code == 200:

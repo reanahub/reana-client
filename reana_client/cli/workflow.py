@@ -17,8 +17,6 @@ from enum import Enum
 import click
 import tablib
 from jsonschema.exceptions import ValidationError
-from reana_db.database import Session
-from reana_db.models import Workflow
 
 from reana_client.api.client import (create_workflow, current_rs_api_client,
                                      delete_workflow, diff_workflows,

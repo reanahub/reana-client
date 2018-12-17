@@ -135,9 +135,8 @@ def start_workflow(workflow, access_token, parameters):
     """Start a workflow."""
     try:
         (response,
-         http_response) = current_rs_api_client.api.set_workflow_status(
+         http_response) = current_rs_api_client.api.start_workflow(
             workflow_id_or_name=workflow,
-            status='start',
             access_token=access_token,
             parameters=parameters).result()
         if http_response.status_code == 200:

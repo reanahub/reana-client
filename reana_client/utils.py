@@ -237,8 +237,7 @@ def validate_cwl_operational_options(operational_options):
 def validate_serial_operational_options(operational_options):
     """Return validated serial operational options."""
     try:
-        operational_options = {'input_parameters':
-                               dict(p.split('=') for p in operational_options)}
+        return dict(p.split('=') for p in operational_options)
     except Exception as err:
         click.echo('Operational options {0} are not valid. \n'
                    '{1}'.format(operational_options, err), err=True)

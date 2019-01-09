@@ -112,7 +112,7 @@ def load_reana_spec(filepath, skip_validation=False):
         if reana_yaml['workflow']['type'] == 'cwl' and \
                 'inputs' in reana_yaml:
             with open(reana_yaml['inputs']['parameters']['input']) as f:
-                reana_yaml['inputs']['parameters']['input'] = yaml.load(f)
+                reana_yaml['inputs']['parameters'] = yaml.load(f)
         return reana_yaml
     except IOError as e:
         logging.info(

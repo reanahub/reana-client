@@ -57,9 +57,7 @@ def workflow_execution_group(ctx):
     logging.debug(ctx.info_name)
 
 
-@workflow_management_group.command(
-    'list',
-    help='List all available workflows.')
+@workflow_management_group.command('list')
 @click.option(
     '-s',
     '--sessions',
@@ -93,8 +91,18 @@ def workflow_execution_group(ctx):
 @add_access_token_options
 @click.pass_context
 def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
-                       show_all, verbose):
-    """List all workflows user has."""
+                       show_all, verbose):  # noqa: D301
+    """List all workflows and sessions.
+
+    The `list` command lists workflows and sessions. By default, the list of
+    workflows is returned. If you would like to see the list of your open
+    interactive sessions, you need to pass the `--sessions` command-line
+    option.
+
+    Example: \n
+    \t $ reana-client list --all \n
+    \t $ reana-client list --sessions
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -175,10 +183,7 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
             err=True)
 
 
-@workflow_management_group.command(
-    'create',
-    help='Create a REANA compatible workflow from REANA '
-         'specifications file.')
+@workflow_management_group.command('create')
 @click.option(
     '-f',
     '--file',
@@ -198,8 +203,19 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
          "submitting it's contents to REANA server.")
 @add_access_token_options
 @click.pass_context
-def workflow_create(ctx, file, name, skip_validation, access_token):
-    """Create a REANA compatible workflow from REANA spec file."""
+def workflow_create(ctx, file, name,
+                    skip_validation, access_token):  # noqa: D301
+    """Create a new workflow.
+
+    The `create` command allows to create a new workflow from reana.yaml
+    specifications file. The file is expected to be located in the current
+    working directory, or supplied via command-line -f option, see examples
+    below.
+
+    Examples: \n
+    \t $ reana-client create \n
+    \t $ reana-client create -f ./somedir/myreana.yaml
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -239,17 +255,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
             sys.exit(1)
 
 
-@workflow_execution_group.command(
-    'start',
-    help="""
-    Start previously created workflow.
-
-    The workflow execution can be further influenced by setting input prameters
-    using `-p` or `--parameters` flag or by setting operational options using
-    `-o` or `--options`.  The input parameters and operational options can be
-    repetitive. For example, to disable caching for the Serial workflow engine,
-    you can set ``-o CACHE=off``.
-    """)
+@workflow_execution_group.command('start')
 @add_workflow_option
 @add_access_token_options
 @click.option(
@@ -269,7 +275,20 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
 @click.pass_context
 def workflow_start(ctx, workflow, access_token,
                    parameters, options):  # noqa: D301
-    """Start previously created workflow."""
+    r"""Start previously created workflow.
+
+    The `start` command allows to start previously created workflow. The
+    workflow execution can be further influenced by passing input prameters
+    using `-p` or `--parameters` flag and by setting additional operational
+    options using `-o` or `--options`.  The input parameters and operational
+    options can be repetitive. For example, to disable caching for the Serial
+    workflow engine, you can set `-o CACHE=off`.
+
+    Examples: \n
+    \t $ reana-client start -w myanalysis.42 -p sleeptime=10 \n
+    \t $ reana-client start -w myanalysis.42 -p myparam1=myvalue1
+    -p myparam2=myvalue2 -o CACHE=off
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -326,9 +345,7 @@ def workflow_start(ctx, workflow, access_token,
                 sys.exit(1)
 
 
-@workflow_execution_group.command(
-    'status',
-    help='Get status of a previously created workflow.')
+@workflow_execution_group.command('status')
 @add_workflow_option
 @click.option(
     '--filter',
@@ -349,8 +366,17 @@ def workflow_start(ctx, workflow, access_token,
     help='Set status information verbosity.')
 @click.pass_context
 def workflow_status(ctx, workflow, _filter, output_format,
-                    access_token, verbose):
-    """Get status of previously created workflow."""
+                    access_token, verbose):  # noqa: D301
+    """Get status of a workflow.
+
+    The `status` command allow to retrieve status of a workflow. The status can
+    be created, queued, running, failed, etc. You can increase verbosity or
+    filter retrieved information by passing appropriate command-line options.
+
+    Examples: \n
+    \t $ reana-client status -w myanalysis.42 \n
+    \t $ reana-client status -w myanalysis.42 -v --json
+    """
     def render_progress(finished_jobs, total_jobs):
         if total_jobs:
             return '{0}/{1}'.format(finished_jobs, total_jobs)
@@ -455,9 +481,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
                 err=True)
 
 
-@workflow_execution_group.command(
-    'logs',
-    help='Get workflow logs.')
+@workflow_execution_group.command('logs')
 @add_workflow_option
 @click.option(
     '--json',
@@ -466,8 +490,16 @@ def workflow_status(ctx, workflow, _filter, output_format,
     help='Get output in JSON format.')
 @add_access_token_options
 @click.pass_context
-def workflow_logs(ctx, workflow, access_token, json_format):
-    """Get workflow logs."""
+def workflow_logs(ctx, workflow, access_token, json_format):  # noqa: D301
+    """Get  workflow logs.
+
+    The `logs` command allows to retrieve logs of running workflow. Note that
+    only finished steps of the workflow are returned, the logs of the currently
+    processed step is not returned until it is finished.
+
+    Examples: \n
+    \t $ reana-client logs -w myanalysis.42
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -515,9 +547,7 @@ def workflow_logs(ctx, workflow, access_token, json_format):
                 err=True)
 
 
-@workflow_execution_group.command(
-    'validate',
-    help='Validate the REANA specification.')
+@workflow_execution_group.command('validate')
 @click.option(
     '-f',
     '--file',
@@ -526,8 +556,15 @@ def workflow_logs(ctx, workflow, access_token, json_format):
     help='REANA specifications file describing the workflow and '
          'context which REANA should execute.')
 @click.pass_context
-def workflow_validate(ctx, file):
-    """Validate given REANA specification file."""
+def workflow_validate(ctx, file):  # noqa: D301
+    """Validate workflow specification file.
+
+    The `validate` command allows to check syntax and validate the reana.yaml
+    workflow specification file.
+
+    Examples: \n
+    \t $ reana-client validate -f reana.yaml
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -554,9 +591,7 @@ def workflow_validate(ctx, file):
             err=True)
 
 
-@workflow_execution_group.command(
-    'stop',
-    help='Stop a running workflow')
+@workflow_execution_group.command('stop')
 @click.option(
     '--force',
     'force_stop',
@@ -566,8 +601,17 @@ def workflow_validate(ctx, file):
 @add_workflow_option
 @add_access_token_options
 @click.pass_context
-def workflow_stop(ctx, workflow, force_stop, access_token):
-    """Stop given workflow."""
+def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
+    """Stop a running workflow.
+
+    The `stop` command allows to hard-stop the running workflow process. Note
+    that soft-stopping of the workflow is currently not supported. This command
+    should be therefore used with care, only if you are absolutely sure that
+    there is no point in continuing the running the workflow.
+
+    Example: \n
+    \t $ reana-client stop -w myanalysis.42--force
+    """
     if not force_stop:
         click.secho('Graceful stop not implement yet. If you really want to '
                     'stop your workflow without waiting for jobs to finish'
@@ -594,9 +638,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):
                         fg='red', err=True)
 
 
-@workflow_execution_group.command(
-    'run',
-    help='Create, upload and start the REANA workflow.')
+@workflow_execution_group.command('run')
 @click.option(
     '-f',
     '--file',
@@ -635,8 +677,16 @@ def workflow_stop(ctx, workflow, force_stop, access_token):
 @add_access_token_options
 @click.pass_context
 def workflow_run(ctx, file, filenames, name, skip_validation,
-                 access_token, parameters, options):
-    """Create, upload and start wrapper command."""
+                 access_token, parameters, options):  # noqa: D301
+    """Shortcut to create, upload, start a new workflow.
+
+    The `run` command allows to create a new workflow, upload its input files
+    and start it in one command.
+
+    Examples: \n
+    \t $ reana-client run -n myanalysis-test-small -p myparam=mysmallvalue \n
+    \t $ reana-client run -n myanalysis-test-big -p myparam=mybigvalue
+    """
     # set context parameters for subcommand
     ctx.invoked_by_subcommand = True
     ctx.workflow_name = ""
@@ -659,18 +709,7 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
                options=options)
 
 
-@workflow_management_group.command(
-    'delete',
-    help='Delete a workflow run. By default removes all cached'
-         ' information of the given workflow and hides it from'
-         ' the workflow list.\n'
-         'Workspaces of deleted workflows'
-         ' are accessible to retrieve files, to remove the workspace'
-         ' too pass --include-workspace flag.\n'
-         'By passing --include-all-runs all workflows with the same'
-         ' will be deleted.\n'
-         'The --include-records flag will delete'
-         ' all workflow data from the database and remove its workspace.')
+@workflow_management_group.command('delete')
 @click.option(
     '--include-all-runs',
     'all_runs',
@@ -680,7 +719,7 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
     '--include-workspace',
     'workspace',
     count=True,
-    help='Delete workflow workspace from REANA.')
+    help='Delete workspace from REANA.')
 @click.option(
     '--include-records',
     'hard_delete',
@@ -692,8 +731,20 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
 @add_access_token_options
 @click.pass_context
 def workflow_delete(ctx, workflow, all_runs, workspace,
-                    hard_delete, access_token):
-    """Delete a workflow run given the workflow name and run number."""
+                    hard_delete, access_token):  # noqa: D301
+    """Delete a workflow.
+
+    The `delete` command allows to remove workflow runs from the database and
+    the workspace. By default, the command removes the workflow and all its
+    cached information and hides the workflow from the workflow list. Note that
+    workflow workspace will still be accessible until you use
+    `--include-workspace` flag. Note also that you can remove all past runs of
+    a workflow by specifying `--include-all-runs` flag.
+
+    Example: \n
+    \t $ reana-client delete -w myanalysis.42 \n
+    \t $ reana-client delete -w myanalysis.42 --include-records
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -730,9 +781,7 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
                 err=True)
 
 
-@workflow_management_group.command(
-    'diff',
-    help='Show differences between two workflows.')
+@workflow_management_group.command('diff')
 @click.argument(
     'workflow_a',
     default=os.environ.get('REANA_WORKON', None),
@@ -757,8 +806,17 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
 @add_access_token_options
 @click.pass_context
 def workflow_diff(ctx, workflow_a, workflow_b, brief,
-                  access_token, context_lines):
-    """Show diff between two worklows."""
+                  access_token, context_lines):  # noqa: D301
+    """Show diff between two worklows.
+
+    The `diff` command allows to compare two workflows, the workflow_a and
+    workflow_b, which must be provided as arguments. The output will show the
+    difference in workflow run parameters, the generated files, the logs, etc.
+
+    Examples: \n
+    \t $ reana-client diff myanalysis.42 myotheranalysis.43 \n
+    \t $ reana-client diff myanalysis.42 myotheranalysis.43 --brief
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -809,9 +867,7 @@ def interactive_group():
     pass
 
 
-@interactive_group.command(
-    'open',
-    help='Open an interactive session inside the workflow workspace')
+@interactive_group.command('open')
 @add_workflow_option
 @click.argument(
     'interactive-session-type',
@@ -825,8 +881,17 @@ def interactive_group():
 @add_access_token_options
 @click.pass_context
 def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
-                                      image, access_token):
-    """Open an interactive session inside the workflow workspace."""
+                                      image, access_token):  # noqa: D301
+    """Open an interactive session inside the workspace.
+
+    The `open` command allows to open interactive session processes on top of
+    the workflow workspace, such as Jupyter notebooks. This is useful to
+    quickly inspect and analyse the produced files while the workflow is stlil
+    running.
+
+    Examples:\n
+    \t $ reana-client open -w myanalysis.42 jupyter
+    """
     if not access_token:
         click.secho(
             ERROR_MESSAGES['missing_access_token'], fg='red', err=True)
@@ -856,13 +921,20 @@ def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
                     fg="red", err=True)
 
 
-@interactive_group.command(
-    'close',
-    help='Close an interactive workflow session')
+@interactive_group.command('close')
 @add_workflow_option
 @add_access_token_options
-def workflow_close_interactive_session(workflow, access_token):
-    """Close an interactive workflow session."""
+def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
+    """Close an interactive session.
+
+    The `close` command allows to shut down any interactive sessions that you
+    may have running. You would typically use this command after you finished
+    exploring data in the Jupyter notebook and after you have transferred any
+    code created in your interactive session.
+
+    Examples:\n
+    \t $ reana-client close -w myanalysis.42
+    """
     if not access_token:
         click.secho(
             ERROR_MESSAGES['missing_access_token'], fg='red', err=True)

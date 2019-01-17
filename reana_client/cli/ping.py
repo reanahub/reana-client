@@ -25,8 +25,14 @@ def configuration_group():
 
 @configuration_group.command('ping')
 @click.pass_context
-def ping(ctx):
-    """Health check REANA server."""
+def ping(ctx):  # noqa: D301
+    """Check connection to REANA server.
+
+    The `ping` command allows to test connection to REANA server.
+
+    Examples: \n
+    \t reana-client ping
+    """
     try:
         logging.info('Connecting to {0}'.format(
             current_rs_api_client.swagger_spec.api_url))

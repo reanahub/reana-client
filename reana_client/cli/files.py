@@ -38,9 +38,7 @@ def files_group(ctx):
     logging.debug(ctx.info_name)
 
 
-@files_group.command(
-    'ls',
-    help='List workflow workspace files.')
+@files_group.command('ls')
 @add_workflow_option
 @click.option(
     '--format',
@@ -59,8 +57,16 @@ def files_group(ctx):
 @add_access_token_options
 @click.pass_context
 def get_files(ctx, workflow, _filter,
-              output_format, access_token):
-    """List workflow workspace files."""
+              output_format, access_token):  # noqa: D301
+    """List workspace files.
+
+    The `ls` command lists workspace files of a workflow specified by the
+    environment variable REANA_WORKON or provided as a command-line flag
+    `--workflow` or `-w`.
+
+    Examples: \n
+    \t $ reana-client ls --workflow myanalysis.42
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -122,12 +128,7 @@ def get_files(ctx, workflow, _filter,
                 err=True)
 
 
-@files_group.command(
-    'download',
-    help='Download all output files declared in the reana.yaml '
-         'specification or download files listed as '
-         'FILE command-line arguments. Note that downloading directories'
-         ' is not yet supported.')
+@files_group.command('download')
 @click.argument(
     'filenames',
     metavar='FILES',
@@ -140,8 +141,19 @@ def get_files(ctx, workflow, _filter,
     help='Path to the directory where files will be downloaded.')
 @add_access_token_options
 @click.pass_context
-def download_files(ctx, workflow, filenames, output_directory, access_token):
-    """Download workflow workspace file(s)."""
+def download_files(ctx, workflow, filenames,
+                   output_directory, access_token):  # noqa: D301
+    """Download workspace files.
+
+    The `download` command allows to download workspace files. By default, the
+    files specified in the workflow specification as outputs are downloaded.
+    You can also specify the individual files you would like to download, see
+    examples below. Note that downloading directories is not yet supported.
+
+    Examples: \n
+    \t $ reana-client download # download all output files \n
+    \t $ reana-client download mydata.tmp outputs/myplot.png
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -194,12 +206,7 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
                            err=True)
 
 
-@files_group.command(
-    'upload',
-    help='Upload all input sources declared in the reana.yaml '
-         'specification or upload files and directories listed as '
-         'SOURCE command-line arguments. If a symbolic link is provided,'
-         ' it is resolved and a hard copy is uploaded.')
+@files_group.command('upload')
 @click.argument(
     'filenames',
     metavar='SOURCES',
@@ -208,8 +215,19 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
 @add_workflow_option
 @add_access_token_options
 @click.pass_context
-def upload_files(ctx, workflow, filenames, access_token):
-    """Upload files and directories to workflow workspace."""
+def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
+    """Upload files and directories to workspace.
+
+    The `upload` command allows to upload workflow input files and
+    directories. The SOURCES argument can be repeated and specifies which files
+    and directories are to be uploaded, see examples below. The default
+    behaviour is to upload all input files and directories specified in the
+    reana.yaml file.
+
+    Examples: \n
+    \t $ reana-client upload -w myanalysis.42 \n
+    \t $ reana-client upload -w myanalysis.42 code/mycode.py
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -284,9 +302,7 @@ def upload_files(ctx, workflow, filenames, access_token):
                     sys.exit(1)
 
 
-@files_group.command(
-    'rm',
-    help='Delete the specified file or pattern.')
+@files_group.command('rm')
 @click.argument(
     'filenames',
     metavar='SOURCES',
@@ -294,8 +310,16 @@ def upload_files(ctx, workflow, filenames, access_token):
 @add_workflow_option
 @add_access_token_options
 @click.pass_context
-def delete_files(ctx, workflow, filenames, access_token):
-    """Delete files contained in the workflow workspace."""
+def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
+    """Delete files from workspace.
+
+    The `rm` command allow to delete files and directories from workspace.
+    Note that you can use glob to remove similar files.
+
+    Examples:\n
+    \t $ reana-client rm -w myanalysis.42 data/mydata.csv \n
+    \t $ reana-client rm -w myanalysis.42 'code/\*'
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -349,11 +373,12 @@ def delete_files(ctx, workflow, filenames, access_token):
 @add_access_token_options
 @click.pass_context
 def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
-    r"""Move files within workspace.
+    """Move files within workspace.
+
+    The `mv` command allow to move the files within workspace.
 
     Examples:\n
     \t $ reana-client mv data/input.txt input/input.txt
-
     """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -396,9 +421,7 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
                 err=True)
 
 
-@files_group.command(
-    'du',
-    help='Get disk usage of a workflow.')
+@files_group.command('du')
 @add_workflow_option
 @add_access_token_options
 @click.option(
@@ -407,8 +430,15 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
     count=True,
     help='Display total.')
 @click.pass_context
-def workflow_disk_usage(ctx, workflow, access_token, summarize):
-    """Get disk usage of a workflow."""
+def workflow_disk_usage(ctx, workflow, access_token, summarize):  # noqa: D301
+    """Get workspace disk usage.
+
+    The `du` command allows to chech the disk usage of given workspace.
+
+    Examples: \n
+    \t reana-client du -s \n
+    \t $ reana-client du -w myanalysis.42 -s
+    """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))

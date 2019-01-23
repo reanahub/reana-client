@@ -7,20 +7,20 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA REST API client."""
 
-import enum
 import json
 import logging
 import os
 import traceback
 from functools import partial
 
-import pkg_resources
 from bravado.exception import HTTPError
 from werkzeug.local import LocalProxy
 
+from reana_client.config import ERROR_MESSAGES, WORKFLOW_ENGINES
 from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import get_workflow_root
-from reana_commons.api_client import BaseAPIClient, get_current_api_client
+from reana_client.utils import (_validate_reana_yaml, get_workflow_root,
+                                is_uuid_v4)
+from reana_commons.api_client import get_current_api_client
 
 current_rs_api_client = LocalProxy(
     partial(get_current_api_client, component='reana-server'))
@@ -131,8 +131,84 @@ def create_workflow(reana_specification, name, access_token):
         raise e
 
 
+def create_workflow_from_json(workflow_json, name, access_token,
+                              parameters=None, workflow_engine='yadage',
+                              outputs=None):
+    """Create a workflow from json specification.
+
+    :param workflow_json: workflow specification in json format.
+    :param name: name or UUID of the workflow to be started.
+    :param access_token: Access token of the current user.
+    :param parameters: workflow input parameters dictionary.
+    :param workflow_engine: one of the workflow engines (yadage, serial, cwl)
+    :param outputs: dictionary with expected workflow outputs.
+
+    :Example:
+
+      .. code:: python
+
+        create_workflow_from_json(
+            workflow_json=workflow_json,
+            name='workflow_name.1',
+            access_token='access_token',
+            parameters={'files': ['file.txt'], 'parameters': {'key': 'value'}},
+            workflow_engine='serial')
+    """
+    if is_uuid_v4(name):
+        raise ValueError('Workflow name cannot be a valid UUIDv4')
+    if not access_token:
+        raise Exception(ERROR_MESSAGES['missing_access_token'])
+    if os.environ.get('REANA_SERVER_URL') is None:
+        raise Exception('Environment variable REANA_SERVER_URL is not set')
+    workflow_engine = workflow_engine.lower()
+    if workflow_engine not in WORKFLOW_ENGINES:
+        raise Exception('Workflow engine - {} not found. You must use one of '
+                        'these engines - {}'.format(workflow_engine,
+                                                    WORKFLOW_ENGINES))
+    try:
+        reana_yaml = {}
+        reana_yaml['workflow'] = workflow_json
+        reana_yaml['workflow']['type'] = workflow_engine
+        if parameters:
+            reana_yaml['inputs'] = parameters
+        if outputs:
+            reana_yaml['outputs'] = outputs
+        _validate_reana_yaml(reana_yaml)
+        reana_specification = reana_yaml
+        (response,
+            http_response) = current_rs_api_client.api.create_workflow(
+                reana_specification=json.loads(json.dumps(
+                    reana_specification, sort_keys=True)),
+                workflow_name=name,
+                access_token=access_token).result()
+        if http_response.status_code == 201:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 201 but replied with "
+                "{status_code}".format(
+                    status_code=http_response.status_code))
+
+    except HTTPError as e:
+        logging.debug(
+            'Workflow creation failed: '
+            '\nStatus: {}\nReason: {}\n'
+            'Message: {}'.format(e.response.status_code,
+                                 e.response.reason,
+                                 e.response.json()['message']))
+        raise Exception(e.response.json()['message'])
+    except Exception as e:
+        raise e
+
+
 def start_workflow(workflow, access_token, parameters):
-    """Start a workflow."""
+    """Start a workflow.
+
+    :param workflow: name or id of previously created workflow.
+    :param access_token: access token of the current user.
+    :param parameters: dict of workflow parameters to override the original
+        ones (after workflow creation).
+    """
     try:
         (response,
          http_response) = current_rs_api_client.api.start_workflow(
@@ -159,7 +235,13 @@ def start_workflow(workflow, access_token, parameters):
 
 
 def upload_file(workflow_id, file_, file_name, access_token):
-    """Upload file to workflow workspace."""
+    """Upload file to workflow workspace.
+
+    :param workflow_id: UID which identifies the workflow.
+    :param file_: content of a file that will be uploaded.
+    :param file_name: name of a file that will be uploaded.
+    :param access_token: access token of the current user.
+    """
     try:
         (response,
             http_response) = current_rs_api_client.api.upload_file(

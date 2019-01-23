@@ -28,3 +28,6 @@ ERROR_MESSAGES = {
         ' the -at/--access-token flag, or by setting the'
         ' REANA_ACCESS_TOKEN environment variable.'
 }
+
+WORKFLOW_ENGINES = ['serial', 'cwl', 'yadage']
+"""Supported workflow engines."""

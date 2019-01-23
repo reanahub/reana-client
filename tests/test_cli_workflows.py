@@ -10,10 +10,12 @@
 
 import json
 
+import yaml
 from click.testing import CliRunner
 from mock import Mock, patch
 from pytest_reana.test_utils import make_mock_api_client
 
+from reana_client.api.client import create_workflow_from_json
 from reana_client.cli import cli
 
 
@@ -140,6 +142,36 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
                 )
                 assert result.exit_code == 0
                 assert response["workflow_name"] in result.output
+
+
+def test_create_workflow_from_json(create_yaml_workflow_schema):
+    """Test create workflow from json specification."""
+    status_code = 201
+    response = {
+        "message": "The workflow has been successfully created.",
+        "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac",
+        "workflow_name": "mytest.1"
+    }
+    env = {'REANA_SERVER_URL': 'localhost'}
+    reana_token = '000000'
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    workflow_json = yaml.load(create_yaml_workflow_schema)
+    with patch.dict('os.environ', env):
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+                result = create_workflow_from_json(
+                    workflow_json=workflow_json['workflow'],
+                    name=response['workflow_name'],
+                    access_token=reana_token,
+                    parameters=workflow_json['inputs'],
+                    workflow_engine='serial'
+                )
+                assert response['workflow_name'] == result['workflow_name']
+                assert response['message'] == result['message']
 
 
 def test_workflow_start_successful():

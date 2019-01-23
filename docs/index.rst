@@ -13,6 +13,7 @@
    userguide
    developerguide
    cliapi
+   apidocs
    contributing
    changes
    license

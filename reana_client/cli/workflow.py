@@ -470,6 +470,32 @@ def workflow_logs(ctx, workflow, access_token):
     if workflow:
         try:
             response = get_workflow_logs(workflow, access_token)
+            workflow_logs = json.loads(response['logs'])
+            if workflow_logs.get('workflow_logs', None):
+                click.secho('workflow engine logs'.upper(), fg='green')
+                click.echo(workflow_logs['workflow_logs'])
+
+            first = True
+            for job_id, job_logs in workflow_logs['job_logs'].items():
+                if job_logs:
+                    if first:
+                        click.echo('\n')
+                        click.secho('job logs'.upper(), fg='green')
+                        first = False
+                    click.secho('job id: {}'.format(job_id), fg='green')
+                    click.echo(job_logs)
+            if workflow_logs.get('engine_specific', None):
+                click.echo('\n')
+                click.secho('engine internal logs'.upper(), fg='green')
+                click.secho(workflow_logs['engine_specific'])
+
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Workflow status could not be retrieved: \n{}'
+                            .format(str(e)), fg='red'),
+                err=True)
             click.echo(response)
         except Exception as e:
             logging.debug(traceback.format_exc())
@@ -605,7 +631,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):
 @click.pass_context
 def workflow_run(ctx, file, filenames, name, skip_validation,
                  access_token, parameters, options):
-    """Wrapper command for create, upload and start a workflow."""
+    """Create, upload and start wrapper command."""
     # set context parameters for subcommand
     ctx.invoked_by_subcommand = True
     ctx.workflow_name = ""
@@ -787,4 +813,4 @@ workflow.add_command(workflow_stop)
 workflow.add_command(workflow_run)
 workflow.add_command(workflow_delete)
 workflow.add_command(workflow_diff)
-# workflow.add_command(workflow_logs)
+workflow.add_command(workflow_logs)

@@ -14,7 +14,7 @@ import click
 
 
 def add_access_token_options(func):
-    """Adds access token related options to click commands."""
+    """Add access token related options to click commands."""
     @click.option('-at', '--access-token',
                   default=os.getenv('REANA_ACCESS_TOKEN', None),
                   help='Access token of the current user.')

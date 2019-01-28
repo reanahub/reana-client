@@ -459,9 +459,14 @@ def workflow_status(ctx, workflow, _filter, output_format,
     callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose logs should be fetched. '
          'Overrides value of REANA_WORKON environment variable.')
+@click.option(
+    '--json',
+    'json_format',
+    count=True,
+    help='Get output in JSON format.')
 @add_access_token_options
 @click.pass_context
-def workflow_logs(ctx, workflow, access_token):
+def workflow_logs(ctx, workflow, access_token, json_format):
     """Get workflow logs."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -471,6 +476,10 @@ def workflow_logs(ctx, workflow, access_token):
         try:
             response = get_workflow_logs(workflow, access_token)
             workflow_logs = json.loads(response['logs'])
+            if json_format:
+                click.echo(json.dumps(workflow_logs, indent=2))
+                sys.exit(0)
+
             if workflow_logs.get('workflow_logs', None):
                 click.secho('workflow engine logs'.upper(), fg='green')
                 click.echo(workflow_logs['workflow_logs'])

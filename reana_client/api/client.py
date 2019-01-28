@@ -167,7 +167,7 @@ def create_workflow_from_json(workflow_json, name, access_token,
                                                     WORKFLOW_ENGINES))
     try:
         reana_yaml = {}
-        reana_yaml['workflow'] = workflow_json
+        reana_yaml['workflow'] = {'specification': workflow_json}
         reana_yaml['workflow']['type'] = workflow_engine
         if parameters:
             reana_yaml['inputs'] = parameters

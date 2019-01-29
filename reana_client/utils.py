@@ -12,6 +12,7 @@ import logging
 import os
 import subprocess
 import sys
+from enum import Enum
 from uuid import UUID
 
 import click
@@ -20,6 +21,7 @@ import yaml
 from cwltool.main import main
 from jsonschema import ValidationError, validate
 from reana_commons.serial import serial_load
+from reana_commons.utils import get_workflow_status_change_verb
 from six import StringIO
 
 from reana_client.config import reana_yaml_schema_file_path
@@ -256,3 +258,14 @@ def validate_input_parameters(live_parameters, original_parameters):
                 err=True)
             del live_parameters[parameter]
     return live_parameters
+
+
+def get_workflow_status_change_msg(workflow, status):
+    """Choose verb conjugation depending on status.
+
+    :param workflow: Workflow name whose status changed.
+    :param status: String which represents the status the workflow changed to.
+    """
+    return '{workflow} {verb} {status}'.format(
+        workflow=workflow, verb=get_workflow_status_change_verb(status),
+        status=status)

@@ -10,6 +10,7 @@
 
 import json
 
+import pytest
 import yaml
 from click.testing import CliRunner
 from mock import Mock, patch
@@ -17,6 +18,7 @@ from pytest_reana.test_utils import make_mock_api_client
 
 from reana_client.api.client import create_workflow_from_json
 from reana_client.cli import cli
+from reana_client.utils import get_workflow_status_change_msg
 
 
 def test_workflows_server_not_connected():
@@ -174,18 +176,22 @@ def test_create_workflow_from_json(create_yaml_workflow_schema):
                 assert response['message'] == result['message']
 
 
-def test_workflow_start_successful():
+@pytest.mark.parametrize("status", [
+    'created', 'running', 'finished', 'failed', 'deleted', 'stopped', 'queued'
+])
+def test_workflow_start_successful(status):
     """Test workflow start when creation is successfull."""
+    workflow_name = "mytest.1"
     response = {
-        "status": "created",
-        "message": "Workflow successfully launched",
+        "status": status,
+        "message": "Server message",
         "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
-        "workflow_name": "mytest.1",
+        "workflow_name": workflow_name,
         "user": "00000000-0000-0000-0000-000000000000"
     }
     status_code = 200
     reana_token = '000000'
-    message = 'mytest.1 has been started'
+    expected_message = get_workflow_status_change_msg(workflow_name, status)
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -201,7 +207,7 @@ def test_workflow_start_successful():
                 ['start', '-at', reana_token, '-w', response["workflow_name"]]
             )
             assert result.exit_code == 0
-            assert message in result.output
+            assert expected_message in result.output
 
 
 def test_workflows_validate(create_yaml_workflow_schema):

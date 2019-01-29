@@ -17,6 +17,8 @@ from enum import Enum
 import click
 import tablib
 from jsonschema.exceptions import ValidationError
+from reana_commons.errors import MissingAPIClientConfiguration
+from reana_commons.utils import click_table_printer
 
 from reana_client.api.client import (create_workflow, current_rs_api_client,
                                      delete_workflow, diff_workflows,
@@ -27,21 +29,13 @@ from reana_client.api.client import (create_workflow, current_rs_api_client,
 from reana_client.cli.files import upload_files
 from reana_client.cli.utils import add_access_token_options
 from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
-from reana_client.utils import (get_workflow_name_and_run_number, is_uuid_v4,
+from reana_client.utils import (get_workflow_status_change_msg,
+                                get_workflow_name_and_run_number, is_uuid_v4,
                                 load_reana_spec,
                                 validate_cwl_operational_options,
                                 validate_input_parameters,
                                 validate_serial_operational_options,
                                 workflow_uuid_or_name)
-from reana_commons.errors import MissingAPIClientConfiguration
-from reana_commons.utils import click_table_printer
-
-
-class _WorkflowStatus(Enum):
-    created = 0
-    running = 1
-    finished = 2
-    failed = 3
 
 
 @click.group(
@@ -292,9 +286,11 @@ def workflow_start(ctx, workflow, access_token,
             response = start_workflow(workflow,
                                       access_token,
                                       parsed_parameters)
-            click.echo(
-                click.style('{} has been started.'.format(workflow),
-                            fg='green'))
+            current_status = get_workflow_status(workflow,
+                                                 access_token).get('status')
+            click.secho(
+                get_workflow_status_change_msg(workflow, current_status),
+                fg='green')
 
         except Exception as e:
             logging.debug(traceback.format_exc())
@@ -590,7 +586,9 @@ def workflow_stop(ctx, workflow, force_stop, access_token):
             logging.info(
                 'Sending a request to stop workflow {}'.format(workflow))
             response = stop_workflow(workflow, force_stop, access_token)
-            click.secho('{} has been stopped.'.format(workflow), fg='green')
+            click.secho(
+                get_workflow_status_change_msg(workflow, 'stopped'),
+                fg='green')
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
@@ -727,9 +725,9 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
                 message = 'All workflows named \'{}\' have been deleted.'.\
                     format(workflow.split('.')[0])
             else:
-                message = '{} has been deleted.'.format(workflow)
-            click.secho(message,
-                        fg='green')
+                message = get_workflow_status_change_msg(workflow,
+                                                         'deleted')
+            click.secho(message, fg='green')
 
         except Exception as e:
             logging.debug(traceback.format_exc())

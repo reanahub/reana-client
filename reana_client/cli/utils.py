@@ -8,7 +8,9 @@
 """Common click options."""
 
 import functools
+import json
 import os
+import shlex
 
 import click
 
@@ -22,3 +24,42 @@ def add_access_token_options(func):
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
     return wrapper
+
+
+def parse_parameters(_filter):
+    """Return parsed filter parameters."""
+    try:
+        parsed_filters = []
+        filters = ' '.join(_filter).replace(',', ' ')
+        for item in shlex.split(filters):
+            if '=' in item:
+                filter_item = {
+                    'column_name': item.split('=')[0],
+                    'column_value': item.split('=')[1]}
+            else:
+                filter_item = {
+                    'column_name': item,
+                    'column_value': None}
+            parsed_filters.append(filter_item)
+        return parsed_filters
+    except ValueError as e:
+        click.echo(click.style('Wrong filter format \n{0}'
+                               .format(e.message),
+                               fg='red'), err=True)
+
+
+def filter_data(parsed_filters, headers, tablib_data):
+    """Return filtered data."""
+    parsed_filters = \
+        [i for i in parsed_filters if i['column_name'] in headers]
+    column_headers = [i['column_name'] for i in parsed_filters] or None
+    tablib_data = tablib_data.subset(rows=None,
+                                     cols=column_headers)
+    tablib_data = json.loads(tablib_data.export('json'))
+    filtered_data = list(tablib_data)
+    for item in filtered_data:
+        for filter_ in parsed_filters:
+            if (filter_['column_value'] is not None and
+                    filter_['column_value'] != item[filter_['column_name']]):
+                tablib_data.remove(item)
+    return tablib_data, column_headers or []

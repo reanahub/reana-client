@@ -12,7 +12,6 @@ import logging
 import os
 import sys
 import traceback
-from enum import Enum
 
 import click
 import tablib
@@ -27,7 +26,8 @@ from reana_client.api.client import (create_workflow, current_rs_api_client,
                                      get_workflow_status, get_workflows,
                                      start_workflow, stop_workflow)
 from reana_client.cli.files import upload_files
-from reana_client.cli.utils import add_access_token_options
+from reana_client.cli.utils import (add_access_token_options, filter_data,
+                                    parse_parameters)
 from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
 from reana_client.utils import (get_workflow_status_change_msg,
                                 get_workflow_name_and_run_number, is_uuid_v4,
@@ -50,10 +50,13 @@ def workflow(ctx):
     'workflows',
     help='List all available workflows.')
 @click.option(
-    '--filter',
+    '--format',
     '_filter',
     multiple=True,
-    help='Filter output according to column titles (case-sensitive).')
+    help='Format output according to column titles or column values '
+         '(case-sensitive). Use `<colum_name>=<columnn_value>` format. For '
+         'E.g. dislpay workflow with failed status and named test_workflow '
+         '`--format status=failed,name=test_workflow`.')
 @click.option(
     '--json',
     'output_format',
@@ -93,7 +96,8 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
             click.style(ERROR_MESSAGES['missing_access_token'],
                         fg='red'), err=True)
         sys.exit(1)
-
+    if _filter:
+        parsed_filters = parse_parameters(_filter)
     try:
         response = get_workflows(access_token)
         verbose_headers = ['id', 'user']
@@ -123,19 +127,24 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
                     data[idx][headers.index('run_number')] += ' *'
                 else:
                     data[idx].append(' ')
-
-        if output_format:
-            tablib_data = tablib.Dataset()
-            tablib_data.headers = headers
-            for row in data:
-                tablib_data.append(row)
-
-            if _filter:
-                tablib_data = tablib_data.subset(rows=None, cols=list(_filter))
-
-            click.echo(tablib_data.export(output_format))
+        tablib_data = tablib.Dataset()
+        tablib_data.headers = headers
+        for row in data:
+            tablib_data.append(row=row, tags=row)
+        if _filter:
+            tablib_data, filtered_headers = \
+                filter_data(parsed_filters, headers, tablib_data)
+            if output_format:
+                click.echo(json.dumps(tablib_data))
+            else:
+                tablib_data = [list(item.values()) for item in tablib_data]
+                click_table_printer(filtered_headers, filtered_headers,
+                                    tablib_data)
         else:
-            click_table_printer(headers, _filter, data)
+            if output_format:
+                click.echo(tablib_data.export(output_format))
+            else:
+                click_table_printer(headers, _filter, data)
 
     except Exception as e:
         logging.debug(traceback.format_exc())

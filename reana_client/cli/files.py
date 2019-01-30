@@ -7,6 +7,7 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client output related commands."""
 
+import json
 import logging
 import os
 import sys
@@ -15,12 +16,12 @@ import traceback
 import click
 import tablib
 
-from reana_client.api.client import delete_file, download_file, \
-    current_rs_api_client
-from reana_client.api.client import list_files
-from reana_client.api.client import upload_to_server
-from reana_client.cli.utils import add_access_token_options
-from reana_client.config import ERROR_MESSAGES, default_user
+from reana_client.api.client import (current_rs_api_client, delete_file,
+                                     download_file, list_files,
+                                     upload_to_server)
+from reana_client.cli.utils import (add_access_token_options, parse_parameters,
+                                    filter_data)
+from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import get_workflow_root, load_reana_spec
 from reana_commons.errors import MissingAPIClientConfiguration
@@ -45,10 +46,13 @@ def files(ctx):
     help='Name or UUID of the workflow whose files should be listed. '
          'Overrides value of REANA_WORKON environment variable.')
 @click.option(
-    '--filter',
+    '--format',
     '_filter',
     multiple=True,
-    help='Filter output according to column titles (case-sensitive).')
+    help='Format output according to column titles or column values '
+         '(case-sensitive). Use `<colum_name>=<columnn_value>` format. For '
+         'E.g. dislpay FILES named data.txt '
+         '`--format name=data.txt`.')
 @click.option(
     '--json',
     'output_format',
@@ -78,6 +82,8 @@ def get_files(ctx, workflow, _filter,
             click.style(ERROR_MESSAGES['missing_access_token'],
                         fg='red'), err=True)
         sys.exit(1)
+    if _filter:
+        parsed_filters = parse_parameters(_filter)
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
@@ -88,18 +94,24 @@ def get_files(ctx, workflow, _filter,
                 data.append(list(map(str, [file_['name'],
                                            file_['size'],
                                            file_['last-modified']])))
-            if output_format:
-                tablib_data = tablib.Dataset()
-                tablib_data.headers = headers
-                for row in data:
-                        tablib_data.append(row)
-
-                if _filter:
-                    tablib_data = tablib_data.subset(
-                        rows=None, cols=list(_filter))
-                click.echo(tablib_data.export(output_format))
+            tablib_data = tablib.Dataset()
+            tablib_data.headers = headers
+            for row in data:
+                    tablib_data.append(row)
+            if _filter:
+                tablib_data, filtered_headers = \
+                    filter_data(parsed_filters, headers, tablib_data)
+                if output_format:
+                    click.echo(json.dumps(tablib_data))
+                else:
+                    tablib_data = [list(item.values()) for item in tablib_data]
+                    click_table_printer(filtered_headers, filtered_headers,
+                                        tablib_data)
             else:
-                click_table_printer(headers, _filter, data)
+                if output_format:
+                    click.echo(tablib_data.export(output_format))
+                else:
+                    click_table_printer(headers, _filter, data)
 
         except Exception as e:
             logging.debug(traceback.format_exc())

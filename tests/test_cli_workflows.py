@@ -78,6 +78,7 @@ def test_workflows_valid_json():
             "user": "00000000-0000-0000-0000-000000000000",
             "name": "mytest.1",
             "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+            "size": "0K"
         }
     ]
     status_code = 200

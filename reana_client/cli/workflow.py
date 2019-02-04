@@ -23,6 +23,7 @@ from reana_client.api.client import (create_workflow, current_rs_api_client,
                                      delete_workflow, diff_workflows,
                                      get_workflow_logs,
                                      get_workflow_parameters,
+                                     get_workflow_disk_usage,
                                      get_workflow_status, get_workflows,
                                      open_interactive_session, start_workflow,
                                      stop_workflow)
@@ -100,8 +101,8 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
     if _filter:
         parsed_filters = parse_parameters(_filter)
     try:
-        response = get_workflows(access_token)
-        verbose_headers = ['id', 'user']
+        response = get_workflows(access_token, bool(verbose))
+        verbose_headers = ['id', 'user', 'size']
         headers = ['name', 'run_number', 'created', 'status']
         if verbose:
             headers += verbose_headers
@@ -119,19 +120,17 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
                 data[-1] += [workflow[k] for k in verbose_headers]
         data = sorted(data, key=lambda x: int(x[1]))
         workflow_ids = ['{0}.{1}'.format(w[0], w[1]) for w in data]
-
         if os.getenv('REANA_WORKON', '') in workflow_ids:
             active_workflow_idx = \
                 workflow_ids.index(os.getenv('REANA_WORKON', ''))
             for idx, row in enumerate(data):
                 if idx == active_workflow_idx:
                     data[idx][headers.index('run_number')] += ' *'
-                else:
-                    data[idx].append(' ')
         tablib_data = tablib.Dataset()
         tablib_data.headers = headers
         for row in data:
             tablib_data.append(row=row, tags=row)
+
         if _filter:
             tablib_data, filtered_headers = \
                 filter_data(parsed_filters, headers, tablib_data)
@@ -451,6 +450,56 @@ def workflow_status(ctx, workflow, _filter, output_format,
             logging.debug(str(e))
             click.echo(
                 click.style('Workflow status could not be retrieved: \n{}'
+                            .format(str(e)), fg='red'),
+                err=True)
+
+
+@click.command(
+    'du',
+    help='Get disk usage of a workflow.')
+@click.option(
+    '-w',
+    '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
+    help='Name or UUID of the workflow to display the disk usage. '
+         'Overrides value of REANA_WORKON environment variable.')
+@add_access_token_options
+@click.option(
+    '-s',
+    '--summarize',
+    count=True,
+    help='Display total.')
+@click.pass_context
+def workflow_disk_usage(ctx, workflow, access_token, summarize):
+    """Get disk usage of a workflow."""
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not access_token:
+        click.echo(
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
+        sys.exit(1)
+
+    if workflow:
+        try:
+            parameters = {'summarize': summarize}
+            response = get_workflow_disk_usage(workflow,
+                                               parameters,
+                                               access_token)
+            headers = ['size', 'name']
+            data = []
+            for disk_usage_info in response['disk_usage_info']:
+                data.append([disk_usage_info['size'],
+                             '.{}'.format(disk_usage_info['name'])])
+            click_table_printer(headers, [], data)
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Disk usage could not be retrieved: \n{}'
                             .format(str(e)), fg='red'),
                 err=True)
 
@@ -878,3 +927,4 @@ workflow.add_command(workflow_delete)
 workflow.add_command(workflow_diff)
 workflow.add_command(workflow_logs)
 workflow.add_command(workflow_open_interactive_session)
+workflow.add_command(workflow_disk_usage)

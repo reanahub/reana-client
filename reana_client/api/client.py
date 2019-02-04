@@ -50,11 +50,12 @@ def ping():
         raise e
 
 
-def get_workflows(access_token):
+def get_workflows(access_token, verbose=False):
     """List all existing workflows."""
     try:
         response, http_response = current_rs_api_client.api.\
-            get_workflows(access_token=access_token).result()
+            get_workflows(access_token=access_token,
+                          verbose=verbose).result()
         if http_response.status_code == 200:
             return response
         else:
@@ -697,6 +698,34 @@ def mv_files(source, target, workflow, access_token):
     except HTTPError as e:
         logging.debug(
             'Files move command failed: '
+            '\nStatus: {}\nReason: {}\n'
+            'Message: {}'.format(e.response.status_code,
+                                 e.response.reason,
+                                 e.response.json()['message']))
+        raise Exception(e.response.json()['message'])
+    except Exception as e:
+        raise e
+
+
+def get_workflow_disk_usage(workflow, parameters, access_token):
+    """Display disk usage workflow."""
+    try:
+        (response, http_response) = current_rs_api_client.api\
+            .get_workflow_disk_usage(
+            workflow_id_or_name=workflow,
+            parameters=parameters,
+            access_token=access_token).result()
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(
+                    status_code=http_response.status_code))
+
+    except HTTPError as e:
+        logging.debug(
+            'Workflow disk usage could not be retrieved: '
             '\nStatus: {}\nReason: {}\n'
             'Message: {}'.format(e.response.status_code,
                                  e.response.reason,

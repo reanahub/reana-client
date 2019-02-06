@@ -24,12 +24,9 @@ LOG_FORMAT = '[%(levelname)s] %(message)s'
 class Config(object):
     """Configuration object to share across commands."""
 
-    def __init__(self, client=None):
-        """Initialize config variables.
-
-        :param client: :reana_commons:`reana_commons.api_client.BaseAPIClient`.
-        """
-        self.client = client
+    def __init__(self):
+        """Initialize config variables."""
+        self.reana_server_url = os.getenv('REANA_SERVER_URL', None)
 
 
 @click.group()

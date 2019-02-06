@@ -361,3 +361,27 @@ def test_workflow_input_parameters():
                  '-p {0}=True'.format(parameter)]
             )
             assert expected_message in result.output
+
+
+def test_open_interactive_session():
+    """Test opening an interactive session."""
+    status_code = 200
+    workflow_id = 'd9304bdf-0d19-45d9-ae87-d5fd18059193'
+    response = {'path': '/{}'.format(workflow_id)}
+    reana_server_url = 'http://localhost'
+    env = {'REANA_SERVER_URL': reana_server_url}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = '000000'
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            expected_message = '{reana_server_url}/{workflow_id}'.format(
+                reana_server_url=reana_server_url, workflow_id=workflow_id)
+            result = runner.invoke(cli, ['open', '-at', reana_token,
+                                         workflow_id])
+            assert expected_message in result.output

@@ -24,13 +24,14 @@ from reana_client.api.client import (create_workflow, current_rs_api_client,
                                      get_workflow_logs,
                                      get_workflow_parameters,
                                      get_workflow_status, get_workflows,
-                                     start_workflow, stop_workflow)
+                                     open_interactive_session, start_workflow,
+                                     stop_workflow)
 from reana_client.cli.files import upload_files
 from reana_client.cli.utils import (add_access_token_options, filter_data,
                                     parse_parameters)
 from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
-from reana_client.utils import (get_workflow_status_change_msg,
-                                get_workflow_name_and_run_number, is_uuid_v4,
+from reana_client.utils import (get_workflow_name_and_run_number,
+                                get_workflow_status_change_msg, is_uuid_v4,
                                 load_reana_spec,
                                 validate_cwl_operational_options,
                                 validate_input_parameters,
@@ -820,6 +821,52 @@ def workflow_diff(ctx, workflow_a, workflow_b, brief,
             err=True)
 
 
+@click.command(
+    'open',
+    help='Open an interactive session inside the workflow workspace')
+@click.argument(
+    'workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name)
+@click.option(
+    '-i',
+    '--image',
+    help="Image to use in the interactive session, by default it is "
+         "``jupyter/scipy-notebook``.")
+@click.option(
+    '-p',
+    '--port',
+    type=int,
+    help="Specify a port for the interactive session, by default ``8888`` "
+         "for Jupyter notebooks.")
+@add_access_token_options
+@click.pass_context
+def workflow_open_interactive_session(ctx, workflow, access_token, image,
+                                      port):
+    """Open an interactive session inside the workflow workspace."""
+    if not access_token:
+        click.secho(
+            ERROR_MESSAGES['missing_access_token'], fg='red', err=True)
+        sys.exit(1)
+    if workflow:
+        try:
+            logging.info(
+                "Opening an interactive session on {}".format(workflow))
+            path = open_interactive_session(workflow, access_token, image,
+                                            port)
+            click.secho("{reana_server_url}{path}".format(
+                reana_server_url=ctx.obj.reana_server_url,
+                path=path), fg="green")
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.secho("Interactive session could not be opened: \n{}"
+                        .format(str(e)), fg='red', err=True)
+    else:
+        click.secho("Workflow {} does not exist".format(workflow),
+                    fg="red", err=True)
+
+
 workflow.add_command(workflow_workflows)
 workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)
@@ -830,3 +877,4 @@ workflow.add_command(workflow_run)
 workflow.add_command(workflow_delete)
 workflow.add_command(workflow_diff)
 workflow.add_command(workflow_logs)
+workflow.add_command(workflow_open_interactive_session)

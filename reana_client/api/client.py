@@ -626,3 +626,46 @@ def diff_workflows(workflow_id_a, workflow_id_b,
         raise Exception(e.response.json()['message'])
     except Exception as e:
         raise e
+
+
+def open_interactive_session(workflow, access_token, image=None, port=None):
+    """Open an interactive session inside the workflow workspace.
+
+    :param workflow: Workflow which workspace will be available inside the
+        interactive session.
+    :param access_token: Workflow owner REANA access token.
+    :param image: Image to use in the interactive session, by default it is
+        ``jupyter/scipy-notebook``.
+    :param port: Port exposed by the service run inside the container spawned
+        with ``image``, by default ``8888`` for Jupyter notebooks.
+
+    :return: Gives the relative path to the interactive service.
+    """
+    try:
+        interactive_environment = {}
+        if image:
+            interactive_environment['image'] = image
+        if port:
+            interactive_environment['port'] = port
+        (response, http_response) = current_rs_api_client.api\
+            .open_interactive_session(
+            workflow_id_or_name=workflow,
+            access_token=access_token,
+            interactive_environment=interactive_environment).result()
+        if http_response.status_code == 200:
+            return response['path']
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(
+                    status_code=http_response.status_code))
+    except HTTPError as e:
+        logging.debug(
+            'Interactive session could not be opened: '
+            '\nStatus: {}\nReason: {}\n'
+            'Message: {}'.format(e.response.status_code,
+                                 e.response.reason,
+                                 e.response.json()['message']))
+        raise Exception(e.response.json()['message'])
+    except Exception as e:
+        raise e

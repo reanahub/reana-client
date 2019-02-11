@@ -903,9 +903,11 @@ def workflow_open_interactive_session(ctx, workflow, access_token, image,
                 "Opening an interactive session on {}".format(workflow))
             path = open_interactive_session(workflow, access_token, image,
                                             port)
-            click.secho("{reana_server_url}{path}".format(
+            click.secho("{reana_server_url}{path}?token={access_token}".format(
                 reana_server_url=ctx.obj.reana_server_url,
-                path=path), fg="green")
+                path=path, access_token=access_token), fg="green")
+            click.echo("It could take several minutes to start the "
+                       "interactive session.")
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))

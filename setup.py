@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018 CERN.
+# Copyright (C) 2017, 2018, 2019 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -54,7 +54,7 @@ install_requires = [
     'click>=7,<8',
     'cwltool==1.0.20181118133959',
     'pyOpenSSL==17.5.0',  # FIXME remove once yadage-schemas solves deps.
-    'reana-commons>=0.5.0.dev20190207,<0.6.0',
+    'reana-commons>=0.5.0.dev20190213,<0.6.0',
     'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
     'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
     'tablib>=0.12.1,<0.13',

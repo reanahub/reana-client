@@ -133,6 +133,11 @@
           "type": "string",
           "title": "Workflow engine.",
           "description": "Name which represents a supported workflow engine to be used to reproduce the analysis."
+        },
+        "resources": {
+          "id": "/properties/workflow/properties/resources",
+          "type": "array",
+          "title": "Workflow resources in yaml format."
         }
       },
       "required": ["type"]

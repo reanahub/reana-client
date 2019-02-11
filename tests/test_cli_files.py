@@ -23,7 +23,7 @@ def test_list_files_server_not_reachable():
     """Test list workflow workspace files when not connected to any cluster."""
     message = 'REANA client is not connected to any REANA cluster.'
     runner = CliRunner()
-    result = runner.invoke(cli, ['list'])
+    result = runner.invoke(cli, ['ls'])
     assert result.exit_code == 1
     assert message in result.output
 
@@ -33,7 +33,7 @@ def test_list_files_server_no_token():
     message = 'Please provide your access token'
     env = {'REANA_SERVER_URL': 'localhost'}
     runner = CliRunner(env=env)
-    result = runner.invoke(cli, ['list'])
+    result = runner.invoke(cli, ['ls'])
     assert result.exit_code == 1
     assert message in result.output
 
@@ -60,7 +60,7 @@ def test_list_files_ok():
                 make_mock_api_client('reana-server')(mock_response,
                                                      mock_http_response)):
             result = runner.invoke(
-                cli, ['list', '-at', reana_token, '--workflow', 'mytest.1',
+                cli, ['ls', '-at', reana_token, '--workflow', 'mytest.1',
                       '--json'])
             json_response = json.loads(result.output)
             assert result.exit_code == 0
@@ -155,7 +155,7 @@ def test_delete_file():
             with runner.isolated_filesystem():
                 result = runner.invoke(
                     cli,
-                    ['remove', '-at', reana_token,
+                    ['rm', '-at', reana_token,
                      '--workflow', 'mytest.1', filename1]
                 )
                 assert result.exit_code == 0
@@ -184,8 +184,38 @@ def test_delete_non_existing_file():
             with runner.isolated_filesystem():
                 result = runner.invoke(
                     cli,
-                    ['remove', '-at', reana_token, '--workflow', 'mytest.1',
+                    ['rm', '-at', reana_token, '--workflow', 'mytest.1',
                      filename]
                 )
                 assert result.exit_code == 0
                 assert message in result.output
+
+
+def test_move_file_running_workflow():
+    """Test move files when workflow is running."""
+    status_code = 200
+    reana_token = '000000'
+    src_file = 'file11'
+    target = 'file2'
+    response = {"status": "running",
+                "logs": "",
+                "name": "mytest.1"}
+    message = 'File(s) could not be moved for running workflow'
+    mock_http_response = Mock()
+    mock_http_response.status_code = status_code
+    mock_http_response.raw_bytes = str(response).encode()
+    mock_response = response
+    env = {'REANA_SERVER_URL': 'localhost'}
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            result = runner.invoke(
+                cli,
+                ['mv', '-at', reana_token, '--workflow', 'mytest.1',
+                 src_file, target]
+            )
+            assert result.exit_code == 1
+            assert message in result.output

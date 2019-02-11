@@ -15,17 +15,17 @@ import traceback
 
 import click
 import tablib
+from reana_commons.errors import MissingAPIClientConfiguration
+from reana_commons.utils import click_table_printer
 
 from reana_client.api.client import (current_rs_api_client, delete_file,
-                                     download_file, list_files,
-                                     upload_to_server)
-from reana_client.cli.utils import (add_access_token_options, parse_parameters,
-                                    filter_data)
+                                     download_file, get_workflow_status,
+                                     list_files, mv_files, upload_to_server)
+from reana_client.cli.utils import (add_access_token_options, filter_data,
+                                    parse_parameters)
 from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import get_workflow_root, load_reana_spec
-from reana_commons.errors import MissingAPIClientConfiguration
-from reana_commons.utils import click_table_printer
 
 
 @click.group(
@@ -37,7 +37,7 @@ def files(ctx):
 
 
 @click.command(
-    'list',
+    'ls',
     help='List workflow workspace files.')
 @click.option(
     '-w',
@@ -319,7 +319,7 @@ def upload_files(ctx, workflow, filenames, access_token):
 
 
 @click.command(
-    'remove',
+    'rm',
     help='Delete the specified file or pattern.')
 @click.argument(
     'filenames',
@@ -388,7 +388,67 @@ def delete_files(ctx, workflow, filenames, access_token):
             err=True)
 
 
+@click.command('mv')
+@click.argument('source')
+@click.argument('target')
+@click.option(
+    '-w',
+    '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    help='Name or UUID of the workflow you are moving files for. '
+         'Overrides value of REANA_WORKON environment variable.')
+@add_access_token_options
+@click.pass_context
+def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
+    r"""Move files within workspace.
+
+    Examples:\n
+    \t $ reana-client mv data/input.txt input/input.txt
+
+    """
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not access_token:
+        click.echo(
+            click.style(ERROR_MESSAGES['missing_access_token'], fg='red'),
+            err=True)
+        sys.exit(1)
+    if workflow:
+        try:
+            current_status = get_workflow_status(workflow,
+                                                 access_token).get('status')
+            if current_status == 'running':
+                click.echo(
+                    click.style('File(s) could not be moved for running '
+                                'workflow', fg='red'),
+                    err=True)
+                sys.exit(1)
+            files = list_files(workflow, access_token)
+            current_files = [file['name'] for file in files]
+            if not any(source in item for item in current_files):
+                click.echo(
+                    click.style('Source file(s) {} does not exist in '
+                                'workspace {}'.format(source,
+                                                      current_files),
+                                fg='red'),
+                    err=True)
+                sys.exit(1)
+            response = mv_files(source, target, workflow, access_token)
+            click.echo(click.style(
+                '{} was successfully moved to {}.'.
+                format(source, target), fg='green'))
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Something went wrong. {}'.format(e), fg='red'),
+                err=True)
+
+
 files.add_command(get_files)
 files.add_command(download_files)
 files.add_command(upload_files)
 files.add_command(delete_files)
+files.add_command(move_files)

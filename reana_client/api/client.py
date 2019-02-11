@@ -669,3 +669,38 @@ def open_interactive_session(workflow, access_token, image=None, port=None):
         raise Exception(e.response.json()['message'])
     except Exception as e:
         raise e
+
+
+def mv_files(source, target, workflow, access_token):
+    """Move target file(s) within workspace.
+
+    :param source: source filename or path.
+    :param target: target filename or path.
+    :param workflow_id: UUID which identifies the workflowself.
+    :param access_token: token of user.
+    """
+    try:
+        (response, http_response) = current_rs_api_client.api.move_files(
+            source=source,
+            target=target,
+            workflow_id_or_name=workflow,
+            access_token=access_token).result()
+
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(
+                    status_code=http_response.status_code))
+
+    except HTTPError as e:
+        logging.debug(
+            'Files move command failed: '
+            '\nStatus: {}\nReason: {}\n'
+            'Message: {}'.format(e.response.status_code,
+                                 e.response.reason,
+                                 e.response.json()['message']))
+        raise Exception(e.response.json()['message'])
+    except Exception as e:
+        raise e

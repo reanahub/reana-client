@@ -113,7 +113,7 @@ and check whether it indeed appears seeded in our workspace:
 
 .. code-block:: console
 
-   $ reana-client list
+   $ reana-client ls
    NAME                 SIZE   LAST-MODIFIED
    code/helloworld.py   2905   2018-08-10T07:29:54
 
@@ -128,7 +128,7 @@ and check whether it was well seeded into our input workspace:
 
 .. code-block:: console
 
-   $ reana-client list
+   $ reana-client ls
    NAME                 SIZE   LAST-MODIFIED
    data/names.txt         18   2018-08-10T07:31:15
    code/helloworld.py   2905   2018-08-10T07:29:54
@@ -161,7 +161,7 @@ We can now check the list of output files:
 
 .. code-block:: console
 
-   $ reana-client list
+   $ reana-client ls
    NAME                    SIZE   LAST-MODIFIED
    code/helloworld.py      2905   2018-08-06T13:58:21
    data/names.txt            18   2018-08-06T13:59:59

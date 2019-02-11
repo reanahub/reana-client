@@ -105,7 +105,7 @@ the ``remove`` command:
 
 .. code-block:: console
 
-   $ reana-client remove mydata.csv
+   $ reana-client rm mydata.csv
    File mydata.csv was successfully deleted.
    25356 bytes freed up.
 
@@ -114,10 +114,22 @@ globbing:
 
 .. code-block:: console
 
-   $ reana-client remove '**/*.csv'
+   $ reana-client rm '**/*.csv'
    File mydata.csv was successfully deleted.
    File mytmp/myfiltereddata.csv was successfully deleted.
    79736 bytes freed up.
+
+
+ Moving analysis assets
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+
+ The movement of file(s) or folders contained in the analysis workspace is
+ possible through the ``mv`` command:
+
+ .. code-block:: console
+
+    $ reana-client mv data/mydata.csv mydata.csv
+    File mydata.csv was successfully deleted.
 
 
 Overriding default input parameters

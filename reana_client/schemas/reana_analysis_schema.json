@@ -137,7 +137,18 @@
         "resources": {
           "id": "/properties/workflow/properties/resources",
           "type": "array",
-          "title": "Workflow resources in yaml format."
+          "title": "Workflow resources in yaml format.",
+          "items": {
+            "id": "/properties/workflow/properties/resources/items",
+            "type": "object",
+            "title": "Workflow resource.",
+            "description": "Declared external resources for workflow.",
+            "optional": true,
+            "items": {
+              "id": "/properties/workflow/properties/resources/item",
+              "type": "string"
+            }
+          }
         }
       },
       "required": ["type"]

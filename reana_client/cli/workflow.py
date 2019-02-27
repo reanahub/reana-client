@@ -16,6 +16,7 @@ import traceback
 import click
 import tablib
 from jsonschema.exceptions import ValidationError
+from reana_commons.config import INTERACTIVE_SESSION_TYPES
 from reana_commons.errors import MissingAPIClientConfiguration
 from reana_commons.utils import click_table_printer
 
@@ -866,25 +867,26 @@ def workflow_diff(ctx, workflow_a, workflow_b, brief,
 @click.command(
     'open',
     help='Open an interactive session inside the workflow workspace')
-@click.argument(
-    'workflow',
+@click.option(
+    '-w',
+    '--workflow',
     default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name)
+    callback=workflow_uuid_or_name,
+    help='Name and run number to be deleted. '
+         'Overrides value of REANA_WORKON environment variable.')
+@click.argument(
+    'interactive-session-type',
+    metavar='interactive-session-type',
+    type=click.Choice(INTERACTIVE_SESSION_TYPES))
 @click.option(
     '-i',
     '--image',
-    help="Image to use in the interactive session, by default it is "
-         "``jupyter/scipy-notebook``.")
-@click.option(
-    '-p',
-    '--port',
-    type=int,
-    help="Specify a port for the interactive session, by default ``8888`` "
-         "for Jupyter notebooks.")
+    help='Docker image which will be used to spawn the interactive session. '
+         'Overrides the default image for the selected type.')
 @add_access_token_options
 @click.pass_context
-def workflow_open_interactive_session(ctx, workflow, access_token, image,
-                                      port):
+def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
+                                      image, access_token):
     """Open an interactive session inside the workflow workspace."""
     if not access_token:
         click.secho(
@@ -894,8 +896,12 @@ def workflow_open_interactive_session(ctx, workflow, access_token, image,
         try:
             logging.info(
                 "Opening an interactive session on {}".format(workflow))
-            path = open_interactive_session(workflow, access_token, image,
-                                            port)
+            interactive_session_configuration = {
+                "image": image or None,
+            }
+            path = open_interactive_session(workflow, access_token,
+                                            interactive_session_type,
+                                            interactive_session_configuration)
             click.secho("{reana_server_url}{path}?token={access_token}".format(
                 reana_server_url=ctx.obj.reana_server_url,
                 path=path, access_token=access_token), fg="green")

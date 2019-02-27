@@ -15,6 +15,7 @@ import yaml
 from click.testing import CliRunner
 from mock import Mock, patch
 from pytest_reana.test_utils import make_mock_api_client
+from reana_commons.config import INTERACTIVE_SESSION_TYPES
 
 from reana_client.api.client import create_workflow_from_json
 from reana_client.cli import cli
@@ -364,7 +365,11 @@ def test_workflow_input_parameters():
             assert expected_message in result.output
 
 
-def test_open_interactive_session():
+@pytest.mark.parametrize(
+    'interactive_session_type',
+    INTERACTIVE_SESSION_TYPES +
+    [pytest.param('wrong-interactive-type', marks=pytest.mark.xfail)])
+def test_open_interactive_session(interactive_session_type):
     """Test opening an interactive session."""
     status_code = 200
     workflow_id = 'd9304bdf-0d19-45d9-ae87-d5fd18059193'
@@ -384,5 +389,6 @@ def test_open_interactive_session():
             expected_message = '{reana_server_url}/{workflow_id}'.format(
                 reana_server_url=reana_server_url, workflow_id=workflow_id)
             result = runner.invoke(cli, ['open', '-at', reana_token,
-                                         workflow_id])
+                                         '-w', workflow_id,
+                                         interactive_session_type])
             assert expected_message in result.output

@@ -629,30 +629,28 @@ def diff_workflows(workflow_id_a, workflow_id_b,
         raise e
 
 
-def open_interactive_session(workflow, access_token, image=None, port=None):
+def open_interactive_session(workflow, access_token,
+                             interactive_session_type,
+                             interactive_session_configuration):
     """Open an interactive session inside the workflow workspace.
 
     :param workflow: Workflow which workspace will be available inside the
         interactive session.
     :param access_token: Workflow owner REANA access token.
-    :param image: Image to use in the interactive session, by default it is
-        ``jupyter/scipy-notebook``.
-    :param port: Port exposed by the service run inside the container spawned
-        with ``image``, by default ``8888`` for Jupyter notebooks.
+    :param interactive_session_type: Type of interactive session to spawn.
+    :param interactive_session_configuration: Specific configuration for
+        the interactive session.
 
     :return: Gives the relative path to the interactive service.
     """
     try:
-        interactive_environment = {}
-        if image:
-            interactive_environment['image'] = image
-        if port:
-            interactive_environment['port'] = port
         (response, http_response) = current_rs_api_client.api\
             .open_interactive_session(
             workflow_id_or_name=workflow,
             access_token=access_token,
-            interactive_environment=interactive_environment).result()
+            interactive_session_type=interactive_session_type,
+            interactive_session_configuration=interactive_session_configuration
+        ).result()
         if http_response.status_code == 200:
             return response['path']
         else:

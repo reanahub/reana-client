@@ -136,8 +136,19 @@
         },
         "resources": {
           "id": "/properties/workflow/properties/resources",
-          "type": "array",
-          "title": "Workflow resources in yaml format."
+          "type": "object",
+          "title": "Workflow resources in yaml format.",
+          "properties": {
+            "cvmfs": {
+              "id": "/properties/workflow/properties/resources/properties/cvmfs",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "title": "CVMFS repos",
+                "optional": false
+              }
+            }
+          }
         }
       },
       "required": ["type"]

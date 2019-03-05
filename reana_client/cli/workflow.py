@@ -310,13 +310,6 @@ def workflow_start(ctx, workflow, access_token,
                 err=True)
             if 'invoked_by_subcommand' in ctx.parent.__dict__:
                 sys.exit(1)
-    else:
-        click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with REANA_WORKON '
-                        'environment variable',
-                        fg='red'),
-            err=True)
 
 
 @click.command(

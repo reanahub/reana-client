@@ -25,7 +25,8 @@ from reana_client.cli.utils import (add_access_token_options, filter_data,
                                     parse_parameters)
 from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import get_workflow_root, load_reana_spec
+from reana_client.utils import (get_workflow_root, load_reana_spec,
+                                workflow_uuid_or_name)
 
 
 @click.group(
@@ -43,6 +44,7 @@ def files(ctx):
     '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow whose files should be listed. '
          'Overrides value of REANA_WORKON environment variable.')
 @click.option(
@@ -123,13 +125,6 @@ def get_files(ctx, workflow, _filter,
                                                              str(e)),
                             fg='red'),
                 err=True)
-    else:
-        click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with REANA_WORKON '
-                        'environment variable',
-                        fg='red'),
-            err=True)
 
 
 @click.command(
@@ -146,6 +141,7 @@ def get_files(ctx, workflow, _filter,
     '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
     help='Name or UUID of that workflow where files should downloaded from. '
          'Overrides value of REANA_WORKON environment variable.')
 @click.option(
@@ -207,13 +203,6 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
                 click.echo(click.style('File {0} could not be downloaded: {1}'.
                                        format(file_name, e), fg='red'),
                            err=True)
-    else:
-        click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with REANA_WORKON '
-                        'environment variable',
-                        fg='red'),
-            err=True)
 
 
 @click.command(
@@ -231,6 +220,7 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
     '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow you are uploading files for. '
          'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
@@ -309,13 +299,6 @@ def upload_files(ctx, workflow, filenames, access_token):
                     err=True)
                 if 'invoked_by_subcommand' in ctx.parent.__dict__:
                     sys.exit(1)
-    else:
-        click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with REANA_WORKON '
-                        'environment variable',
-                        fg='red'),
-            err=True)
 
 
 @click.command(
@@ -329,6 +312,7 @@ def upload_files(ctx, workflow, filenames, access_token):
     '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow you are deleting files for. '
          'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options
@@ -379,13 +363,6 @@ def delete_files(ctx, workflow, filenames, access_token):
                     err=True)
                 if 'invoked_by_subcommand' in ctx.parent.__dict__:
                     sys.exit(1)
-    else:
-        click.echo(
-            click.style('Workflow name must be provided either with '
-                        '`--workflow` option or with REANA_WORKON '
-                        'environment variable',
-                        fg='red'),
-            err=True)
 
 
 @click.command('mv')
@@ -395,6 +372,7 @@ def delete_files(ctx, workflow, filenames, access_token):
     '-w',
     '--workflow',
     default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
     help='Name or UUID of the workflow you are moving files for. '
          'Overrides value of REANA_WORKON environment variable.')
 @add_access_token_options

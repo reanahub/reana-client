@@ -27,7 +27,7 @@ from reana_client.api.client import (create_workflow, current_rs_api_client,
                                      get_workflow_disk_usage,
                                      get_workflow_status, get_workflows,
                                      open_interactive_session, start_workflow,
-                                     stop_workflow)
+                                     stop_workflow, close_interactive_session)
 from reana_client.cli.files import upload_files
 from reana_client.cli.utils import (add_access_token_options, filter_data,
                                     parse_parameters)
@@ -917,6 +917,40 @@ def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
                     fg="red", err=True)
 
 
+@click.command(
+    'close',
+    help='Close an interactive workflow session')
+@click.option(
+    '-w',
+    '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
+    help='Name and run number to be deleted. '
+         'Overrides value of REANA_WORKON environment variable.')
+@add_access_token_options
+def workflow_close_interactive_session(workflow, access_token):
+    """Close an interactive workflow session."""
+    if not access_token:
+        click.secho(
+            ERROR_MESSAGES['missing_access_token'], fg='red', err=True)
+        sys.exit(1)
+    if workflow:
+        try:
+            logging.info(
+                "Closing an interactive session on {}".format(workflow))
+            close_interactive_session(workflow, access_token)
+            click.echo("Interactive session for workflow {}"
+                       " was successfully closed".format(workflow))
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.secho("Interactive session could not be closed: \n{}"
+                        .format(str(e)), fg='red', err=True)
+    else:
+            click.secho("Workflow {} does not exist".format(workflow),
+                        fg="red", err=True)
+
+
 workflow.add_command(workflow_workflows)
 workflow.add_command(workflow_create)
 workflow.add_command(workflow_start)
@@ -928,4 +962,5 @@ workflow.add_command(workflow_delete)
 workflow.add_command(workflow_diff)
 workflow.add_command(workflow_logs)
 workflow.add_command(workflow_open_interactive_session)
+workflow.add_command(workflow_close_interactive_session)
 workflow.add_command(workflow_disk_usage)

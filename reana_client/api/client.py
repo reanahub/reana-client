@@ -670,6 +670,39 @@ def open_interactive_session(workflow, access_token,
         raise e
 
 
+def close_interactive_session(workflow, access_token):
+    """Close an interactive workflow session.
+
+    :param workflow: Workflow name to close.
+    :param access_token: Workflow owner REANA access token.
+
+    :return: Gives the relative path to the interactive service.
+    """
+    try:
+        (response, http_response) = current_rs_api_client.api\
+            .close_interactive_session(
+            workflow_id_or_name=workflow,
+            access_token=access_token,
+        ).result()
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(
+                    status_code=http_response.status_code))
+    except HTTPError as e:
+        logging.debug(
+            'Interactive session could not be closed: '
+            '\nStatus: {}\nReason: {}\n'
+            'Message: {}'.format(e.response.status_code,
+                                 e.response.reason,
+                                 e.response.json()['message']))
+        raise Exception(e.response.json()['message'])
+    except Exception as e:
+        raise e
+
+
 def mv_files(source, target, workflow, access_token):
     """Move target file(s) within workspace.
 

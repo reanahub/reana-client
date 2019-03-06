@@ -392,3 +392,26 @@ def test_open_interactive_session(interactive_session_type):
                                          '-w', workflow_id,
                                          interactive_session_type])
             assert expected_message in result.output
+
+
+def test_close_interactive_session():
+    """Test closing an interactive session."""
+    status_code = 200
+    workflow = "workflow.1"
+    expected_message = "Interactive session for workflow {} " \
+                       "was successfully closed\n".format(workflow)
+    reana_server_url = 'http://localhost'
+    env = {'REANA_SERVER_URL': reana_server_url}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = expected_message
+    reana_token = '000000'
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            result = runner.invoke(cli, ['close', '-at', reana_token,
+                                         '-w', workflow])
+            assert expected_message == result.output

@@ -12,7 +12,6 @@ import logging
 import os
 import subprocess
 import sys
-from enum import Enum
 from uuid import UUID
 
 import click

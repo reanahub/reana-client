@@ -25,7 +25,7 @@ from reana_client.utils import get_workflow_status_change_msg
 def test_workflows_server_not_connected():
     """Test workflows command when server is not connected."""
     runner = CliRunner()
-    result = runner.invoke(cli, ['workflows'])
+    result = runner.invoke(cli, ['list'])
     message = 'REANA client is not connected to any REANA cluster.'
     assert message in result.output
     assert result.exit_code == 1
@@ -35,7 +35,7 @@ def test_workflows_no_token():
     """Test workflows command when token is not set."""
     env = {'REANA_SERVER_URL': 'localhost'}
     runner = CliRunner(env=env)
-    result = runner.invoke(cli, ['workflows'])
+    result = runner.invoke(cli, ['list'])
     message = 'Please provide your access token by using the -at'
     assert result.exit_code == 1
     assert message in result.output
@@ -64,7 +64,40 @@ def test_workflows_server_ok():
                 "reana_client.api.client.current_rs_api_client",
                 make_mock_api_client('reana-server')(mock_response,
                                                      mock_http_response)):
-            result = runner.invoke(cli, ['workflows', '-at', reana_token])
+            result = runner.invoke(cli, ['list', '-at', reana_token])
+            message = 'RUN_NUMBER'
+            assert result.exit_code == 0
+            assert message in result.output
+
+
+def test_workflows_sessions():
+    """Test list command for getting interactive sessions."""
+    response = [
+        {
+            'created': '2019-03-19T14:37:58',
+            'id': '29136cd0-b259-4d48-8c1e-afe3572df408',
+            'name': 'workflow.1',
+            'session_type': 'jupyter',
+            'session_uri': '/29136cd0-b259-4d48-8c1e-afe3572df408',
+            'size': '0',
+            'status': 'created',
+            'user': '00000000-0000-0000-0000-000000000000'
+        }
+    ]
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {'REANA_SERVER_URL': 'localhost', 'REANA_WORKON': 'mytest.1'}
+    reana_token = '000000'
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            result = runner.invoke(cli, ['list', '-at', reana_token,
+                                         '--sessions'])
             message = 'RUN_NUMBER'
             assert result.exit_code == 0
             assert message in result.output
@@ -95,7 +128,7 @@ def test_workflows_valid_json():
                 make_mock_api_client('reana-server')(mock_response,
                                                      mock_http_response)):
             result = runner.invoke(cli,
-                                   ['workflows', '-v', '-at',
+                                   ['list', '-v', '-at',
                                     reana_token, '--json'])
             json_response = json.loads(result.output)
             assert result.exit_code == 0
@@ -141,7 +174,7 @@ def test_workflows_filter():
                 make_mock_api_client('reana-server')(mock_response,
                                                      mock_http_response)):
             result = runner.invoke(cli,
-                                   ['workflows', '-at', reana_token, '--json',
+                                   ['list', '-at', reana_token, '--json',
                                     '--format="{}"'.format(filter_)])
             json_response = json.loads(result.output)
             assert result.exit_code == 0

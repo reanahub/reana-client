@@ -50,8 +50,13 @@ def workflow(ctx):
 
 
 @click.command(
-    'workflows',
+    'list',
     help='List all available workflows.')
+@click.option(
+    '-s',
+    '--sessions',
+    is_flag=True,
+    help='List all open interactive sessions.')
 @click.option(
     '--format',
     '_filter',
@@ -79,13 +84,13 @@ def workflow(ctx):
     help='Set status information verbosity.')
 @add_access_token_options
 @click.pass_context
-def workflow_workflows(ctx, _filter, output_format, access_token,
+def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
                        show_all, verbose):
     """List all workflows user has."""
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-
+    type = 'interactive' if sessions else 'batch'
     try:
         _url = current_rs_api_client.swagger_spec.api_url
     except MissingAPIClientConfiguration as e:
@@ -102,23 +107,28 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
     if _filter:
         parsed_filters = parse_parameters(_filter)
     try:
-        response = get_workflows(access_token, bool(verbose))
+        response = get_workflows(access_token, type, bool(verbose))
         verbose_headers = ['id', 'user', 'size']
-        headers = ['name', 'run_number', 'created', 'status']
+        headers = {
+            'batch': ['name', 'run_number', 'created', 'status'],
+            'interactive': ['name', 'run_number', 'created', 'session_type',
+                            'session_uri']
+        }
         if verbose:
-            headers += verbose_headers
+            headers[type] += verbose_headers
         data = []
         for workflow in response:
             if workflow['status'] == 'deleted' and not show_all:
                 continue
             name, run_number = get_workflow_name_and_run_number(
                 workflow['name'])
-            data.append(list(map(str, [name,
-                                       run_number,
-                                       workflow['created'],
-                                       workflow['status']])))
-            if verbose:
-                data[-1] += [workflow[k] for k in verbose_headers]
+            workflow['name'] = name
+            workflow['run_number'] = run_number
+            if type == 'interactive':
+                workflow['session_uri'] = '{reana_server_url}{path}'.format(
+                    reana_server_url=ctx.obj.reana_server_url,
+                    path=workflow['session_uri'])
+            data.append([str(workflow[k]) for k in headers[type]])
         data = sorted(data, key=lambda x: int(x[1]))
         workflow_ids = ['{0}.{1}'.format(w[0], w[1]) for w in data]
         if os.getenv('REANA_WORKON', '') in workflow_ids:
@@ -126,15 +136,15 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
                 workflow_ids.index(os.getenv('REANA_WORKON', ''))
             for idx, row in enumerate(data):
                 if idx == active_workflow_idx:
-                    data[idx][headers.index('run_number')] += ' *'
+                    data[idx][headers[type].index('run_number')] += ' *'
         tablib_data = tablib.Dataset()
-        tablib_data.headers = headers
+        tablib_data.headers = headers[type]
         for row in data:
             tablib_data.append(row=row, tags=row)
 
         if _filter:
             tablib_data, filtered_headers = \
-                filter_data(parsed_filters, headers, tablib_data)
+                filter_data(parsed_filters, headers[type], tablib_data)
             if output_format:
                 click.echo(json.dumps(tablib_data))
             else:
@@ -145,7 +155,7 @@ def workflow_workflows(ctx, _filter, output_format, access_token,
             if output_format:
                 click.echo(tablib_data.export(output_format))
             else:
-                click_table_printer(headers, _filter, data)
+                click_table_printer(headers[type], _filter, data)
 
     except Exception as e:
         logging.debug(traceback.format_exc())

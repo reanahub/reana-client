@@ -22,13 +22,13 @@ tests_require = [
     'check-manifest>=0.25',
     'coverage>=4.0',
     'docutils>=0.14',
-    'isort>=4.3.4',
+    'isort>=4.2.2,<4.3',
     'pydocstyle>=1.0.0',
     'pytest>=3.8.0,<4.0.0',
     'pytest-cache>=1.0',
     'pytest-cov>=1.8.0',
     'pytest-pep8>=1.0.6',
-    'pytest-reana>=0.5.0.dev20190116'
+    'pytest-reana>=0.5.0.dev20190321'
 ]
 
 extras_require = {
@@ -54,12 +54,12 @@ install_requires = [
     'click>=7,<8',
     'cwltool==1.0.20181118133959',
     'pyOpenSSL==17.5.0',  # FIXME remove once yadage-schemas solves deps.
-    'reana-commons>=0.5.0.dev20190306,<0.6.0',
+    'reana-commons>=0.5.0.dev20190321,<0.6.0',
     'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
     'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
     'tablib>=0.12.1,<0.13',
     'webcolors==1.7',  # FIXME remove once yadage-schemas solves deps.
-    'werkzeug==0.14.1',
+    'werkzeug>=0.14.1',
     'yadage-schemas==0.7.16',
 ]
 

@@ -190,6 +190,33 @@ analysis inputs, and start the workflow run.
    myanalysis   1            2018-11-07T12:45:18   running   1/1
    $ reana-client download results/plot.png
 
+Opening interactive sessions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can launch interactive processes such as Jupyter notebooks inside your
+workflow workspace via the ``open`` command.
+
+.. code-block:: console
+
+   $ reana-client open -w myanalysis.1 jupyter
+   http://reana.cern.ch:30080/7cd4d23e-48d1-4f7f-8a3c-3a6d256fb8bc?token=P-IkL_7w25IDHhes8I7DtICWLNQm2WAZ9gkoKC2vq10
+   It could take several minutes to start the interactive session.
+
+Open the link returned by the command in order to access the interactive
+notebook session. Please note that Note that only `jupyter
+<https://jupyter.org>`_ notebooks are supported for now.
+
+Closing interactive sessions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once you finished working on your interactive session notebook, you can close it
+via ``close`` command.
+
+.. code-block:: console
+
+   $ reana-client close -w myanalysis.1
+   Interactive session for workflow myanalysis.1 was successfully closed
+
 Deleting workflows
 ~~~~~~~~~~~~~~~~~~
 

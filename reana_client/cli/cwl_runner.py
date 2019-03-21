@@ -51,7 +51,8 @@ def get_file_dependencies_obj(cwl_obj, basedir):
     # Get dependencies
     printdeps(workflow_obj, document_loader, in_memory_buffer, 'primary', uri,
               basedir=basedir)
-    file_dependencies_obj = yaml.load(in_memory_buffer.getvalue())
+    file_dependencies_obj = yaml.load(in_memory_buffer.getvalue(),
+                                      Loader=yaml.FullLoader)
     in_memory_buffer.close()
     return file_dependencies_obj
 
@@ -82,7 +83,9 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
             with open(jobfile) as f:
                 reana_spec = {
                     "workflow": {"type": "cwl"},
-                    "inputs": {"parameters": {"input": yaml.load(f)}}}
+                    "inputs":
+                        {"parameters":
+                            {"input": yaml.load(f, Loader=yaml.FullLoader)}}}
 
             reana_spec['workflow']['spec'] = load_workflow_spec(
                 reana_spec['workflow']['type'],
@@ -90,7 +93,7 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
             )
         else:
             with open(jobfile) as f:
-                job = yaml.load(f)
+                job = yaml.load(f, Loader=yaml.FullLoader)
             reana_spec = {"workflow": {"type": "cwl"},
                           "parameters": {"input": ""}}
 

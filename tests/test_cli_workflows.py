@@ -236,7 +236,8 @@ def test_create_workflow_from_json(create_yaml_workflow_schema):
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    workflow_json = yaml.load(create_yaml_workflow_schema)
+    workflow_json = yaml.load(create_yaml_workflow_schema,
+                              Loader=yaml.FullLoader)
     with patch.dict('os.environ', env):
         with patch(
                 "reana_client.api.client.current_rs_api_client",

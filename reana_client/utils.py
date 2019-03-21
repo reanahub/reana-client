@@ -91,7 +91,7 @@ def load_reana_spec(filepath, skip_validation=False):
     """
     try:
         with open(filepath) as f:
-            reana_yaml = yaml.load(f.read())
+            reana_yaml = yaml.load(f.read(), Loader=yaml.FullLoader)
 
         if not (skip_validation):
             logging.info('Validating REANA specification file: {filepath}'
@@ -113,7 +113,8 @@ def load_reana_spec(filepath, skip_validation=False):
         if reana_yaml['workflow']['type'] == 'cwl' and \
                 'inputs' in reana_yaml:
             with open(reana_yaml['inputs']['parameters']['input']) as f:
-                reana_yaml['inputs']['parameters'] = yaml.load(f)
+                reana_yaml['inputs']['parameters'] = \
+                    yaml.load(f, Loader=yaml.FullLoader)
         return reana_yaml
     except IOError as e:
         logging.info(

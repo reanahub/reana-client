@@ -54,7 +54,7 @@ You can list all your workflow runs and their statuses by doing:
 
 .. code-block:: console
 
-   $ reana-client workflows
+   $ reana-client list
 
 and set ``REANA_WORKON`` to the one you would like to work on.
 

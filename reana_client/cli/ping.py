@@ -17,7 +17,13 @@ from reana_client.api.client import ping as rs_ping
 from reana_commons.errors import MissingAPIClientConfiguration
 
 
-@click.command('ping', help='Health check REANA server.')
+@click.group(help='Configuration commands')
+def configuration_group():
+    """Configuration commands."""
+    pass
+
+
+@configuration_group.command('ping')
 @click.pass_context
 def ping(ctx):
     """Health check REANA server."""

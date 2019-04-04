@@ -29,7 +29,47 @@ class Config(object):
         self.reana_server_url = os.getenv('REANA_SERVER_URL', None)
 
 
-@click.group()
+class ReanaCLI(click.Group):
+    """Reana command line interface."""
+
+    cmd_groups = [ping.configuration_group,
+                  workflow.workflow_management_group,
+                  workflow.workflow_execution_group,
+                  workflow.interactive_group,
+                  files.files_group]
+
+    def __init__(self, name=None, commands=None, **attrs):
+        """Initialize Reana client commands."""
+        click.Group.__init__(self, name, **attrs)
+        for group in ReanaCLI.cmd_groups:
+            for cmd in group.commands.items():
+                self.add_command(cmd=cmd[1], name=cmd[0])
+
+    def format_commands(self, ctx, formatter):
+        """Overides default click cmd display."""
+        if ReanaCLI.cmd_groups:
+            max_cmd_length = \
+                len(max([max(name) for name in self.list_commands(ctx)]))
+            limit = formatter.width - 6 - max_cmd_length
+            print(limit)
+            rows = []
+            for group in ReanaCLI.cmd_groups:
+                item = {'rows': []}
+                item['group_help'] = group.get_short_help_str(limit)
+                for command in group.commands.items():
+                    if command[1] is None:
+                        continue
+                    if command[1].hidden:
+                        continue
+                    command_help = command[1].get_short_help_str(limit)
+                    item['rows'].append((command[0], command_help))
+                rows.append(item)
+            for item in rows:
+                with formatter.section(item['group_help']):
+                    formatter.write_dl(item['rows'])
+
+
+@click.command(cls=ReanaCLI)
 @click.option(
     '--loglevel',
     '-l',
@@ -45,10 +85,3 @@ def cli(obj, ctx, loglevel):
         stream=sys.stderr,
         level=loglevel)
     ctx.obj = obj or Config()
-
-commands = []
-commands.extend(workflow.workflow.commands.values())
-commands.extend(files.files.commands.values())
-for cmd in commands:
-    cli.add_command(cmd)
-cli.add_command(ping.ping)

@@ -14,30 +14,30 @@ import sys
 import traceback
 
 import click
-import tablib
-from reana_commons.errors import MissingAPIClientConfiguration
-from reana_commons.utils import click_table_printer
 
+import tablib
 from reana_client.api.client import (current_rs_api_client, delete_file,
-                                     download_file, get_workflow_status,
-                                     list_files, mv_files, upload_to_server)
+                                     download_file, get_workflow_disk_usage,
+                                     get_workflow_status, list_files, mv_files,
+                                     upload_to_server)
 from reana_client.cli.utils import (add_access_token_options, filter_data,
                                     parse_parameters)
 from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import (get_workflow_root, load_reana_spec,
                                 workflow_uuid_or_name)
+from reana_commons.errors import MissingAPIClientConfiguration
+from reana_commons.utils import click_table_printer
 
 
-@click.group(
-    help='All interaction related to files.')
+@click.group(help='Workspace file management commands')
 @click.pass_context
-def files(ctx):
+def files_group(ctx):
     """Top level wrapper for files related interactions."""
     logging.debug(ctx.info_name)
 
 
-@click.command(
+@files_group.command(
     'ls',
     help='List workflow workspace files.')
 @click.option(
@@ -127,9 +127,9 @@ def get_files(ctx, workflow, _filter,
                 err=True)
 
 
-@click.command(
+@files_group.command(
     'download',
-    help='Download all output files declared in the reana.yaml'
+    help='Download all output files declared in the reana.yaml '
          'specification or download files listed as '
          'FILE command-line arguments. Note that downloading directories'
          ' is not yet supported.')
@@ -205,9 +205,9 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
                            err=True)
 
 
-@click.command(
+@files_group.command(
     'upload',
-    help='Upload all input sources declared in the reana.yaml'
+    help='Upload all input sources declared in the reana.yaml '
          'specification or upload files and directories listed as '
          'SOURCE command-line arguments. If a symbolic link is provided,'
          ' it is resolved and a hard copy is uploaded.')
@@ -301,7 +301,7 @@ def upload_files(ctx, workflow, filenames, access_token):
                     sys.exit(1)
 
 
-@click.command(
+@files_group.command(
     'rm',
     help='Delete the specified file or pattern.')
 @click.argument(
@@ -365,7 +365,7 @@ def delete_files(ctx, workflow, filenames, access_token):
                     sys.exit(1)
 
 
-@click.command('mv')
+@files_group.command('mv')
 @click.argument('source')
 @click.argument('target')
 @click.option(
@@ -425,8 +425,51 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
                 err=True)
 
 
-files.add_command(get_files)
-files.add_command(download_files)
-files.add_command(upload_files)
-files.add_command(delete_files)
-files.add_command(move_files)
+@files_group.command(
+    'du',
+    help='Get disk usage of a workflow.')
+@click.option(
+    '-w',
+    '--workflow',
+    default=os.environ.get('REANA_WORKON', None),
+    callback=workflow_uuid_or_name,
+    help='Name or UUID of the workflow to display the disk usage. '
+         'Overrides value of REANA_WORKON environment variable.')
+@add_access_token_options
+@click.option(
+    '-s',
+    '--summarize',
+    count=True,
+    help='Display total.')
+@click.pass_context
+def workflow_disk_usage(ctx, workflow, access_token, summarize):
+    """Get disk usage of a workflow."""
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    if not access_token:
+        click.echo(
+            click.style(ERROR_MESSAGES['missing_access_token'],
+                        fg='red'), err=True)
+        sys.exit(1)
+
+    if workflow:
+        try:
+            parameters = {'summarize': summarize}
+            response = get_workflow_disk_usage(workflow,
+                                               parameters,
+                                               access_token)
+            headers = ['size', 'name']
+            data = []
+            for disk_usage_info in response['disk_usage_info']:
+                data.append([disk_usage_info['size'],
+                             '.{}'.format(disk_usage_info['name'])])
+            click_table_printer(headers, [], data)
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Disk usage could not be retrieved: \n{}'
+                            .format(str(e)), fg='red'),
+                err=True)

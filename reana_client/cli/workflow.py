@@ -41,15 +41,21 @@ from reana_client.utils import (get_workflow_name_and_run_number,
                                 workflow_uuid_or_name)
 
 
-@click.group(
-    help='All interaction related to workflows on REANA cloud.')
+@click.group(help='Workflow management commands')
 @click.pass_context
-def workflow(ctx):
-    """Top level wrapper for workflow related interaction."""
+def workflow_management_group(ctx):
+    """Top level wrapper for workflow management."""
     logging.debug(ctx.info_name)
 
 
-@click.command(
+@click.group(help='Workflow execution commands')
+@click.pass_context
+def workflow_execution_group(ctx):
+    """Top level wrapper for execution related interaction."""
+    logging.debug(ctx.info_name)
+
+
+@workflow_management_group.command(
     'list',
     help='List all available workflows.')
 @click.option(
@@ -166,7 +172,7 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
             err=True)
 
 
-@click.command(
+@workflow_management_group.command(
     'create',
     help='Create a REANA compatible workflow from REANA '
          'specifications file.')
@@ -230,7 +236,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
             sys.exit(1)
 
 
-@click.command(
+@workflow_execution_group.command(
     'start',
     help="""
     Start previously created workflow.
@@ -323,7 +329,7 @@ def workflow_start(ctx, workflow, access_token,
                 sys.exit(1)
 
 
-@click.command(
+@workflow_execution_group.command(
     'status',
     help='Get status of a previously created workflow.')
 @click.option(
@@ -458,57 +464,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
                 err=True)
 
 
-@click.command(
-    'du',
-    help='Get disk usage of a workflow.')
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the workflow to display the disk usage. '
-         'Overrides value of REANA_WORKON environment variable.')
-@add_access_token_options
-@click.option(
-    '-s',
-    '--summarize',
-    count=True,
-    help='Display total.')
-@click.pass_context
-def workflow_disk_usage(ctx, workflow, access_token, summarize):
-    """Get disk usage of a workflow."""
-    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
-        sys.exit(1)
-
-    if workflow:
-        try:
-            parameters = {'summarize': summarize}
-            response = get_workflow_disk_usage(workflow,
-                                               parameters,
-                                               access_token)
-            headers = ['size', 'name']
-            data = []
-            for disk_usage_info in response['disk_usage_info']:
-                data.append([disk_usage_info['size'],
-                             '.{}'.format(disk_usage_info['name'])])
-            click_table_printer(headers, [], data)
-        except Exception as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            click.echo(
-                click.style('Disk usage could not be retrieved: \n{}'
-                            .format(str(e)), fg='red'),
-                err=True)
-
-
-@click.command(
+@workflow_execution_group.command(
     'logs',
     help='Get workflow logs.')
 @click.option(
@@ -574,7 +530,7 @@ def workflow_logs(ctx, workflow, access_token, json_format):
                 err=True)
 
 
-@click.command(
+@workflow_execution_group.command(
     'validate',
     help='Validate the REANA specification.')
 @click.option(
@@ -613,7 +569,7 @@ def workflow_validate(ctx, file):
             err=True)
 
 
-@click.command(
+@workflow_execution_group.command(
     'stop',
     help='Stop a running workflow')
 @click.option(
@@ -659,7 +615,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):
                         fg='red', err=True)
 
 
-@click.command(
+@workflow_execution_group.command(
     'run',
     help='Create, upload and start the REANA workflow.')
 @click.option(
@@ -724,7 +680,7 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
                options=options)
 
 
-@click.command(
+@workflow_management_group.command(
     'delete',
     help='Delete a workflow run. By default removes all cached'
          ' information of the given workflow and hides it from'
@@ -801,7 +757,7 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
                 err=True)
 
 
-@click.command(
+@workflow_management_group.command(
     'diff',
     help='Show differences between two workflows.')
 @click.argument(
@@ -874,7 +830,13 @@ def workflow_diff(ctx, workflow_a, workflow_b, brief,
             err=True)
 
 
-@click.command(
+@click.group(help='Workspace interactive commands')
+def interactive_group():
+    """Workspace interactive commands."""
+    pass
+
+
+@interactive_group.command(
     'open',
     help='Open an interactive session inside the workflow workspace')
 @click.option(
@@ -927,7 +889,7 @@ def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
                     fg="red", err=True)
 
 
-@click.command(
+@interactive_group.command(
     'close',
     help='Close an interactive workflow session')
 @click.option(
@@ -959,18 +921,3 @@ def workflow_close_interactive_session(workflow, access_token):
     else:
             click.secho("Workflow {} does not exist".format(workflow),
                         fg="red", err=True)
-
-
-workflow.add_command(workflow_workflows)
-workflow.add_command(workflow_create)
-workflow.add_command(workflow_start)
-workflow.add_command(workflow_validate)
-workflow.add_command(workflow_status)
-workflow.add_command(workflow_stop)
-workflow.add_command(workflow_run)
-workflow.add_command(workflow_delete)
-workflow.add_command(workflow_diff)
-workflow.add_command(workflow_logs)
-workflow.add_command(workflow_open_interactive_session)
-workflow.add_command(workflow_close_interactive_session)
-workflow.add_command(workflow_disk_usage)

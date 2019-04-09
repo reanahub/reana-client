@@ -10,7 +10,7 @@ REANA_SERVER_URL
 ~~~~~~~~~~~~~~~~
 
 You can set this environment variable in order to specify to which REANA cloud
-instance your client should connect and a valid token. For example:
+instance your client should connect. For example:
 
 .. code-block:: console
 
@@ -26,7 +26,7 @@ like to use. For example:
 
    $ export REANA_ACCESS_TOKEN=XXXXXXX
 
-The token should have been given to you by the REANA cluster administrators.
+The token should be provided to you by the REANA cluster administrators.
 
 REANA_WORKON
 ~~~~~~~~~~~~
@@ -70,7 +70,7 @@ case scenario.
 Uploading analysis assets
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Uploading files or directories to an analysis workspace is simple as:
+Uploading files or directories to the analysis workspace is simple as:
 
 .. code-block:: console
 
@@ -120,11 +120,11 @@ globbing:
    79736 bytes freed up.
 
 
- Moving analysis assets
- ~~~~~~~~~~~~~~~~~~~~~~~~
+Moving analysis assets
+~~~~~~~~~~~~~~~~~~~~~~
 
- The movement of file(s) or folders contained in the analysis workspace is
- possible through the ``mv`` command:
+The movement of file(s) or folders within the analysis workspace is
+possible through the ``mv`` command:
 
  .. code-block:: console
 
@@ -150,7 +150,7 @@ Non-existing parameters will be skipped.
 Downloading outputs
 ~~~~~~~~~~~~~~~~~~~
 
-Downloading files from an analysis workspace works in the same way:
+Downloading files from an analysis workspace:
 
 .. code-block:: console
 
@@ -203,8 +203,7 @@ workflow workspace via the ``open`` command.
    It could take several minutes to start the interactive session.
 
 Open the link returned by the command in order to access the interactive
-notebook session. Please note that Note that only `jupyter
-<https://jupyter.org>`_ notebooks are supported for now.
+notebook session. Reana supports`jupyter <https://jupyter.org>`_ notebooks.
 
 Closing interactive sessions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -63,3 +63,10 @@ def filter_data(parsed_filters, headers, tablib_data):
                     filter_['column_value'] != item[filter_['column_name']]):
                 tablib_data.remove(item)
     return tablib_data, column_headers or []
+
+
+def format_session_uri(reana_server_url, path, access_token):
+    """Format interactive session URI."""
+    return "{reana_server_url}{path}?token={access_token}".format(
+        reana_server_url=reana_server_url,
+        path=path, access_token=access_token)

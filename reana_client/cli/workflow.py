@@ -16,21 +16,19 @@ import traceback
 import click
 import tablib
 from jsonschema.exceptions import ValidationError
-from reana_commons.config import INTERACTIVE_SESSION_TYPES
-from reana_commons.errors import MissingAPIClientConfiguration
-from reana_commons.utils import click_table_printer
 
-from reana_client.api.client import (create_workflow, current_rs_api_client,
+from reana_client.api.client import (close_interactive_session,
+                                     create_workflow, current_rs_api_client,
                                      delete_workflow, diff_workflows,
+                                     get_workflow_disk_usage,
                                      get_workflow_logs,
                                      get_workflow_parameters,
-                                     get_workflow_disk_usage,
                                      get_workflow_status, get_workflows,
                                      open_interactive_session, start_workflow,
-                                     stop_workflow, close_interactive_session)
+                                     stop_workflow)
 from reana_client.cli.files import upload_files
 from reana_client.cli.utils import (add_access_token_options, filter_data,
-                                    parse_parameters)
+                                    format_session_uri, parse_parameters)
 from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
 from reana_client.utils import (get_workflow_name_and_run_number,
                                 get_workflow_status_change_msg, is_uuid_v4,
@@ -39,6 +37,9 @@ from reana_client.utils import (get_workflow_name_and_run_number,
                                 validate_input_parameters,
                                 validate_serial_operational_options,
                                 workflow_uuid_or_name)
+from reana_commons.config import INTERACTIVE_SESSION_TYPES
+from reana_commons.errors import MissingAPIClientConfiguration
+from reana_commons.utils import click_table_printer
 
 
 @click.group(help='Workflow management commands')
@@ -131,9 +132,10 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
             workflow['name'] = name
             workflow['run_number'] = run_number
             if type == 'interactive':
-                workflow['session_uri'] = '{reana_server_url}{path}'.format(
+                workflow['session_uri'] = format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
-                    path=workflow['session_uri'])
+                    path=workflow['session_uri'],
+                    access_token=access_token)
             data.append([str(workflow[k]) for k in headers[type]])
         data = sorted(data, key=lambda x: int(x[1]))
         workflow_ids = ['{0}.{1}'.format(w[0], w[1]) for w in data]
@@ -874,7 +876,7 @@ def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
             path = open_interactive_session(workflow, access_token,
                                             interactive_session_type,
                                             interactive_session_configuration)
-            click.secho("{reana_server_url}{path}?token={access_token}".format(
+            click.secho(format_session_uri(
                 reana_server_url=ctx.obj.reana_server_url,
                 path=path, access_token=access_token), fg="green")
             click.echo("It could take several minutes to start the "

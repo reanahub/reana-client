@@ -51,7 +51,6 @@ class ReanaCLI(click.Group):
             max_cmd_length = \
                 len(max([max(name) for name in self.list_commands(ctx)]))
             limit = formatter.width - 6 - max_cmd_length
-            print(limit)
             rows = []
             for group in ReanaCLI.cmd_groups:
                 item = {'rows': []}

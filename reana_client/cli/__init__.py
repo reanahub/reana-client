@@ -30,7 +30,7 @@ class Config(object):
 
 
 class ReanaCLI(click.Group):
-    """Reana command line interface."""
+    """REANA command line interface."""
 
     cmd_groups = [ping.configuration_group,
                   workflow.workflow_management_group,
@@ -39,7 +39,7 @@ class ReanaCLI(click.Group):
                   files.files_group]
 
     def __init__(self, name=None, commands=None, **attrs):
-        """Initialize Reana client commands."""
+        """Initialize REANA client commands."""
         click.Group.__init__(self, name, **attrs)
         for group in ReanaCLI.cmd_groups:
             for cmd in group.commands.items():

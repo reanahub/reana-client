@@ -126,10 +126,10 @@ Moving analysis assets
 The movement of file(s) or folders within the analysis workspace is
 possible through the ``mv`` command:
 
- .. code-block:: console
+.. code-block:: console
 
-    $ reana-client mv data/mydata.csv mydata.csv
-    File mydata.csv was successfully deleted.
+   $ reana-client mv data/mydata.csv mydata.csv
+   File mydata.csv was successfully deleted.
 
 
 Overriding default input parameters
@@ -203,7 +203,7 @@ workflow workspace via the ``open`` command.
    It could take several minutes to start the interactive session.
 
 Open the link returned by the command in order to access the interactive
-notebook session. Reana supports`jupyter <https://jupyter.org>`_ notebooks.
+notebook session. REANA supports `Jupyter <https://jupyter.org>`_ notebooks.
 
 Closing interactive sessions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

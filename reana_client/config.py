@@ -20,7 +20,7 @@ reana_yaml_schema_file_path = pkg_resources.resource_filename(
 """REANA specification schema location."""
 
 default_user = '00000000-0000-0000-0000-000000000000'
-"""Default user to use when submitting workflows to Reana Server."""
+"""Default user to use when submitting workflows to REANA Server."""
 
 ERROR_MESSAGES = {
         'missing_access_token':

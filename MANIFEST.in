@@ -12,6 +12,7 @@ include *.txt
 include *.yaml
 include pytest.ini
 include docs/requirements.txt
+include docs/cmd_list.txt
 prune docs/_build
 recursive-include reana_client *.py
 recursive-include reana_client *.json

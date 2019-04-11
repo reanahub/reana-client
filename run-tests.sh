@@ -8,6 +8,9 @@
 
 pydocstyle reana_client && \
 isort -rc -c -df **/*.py && \
+reana-client --help > cmd_list.txt && \
+diff -q -w docs/cmd_list.txt cmd_list.txt  && \
+rm cmd_list.txt && \
 check-manifest --ignore ".travis-*" && \
 sphinx-build -qnNW docs docs/_build/html && \
 python setup.py test && \

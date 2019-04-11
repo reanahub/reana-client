@@ -1,0 +1,39 @@
+Usage: reana-client [OPTIONS] COMMAND [ARGS]...
+
+  REANA client for interacting with REANA server.
+
+Options:
+  -l, --loglevel [DEBUG|INFO|WARNING]
+                                  Sets log level
+  --help                          Show this message and exit.
+
+Configuration commands:
+  ping  Health check REANA server.
+
+Workflow management commands:
+  create  Create a REANA compatible workflow from REANA specifications file.
+  delete  Delete a workflow run.
+  diff    Show differences between two workflows.
+  list    List all available workflows.
+
+Workflow execution commands:
+  logs      Get workflow logs.
+  run       Create, upload and start the REANA workflow.
+  start     Start previously created workflow.
+  status    Get status of a previously created workflow.
+  stop      Stop a running workflow
+  validate  Validate the REANA specification.
+
+Workspace interactive commands:
+  close  Close an interactive workflow session
+  open   Open an interactive session inside the workflow workspace
+
+Workspace file management commands:
+  download  Download all output files declared in the reana.yaml specification
+            or...
+  du        Get disk usage of a workflow.
+  ls        List workflow workspace files.
+  mv        Move files within workspace.
+  rm        Delete the specified file or pattern.
+  upload    Upload all input sources declared in the reana.yaml specification
+            or...

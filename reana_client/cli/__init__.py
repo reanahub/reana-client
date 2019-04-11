@@ -55,7 +55,7 @@ class ReanaCLI(click.Group):
             for group in ReanaCLI.cmd_groups:
                 item = {'rows': []}
                 item['group_help'] = group.get_short_help_str(limit)
-                for command in group.commands.items():
+                for command in sorted(group.commands.items()):
                     if command[1] is None:
                         continue
                     if command[1].hidden:

@@ -25,7 +25,7 @@ default_user = '00000000-0000-0000-0000-000000000000'
 ERROR_MESSAGES = {
         'missing_access_token':
         'Please provide your access token by using'
-        ' the -at/--access-token flag, or by setting the'
+        ' the -t/--access-token flag, or by setting the'
         ' REANA_ACCESS_TOKEN environment variable.'
 }
 

@@ -14,12 +14,27 @@ import shlex
 
 import click
 
+from reana_client.utils import workflow_uuid_or_name
+
 
 def add_access_token_options(func):
     """Add access token related options to click commands."""
-    @click.option('-at', '--access-token',
+    @click.option('-t', '--access-token',
                   default=os.getenv('REANA_ACCESS_TOKEN', None),
                   help='Access token of the current user.')
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def add_workflow_option(func):
+    """Add workflow related option to click commands."""
+    @click.option('-w', '--workflow',
+                  default=os.environ.get('REANA_WORKON', None),
+                  callback=workflow_uuid_or_name,
+                  help='Name or UUID of the workflow. Overrides value of '
+                       'REANA_WORKON environment variable.')
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)

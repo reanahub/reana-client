@@ -20,7 +20,8 @@ from reana_client.api.client import (current_rs_api_client, delete_file,
                                      download_file, get_workflow_disk_usage,
                                      get_workflow_status, list_files, mv_files,
                                      upload_to_server)
-from reana_client.cli.utils import (add_access_token_options, filter_data,
+from reana_client.cli.utils import (add_access_token_options,
+                                    add_workflow_option, filter_data,
                                     parse_parameters)
 from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
@@ -40,13 +41,7 @@ def files_group(ctx):
 @files_group.command(
     'ls',
     help='List workflow workspace files.')
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the workflow whose files should be listed. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @click.option(
     '--format',
     '_filter',
@@ -137,13 +132,7 @@ def get_files(ctx, workflow, _filter,
     'filenames',
     metavar='FILES',
     nargs=-1)
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of that workflow where files should downloaded from. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @click.option(
     '-o',
     '--output-directory',
@@ -216,13 +205,7 @@ def download_files(ctx, workflow, filenames, output_directory, access_token):
     metavar='SOURCES',
     type=click.Path(exists=True, resolve_path=True),
     nargs=-1)
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the workflow you are uploading files for. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @add_access_token_options
 @click.pass_context
 def upload_files(ctx, workflow, filenames, access_token):
@@ -308,13 +291,7 @@ def upload_files(ctx, workflow, filenames, access_token):
     'filenames',
     metavar='SOURCES',
     nargs=-1)
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the workflow you are deleting files for. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @add_access_token_options
 @click.pass_context
 def delete_files(ctx, workflow, filenames, access_token):
@@ -368,13 +345,7 @@ def delete_files(ctx, workflow, filenames, access_token):
 @files_group.command('mv')
 @click.argument('source')
 @click.argument('target')
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the workflow you are moving files for. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @add_access_token_options
 @click.pass_context
 def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
@@ -428,13 +399,7 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
 @files_group.command(
     'du',
     help='Get disk usage of a workflow.')
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the workflow to display the disk usage. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @add_access_token_options
 @click.option(
     '-s',

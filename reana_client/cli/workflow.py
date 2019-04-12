@@ -27,7 +27,8 @@ from reana_client.api.client import (close_interactive_session,
                                      open_interactive_session, start_workflow,
                                      stop_workflow)
 from reana_client.cli.files import upload_files
-from reana_client.cli.utils import (add_access_token_options, filter_data,
+from reana_client.cli.utils import (add_access_token_options,
+                                    add_workflow_option, filter_data,
                                     format_session_uri, parse_parameters)
 from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
 from reana_client.utils import (get_workflow_name_and_run_number,
@@ -249,13 +250,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):
     repetitive. For example, to disable caching for the Serial workflow engine,
     you can set ``-o CACHE=off``.
     """)
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the workflow to be started. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @add_access_token_options
 @click.option(
     '-p', '--parameter', 'parameters',
@@ -334,13 +329,7 @@ def workflow_start(ctx, workflow, access_token,
 @workflow_execution_group.command(
     'status',
     help='Get status of a previously created workflow.')
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the workflow whose status should be resolved. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @click.option(
     '--filter',
     '_filter',
@@ -469,13 +458,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
 @workflow_execution_group.command(
     'logs',
     help='Get workflow logs.')
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name or UUID of the workflow whose logs should be fetched. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @click.option(
     '--json',
     'json_format',
@@ -580,13 +563,7 @@ def workflow_validate(ctx, file):
     is_flag=True,
     default=False,
     help='Stop a workflow without waiting for jobs to finish.')
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name and run number to be stopped. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @add_access_token_options
 @click.pass_context
 def workflow_stop(ctx, workflow, force_stop, access_token):
@@ -711,13 +688,7 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
     help='Delete all records of workflow, including database entries and'
          ' workspace.'
 )
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name and run number to be deleted. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @add_access_token_options
 @click.pass_context
 def workflow_delete(ctx, workflow, all_runs, workspace,
@@ -841,13 +812,7 @@ def interactive_group():
 @interactive_group.command(
     'open',
     help='Open an interactive session inside the workflow workspace')
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name and run number to be deleted. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @click.argument(
     'interactive-session-type',
     metavar='interactive-session-type',
@@ -894,13 +859,7 @@ def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
 @interactive_group.command(
     'close',
     help='Close an interactive workflow session')
-@click.option(
-    '-w',
-    '--workflow',
-    default=os.environ.get('REANA_WORKON', None),
-    callback=workflow_uuid_or_name,
-    help='Name and run number to be deleted. '
-         'Overrides value of REANA_WORKON environment variable.')
+@add_workflow_option
 @add_access_token_options
 def workflow_close_interactive_session(workflow, access_token):
     """Close an interactive workflow session."""

@@ -60,7 +60,7 @@ def test_list_files_ok():
                 make_mock_api_client('reana-server')(mock_response,
                                                      mock_http_response)):
             result = runner.invoke(
-                cli, ['ls', '-at', reana_token, '--workflow', 'mytest.1',
+                cli, ['ls', '-t', reana_token, '--workflow', 'mytest.1',
                       '--json'])
             json_response = json.loads(result.output)
             assert result.exit_code == 0
@@ -89,7 +89,7 @@ def test_download_file():
                 make_mock_api_client('reana-server')(mock_response,
                                                      mock_http_response)):
             result = runner.invoke(
-                cli, ['download', '-at', reana_token, '--workflow', 'mytest.1',
+                cli, ['download', '-t', reana_token, '--workflow', 'mytest.1',
                       file]
             )
             assert result.exit_code == 0
@@ -124,7 +124,7 @@ def test_upload_file(create_yaml_workflow_schema):
                 with open('reana.yaml', 'w') as reana_schema:
                     reana_schema.write(create_yaml_workflow_schema)
                 result = runner.invoke(
-                    cli, ['upload', '-at', reana_token, '--workflow',
+                    cli, ['upload', '-t', reana_token, '--workflow',
                           'mytest.1', file]
                 )
                 assert result.exit_code == 0
@@ -155,7 +155,7 @@ def test_delete_file():
             with runner.isolated_filesystem():
                 result = runner.invoke(
                     cli,
-                    ['rm', '-at', reana_token,
+                    ['rm', '-t', reana_token,
                      '--workflow', 'mytest.1', filename1]
                 )
                 assert result.exit_code == 0
@@ -184,7 +184,7 @@ def test_delete_non_existing_file():
             with runner.isolated_filesystem():
                 result = runner.invoke(
                     cli,
-                    ['rm', '-at', reana_token, '--workflow', 'mytest.1',
+                    ['rm', '-t', reana_token, '--workflow', 'mytest.1',
                      filename]
                 )
                 assert result.exit_code == 0
@@ -214,7 +214,7 @@ def test_move_file_running_workflow():
                                                      mock_http_response)):
             result = runner.invoke(
                 cli,
-                ['mv', '-at', reana_token, '--workflow', 'mytest.1',
+                ['mv', '-t', reana_token, '--workflow', 'mytest.1',
                  src_file, target]
             )
             assert result.exit_code == 1

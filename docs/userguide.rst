@@ -193,17 +193,27 @@ analysis inputs, and start the workflow run.
 Opening interactive sessions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can launch interactive processes such as Jupyter notebooks inside your
-workflow workspace via the ``open`` command.
+While your analysis workflows are running, you may want to open interactive
+session processes on the workspace, such as Jupyter notebooks, via the `open`
+command. This will allow to quickly explore the generated data while the
+analysis is in progress, or even run your analyses from within the notebook
+environment spawned on the remote containerised platform.
 
 .. code-block:: console
 
    $ reana-client open -w myanalysis.1 jupyter
-   http://reana.cern.ch:30080/7cd4d23e-48d1-4f7f-8a3c-3a6d256fb8bc?token=P-IkL_7w25IDHhes8I7DtICWLNQm2WAZ9gkoKC2vq10
+   https://reana.cern.ch/7cd4d23e-48d1-4f7f-8a3c-3a6d256fb8bc?token=P-IkL_7w25IDHhes8I7DtICWLNQm2WAZ9gkoKC2vq10
    It could take several minutes to start the interactive session.
 
 Open the link returned by the command in order to access the interactive
-notebook session. REANA supports `Jupyter <https://jupyter.org>`_ notebooks.
+notebook session.
+
+.. image:: /_static/interactive-session.png
+
+REANA currently supports `Jupyter <https://jupyter.org>`_ notebooks. Note that
+you can pass any notebook image you are interested to run on the workspace,
+such as PySpark, or even your own image, by using the `--image` option.
+
 
 Closing interactive sessions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

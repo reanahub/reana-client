@@ -24,7 +24,7 @@ tests_require = [
     'docutils>=0.14',
     'isort>=4.2.2,<4.3',
     'pydocstyle>=1.0.0',
-    'pytest>=3.8.0,<4.0.0',
+    'pytest>=3.8.0',
     'pytest-cache>=1.0',
     'pytest-cov>=1.8.0',
     'pytest-pep8>=1.0.6',
@@ -51,7 +51,7 @@ setup_requires = [
 ]
 
 install_requires = [
-    'click>=7,<8',
+    'click>=7',
     'cwltool==1.0.20181118133959',
     'pyOpenSSL==17.5.0',  # FIXME remove once yadage-schemas solves deps.
     'reana-commons>=0.5.0.dev20190408,<0.6.0',

@@ -268,7 +268,7 @@ def workflow_create(ctx, file, name,
 @click.option(
     '-o', '--option', 'options',
     multiple=True,
-    help='Additional operatioal options for the workflow execution. '
+    help='Additional operational options for the workflow execution. '
          'E.g. CACHE=off. (workflow engine - serial) '
          'E.g. --debug (workflow engine - cwl)',
 )
@@ -807,7 +807,7 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
 @click.pass_context
 def workflow_diff(ctx, workflow_a, workflow_b, brief,
                   access_token, context_lines):  # noqa: D301
-    """Show diff between two worklows.
+    """Show diff between two workflows.
 
     The `diff` command allows to compare two workflows, the workflow_a and
     workflow_b, which must be provided as arguments. The output will show the

@@ -13,7 +13,7 @@ Configuration commands:
 Workflow management commands:
   create  Create a new workflow.
   delete  Delete a workflow.
-  diff    Show diff between two worklows.
+  diff    Show diff between two workflows.
   list    List all workflows and sessions.
 
 Workflow execution commands:

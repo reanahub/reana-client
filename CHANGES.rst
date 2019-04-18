@@ -1,6 +1,39 @@
 Changes
 =======
 
+Version 0.5.0 (2019-04-24)
+--------------------------
+
+- Introduces new ``resources`` field in ``reana.yaml`` specification file
+  allowing to declare computing resources needed for workflow runs, such as the
+  CVMFS repositories via ``cvmfs`` subfield.
+- Improves ``reana-client`` embedded command-line documentation (``-help``) by
+  grouping commands and providing concrete usage examples for all commands.
+- Enhances workflow ``start`` command allowing to override input parameters
+  (``--parameter``) and to specify additional operational options
+  (``--option``).
+- Introduces new workflow ``run`` wrapper command that creates workflow, uploads
+  its input data and code and starts its execution.
+- Introduces new workflow ``stop`` command for stopping a running workflow.
+- Enhances workflow ``logs`` command output capabilities via new ``--json``
+  option.
+- Introduces new workflow ``diff`` command for comparing two workflow runs.
+- Introduces new workflow ``delete`` command for deleting one or more workflow
+  runs.
+- Introduces new session ``open`` command allowing to run interactive sessions
+  such as Jupyter notebook upon workflow workspace.
+- Introduces new session ``close`` command for closing interactive sessions.
+- Renames past ``workflows`` command to ``list`` allowing to list both workflow
+  runs and interactive sessions.
+- Introduces new workspace ``du`` command for checking workspace disk usage.
+- Introduces new workspace ``mv`` command for moving files within workspace.
+- Introduces new workspace ``rm`` command for removing files within workspace.
+- Renames past workspace ``list`` command to ``ls`` allowing to list workspace
+  files. Enhances its output capabilities via new ``--format`` option.
+- Introduces new API function ``create_workflow_from_json()`` which allows
+  developers and third-party systems to create workflows directly from JSON
+  specification.
+
 Version 0.4.0 (2018-11-07)
 --------------------------
 

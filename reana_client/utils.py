@@ -6,12 +6,13 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client utils."""
-
+import base64
 import json
 import logging
 import os
 import subprocess
 import sys
+import traceback
 from uuid import UUID
 
 import click
@@ -269,3 +270,62 @@ def get_workflow_status_change_msg(workflow, status):
     return '{workflow} {verb} {status}'.format(
         workflow=workflow, verb=get_workflow_status_change_verb(status),
         status=status)
+
+
+def parse_secret_from_literal(literal):
+    """Parse a literal string, into a secret dict.
+
+    :param literal: String containg a key and a value. (e.g. 'KEY=VALUE')
+    :returns secret: Dictionary in the format suitable for sending
+    via http request.
+    """
+    try:
+        key, value = literal.split('=')
+        secret = {
+            key: {
+                'value': base64.b64encode(
+                    value.encode('utf-8')
+                ).decode('utf-8'),
+                'type': 'env'
+            }
+        }
+        return secret
+
+    except ValueError as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style(
+                'Option "{0}" is invalid: \n'
+                'For literal strings use "SECRET_NAME=VALUE" format'
+                .format(literal),
+                fg='red'),
+            err=True)
+
+
+def parse_secret_from_path(path):
+    """Parse a file path into a secret dict.
+
+    :param path: Path of the file containing secret
+    :returns secret: Dictionary in the format suitable for sending
+     via http request.
+    """
+    try:
+        with open(path, 'rb') as file:
+            secret = {
+                file.name: {
+                    'value': base64.b64encode(
+                        file.read()).decode('utf-8'),
+                    'type': 'file'
+                }
+            }
+        return secret
+    except FileNotFoundError as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        click.echo(
+            click.style(
+                'File {0} could not be uploaded: {0} does not exist.'
+                .format(path),
+                fg='red'),
+            err=True)

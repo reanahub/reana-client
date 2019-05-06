@@ -132,6 +132,69 @@ possible through the ``mv`` command:
    File mydata.csv was successfully deleted.
 
 
+Adding secrets
+~~~~~~~~~~~~~~
+
+If you need to use secrets in your workflow you can add them with
+the ``secrets-add`` command:
+
+.. code-block:: console
+
+   $ # You can upload secrets from literal strings:
+   $ reana-client secrets-add --from-literal USERNAME=reana
+                              --from-literal PASSWORD=password
+   Secrets USERNAME, PASSWORD were successfully uploaded.
+
+   $ # ...and from files:
+   $ reana-client secrets-add --from-file ~/.keytab
+   Secrets .keytab were successfully uploaded.
+
+   $ # ...you can also combine two options in one command:
+   $ reana-client secrets-add --from-file ~/.keytab
+                              --from-literal USERNAME=reana
+   Secrets .keytab, USERNAME were successfully uploaded.
+
+   $ # Trying to add a secret that is already added
+   $ # will result in a warning and no action will be taken:
+   $ reana-client secrets-add --from-literal USERNAME=reana
+   One of the secrets already exists. No secrets were added.
+
+   $ # If you are sure that you want to overwrite it you can use
+   $ # the ``--overwrite`` option:
+   $ reana-client secrets-add --from-literal USERNAME=reana
+                              --overwrite
+   Secrets USERNAME were successfully uploaded.
+   $ # Note that the ``--overwrite`` option will aply to
+   $ # all of secrets passed next to it.
+
+
+Listing secrets
+~~~~~~~~~~~~~~~
+
+To list all the secrets that you have uploaded you can use
+the ``secrets-list`` command:
+
+.. code-block:: console
+
+   $ reana-client secrets-list
+   NAME         TYPE
+   USERNAME     env
+   PASSWORD     env
+   keytab       file
+
+
+Deleting secrets
+~~~~~~~~~~~~~~~~
+
+If you want to delete some of the secrets that you have uploaded you can use
+the ``secrets-delete`` command:
+
+.. code-block:: console
+
+   $ reana-client secrets-delete PASSWORD USERNAME
+   Secrets PASSWORD, USERNAME were successfully deleted.
+
+
 Overriding default input parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -147,24 +210,6 @@ Non-existing parameters will be skipped.
    $ reana-client start -p myparam1=myval1 -p myparam2=myval2
    workflow.1 has been started.
 
-Downloading outputs
-~~~~~~~~~~~~~~~~~~~
-
-Downloading files from an analysis workspace:
-
-.. code-block:: console
-
-   $ reana-client download result.png
-   File plot.png downloaded to /myfirstanalysis.
-
-In the same way you can download all outputs defined in the reana.yaml
-file of the analysis, by just running:
-
-.. code-block:: console
-
-   $ reana-client download
-
-Note that downloading directories is not yet supported.
 
 Running analysis
 ~~~~~~~~~~~~~~~~
@@ -189,6 +234,27 @@ analysis inputs, and start the workflow run.
    NAME         RUN_NUMBER   CREATED               STATUS    PROGRESS
    myanalysis   1            2018-11-07T12:45:18   running   1/1
    $ reana-client download results/plot.png
+
+
+Downloading outputs
+~~~~~~~~~~~~~~~~~~~
+
+Downloading files from an analysis workspace:
+
+.. code-block:: console
+
+   $ reana-client download result.png
+   File plot.png downloaded to /myfirstanalysis.
+
+In the same way you can download all outputs defined in the reana.yaml
+file of the analysis, by just running:
+
+.. code-block:: console
+
+   $ reana-client download
+
+Note that downloading directories is not yet supported.
+
 
 Opening interactive sessions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

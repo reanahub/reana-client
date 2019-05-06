@@ -35,3 +35,8 @@ Workspace file management commands:
   mv        Move files within workspace.
   rm        Delete files from workspace.
   upload    Upload files and directories to workspace.
+
+Secret management commands:
+  secrets-add     Add secrets from literal string or from file.
+  secrets-delete  Delete user secrets by name.
+  secrets-list    List user secrets.

@@ -14,13 +14,14 @@ import traceback
 from functools import partial
 
 from bravado.exception import HTTPError
-from werkzeug.local import LocalProxy
-
 from reana_client.config import ERROR_MESSAGES, WORKFLOW_ENGINES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import (_validate_reana_yaml, get_workflow_root,
                                 is_uuid_v4)
 from reana_commons.api_client import get_current_api_client
+from reana_commons.errors import REANASecretAlreadyExists, \
+    REANASecretDoesNotExist
+from werkzeug.local import LocalProxy
 
 current_rs_api_client = LocalProxy(
     partial(get_current_api_client, component='reana-server'))
@@ -757,6 +758,112 @@ def get_workflow_disk_usage(workflow, parameters, access_token):
     except HTTPError as e:
         logging.debug(
             'Workflow disk usage could not be retrieved: '
+            '\nStatus: {}\nReason: {}\n'
+            'Message: {}'.format(e.response.status_code,
+                                 e.response.reason,
+                                 e.response.json()['message']))
+        raise Exception(e.response.json()['message'])
+    except Exception as e:
+        raise e
+
+
+def add_secrets(secrets, overwrite, access_token):
+    """Add new secrets.
+
+    :param secrets: dictionary containing all the secrets to be sent.
+      The dictionary with secret names for keys and for each key there is
+       a dictionary with two fields:
+      - 'value':  a base64 encoded file or literal string
+      - 'type': 'file' or 'env'
+    :param overwrite: whether secrets should be overwritten when they
+     already exist.
+    :param access_token: access token of the current user.
+
+    """
+    try:
+        (response,
+            http_response) = current_rs_api_client.api.add_secrets(
+            secrets=secrets,
+            access_token=access_token,
+            overwrite=overwrite).result()
+        if http_response.status_code == 201:
+            return response
+        elif http_response.status_code == 409:
+            raise REANASecretAlreadyExists()
+        else:
+            raise Exception(
+                "Expected status code 201 but replied with "
+                "{status_code}".format(
+                    status_code=http_response.status_code))
+
+    except HTTPError as e:
+        logging.debug(
+            'Secrets could not be added: '
+            '\nStatus: {}\nReason: {}\n'
+            'Message: {}'.format(e.response.status_code,
+                                 e.response.reason,
+                                 e.response.json()['message']))
+        raise Exception(e.response.json()['message'])
+    except Exception as e:
+        raise e
+
+
+def delete_secrets(secrets, access_token):
+    """Delete a list of secrets.
+
+    :param secrets: List of secret names to be deleted.
+    :param access_token: access token of the current user.
+
+    """
+    try:
+        (response,
+            http_response) = current_rs_api_client.api.delete_secrets(
+            secrets=secrets,
+            access_token=access_token).result()
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(
+                    status_code=http_response.status_code))
+
+    except HTTPError as e:
+        if e.response.status_code == 404:
+            raise REANASecretDoesNotExist(e.response.json())
+        else:
+            logging.debug(
+                'Secrets could not be deleted: '
+                '\nStatus: {}\nReason: {}\n'
+                'Message: {}'.format(e.response.status_code,
+                                     e.response.reason,
+                                     e.response.json()['message']))
+        raise Exception(e.response.json()['message'])
+    except Exception as e:
+        raise e
+
+
+def list_secrets(access_token):
+    """List user secrets.
+
+    :param access_token: access token of the current user.
+
+    """
+    try:
+        (response,
+            http_response) = current_rs_api_client.api.get_secrets(
+            access_token=access_token).result()
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(
+                    status_code=http_response.status_code))
+
+    except HTTPError as e:
+        logging.debug(
+            'Secrets could not be listed: '
             '\nStatus: {}\nReason: {}\n'
             'Message: {}'.format(e.response.status_code,
                                  e.response.reason,

@@ -12,7 +12,7 @@ import sys
 
 import click
 
-from reana_client.cli import workflow, files, ping
+from reana_client.cli import workflow, files, ping, secrets
 
 DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \
                    '{%(pathname)s:%(lineno)d} ' \
@@ -36,7 +36,8 @@ class ReanaCLI(click.Group):
                   workflow.workflow_management_group,
                   workflow.workflow_execution_group,
                   workflow.interactive_group,
-                  files.files_group]
+                  files.files_group,
+                  secrets.secrets_group]
 
     def __init__(self, name=None, commands=None, **attrs):
         """Initialize REANA client commands."""

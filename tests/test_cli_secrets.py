@@ -9,6 +9,7 @@
 """REANA client secrets tests."""
 
 import pytest
+from bravado.exception import HTTPError
 from click.testing import CliRunner
 from mock import Mock, patch
 from pytest_reana.test_utils import make_mock_api_client
@@ -118,19 +119,20 @@ def test_secrets_add_already_exist():
     """Test adding secrets when they already exist."""
     status_code = 409
     reana_token = '000000'
-    response = Mock()
     env = {'REANA_SERVER_URL': 'localhost'}
     message = 'One of the secrets already exists. No secrets were added.'
-    mock_http_response = Mock()
-    mock_http_response.status_code = status_code
-    mock_http_response.raw_bytes = str(response).encode()
-    mock_response = response
+    mock_http_response = Mock(
+        status_code=status_code,
+        reason='Conflict',
+        json=Mock(return_value={'message': 'Conflict'}))
+    rs_api_client_mock = Mock()
+    rs_api_client_mock.api.add_secrets = Mock(
+        side_effect=HTTPError(mock_http_response))
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
                 "reana_client.api.client.current_rs_api_client",
-                make_mock_api_client('reana-server')(mock_response,
-                                                     mock_http_response)):
+                rs_api_client_mock):
                 result = runner.invoke(
                     cli, ['secrets-add',
                           '-t', reana_token,

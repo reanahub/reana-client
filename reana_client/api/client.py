@@ -788,8 +788,6 @@ def add_secrets(secrets, overwrite, access_token):
             overwrite=overwrite).result()
         if http_response.status_code == 201:
             return response
-        elif http_response.status_code == 409:
-            raise REANASecretAlreadyExists()
         else:
             raise Exception(
                 "Expected status code 201 but replied with "
@@ -803,7 +801,10 @@ def add_secrets(secrets, overwrite, access_token):
             'Message: {}'.format(e.response.status_code,
                                  e.response.reason,
                                  e.response.json()['message']))
-        raise Exception(e.response.json()['message'])
+        if e.status_code == 409:
+            raise REANASecretAlreadyExists()
+        else:
+            raise Exception(e.response.json()['message'])
     except Exception as e:
         raise e
 

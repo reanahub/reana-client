@@ -8,6 +8,7 @@
 
 """REANA client secrets tests."""
 
+import pytest
 from click.testing import CliRunner
 from mock import Mock, patch
 from pytest_reana.test_utils import make_mock_api_client
@@ -61,7 +62,10 @@ def test_secrets_list_ok():
             assert "env" in result.output
 
 
-def test_secrets_add():
+@pytest.mark.parametrize(
+    'secret',
+    ['USER=reanauser', 'USER=reana=user'])
+def test_secrets_add(secret):
     """Test secrets add."""
     status_code = 201
     reana_token = '000000'
@@ -86,13 +90,16 @@ def test_secrets_add():
                     cli, ['secrets-add',
                           '-t', reana_token,
                           '--from-file', secret_file,
-                          '--from-literal', 'USER=reanauser']
+                          '--from-literal', secret]
                 )
                 assert result.exit_code == 0
                 assert message in result.output
 
 
-def test_secrets_add_wrong_format():
+@pytest.mark.parametrize(
+    'secret',
+    ['wrongformat', 'PASS:123'])
+def test_secrets_add_wrong_format(secret):
     """Test adding secrets with wrong format."""
     reana_token = '000000'
     env = {'REANA_SERVER_URL': 'localhost'}
@@ -101,7 +108,7 @@ def test_secrets_add_wrong_format():
 
     result = runner.invoke(
         cli, ['secrets-add', '-t', reana_token,
-              '--from-literal', 'wrongformat']
+              '--from-literal', secret]
     )
     assert result.exit_code == 1
     assert message in result.output

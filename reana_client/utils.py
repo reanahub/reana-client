@@ -280,7 +280,7 @@ def parse_secret_from_literal(literal):
     via http request.
     """
     try:
-        key, value = literal.split('=')
+        key, value = literal.split('=', 1)
         secret = {
             key: {
                 'value': base64.b64encode(

@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import sys
+import time
 import traceback
 
 import click
@@ -30,7 +31,8 @@ from reana_client.cli.files import upload_files
 from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, filter_data,
                                     format_session_uri, parse_parameters)
-from reana_client.config import ERROR_MESSAGES, reana_yaml_default_file_path
+from reana_client.config import (ERROR_MESSAGES, reana_yaml_default_file_path,
+                                 TIMECHECK)
 from reana_client.utils import (get_workflow_name_and_run_number,
                                 get_workflow_status_change_msg, is_uuid_v4,
                                 load_reana_spec,
@@ -272,10 +274,16 @@ def workflow_create(ctx, file, name,
          'E.g. CACHE=off. (workflow engine - serial) '
          'E.g. --debug (workflow engine - cwl)',
 )
+@click.option(
+    '--follow', 'follow',
+    is_flag=True,
+    default=False,
+    help='If set, follows the execution of the workflow until termination.',
+)
 @click.pass_context
 def workflow_start(ctx, workflow, access_token,
-                   parameters, options):  # noqa: D301
-    r"""Start previously created workflow.
+                   parameters, options, follow):  # noqa: D301
+    """Start previously created workflow.
 
     The `start` command allows to start previously created workflow. The
     workflow execution can be further influenced by passing input prameters
@@ -285,9 +293,8 @@ def workflow_start(ctx, workflow, access_token,
     workflow engine, you can set `-o CACHE=off`.
 
     Examples: \n
-    \t $ reana-client start -w myanalysis.42 -p sleeptime=10 \n
-    \t $ reana-client start -w myanalysis.42 -p myparam1=myvalue1
-    -p myparam2=myvalue2 -o CACHE=off
+    \t $ reana-client start -w myanalysis.42 -p sleeptime=10 -p myparam=4 \n
+    \t $ reana-client start -w myanalysis.42 -p myparam1=myvalue1 -o CACHE=off
     """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -321,7 +328,6 @@ def workflow_start(ctx, workflow, access_token,
                     click.style('Could not apply given input parameters: '
                                 '{0} \n{1}'.format(parameters, str(e))),
                     err=True)
-
         try:
             logging.info('Connecting to {0}'.format(
                 current_rs_api_client.swagger_spec.api_url))
@@ -333,7 +339,19 @@ def workflow_start(ctx, workflow, access_token,
             click.secho(
                 get_workflow_status_change_msg(workflow, current_status),
                 fg='green')
-
+            if follow:
+                while 'running' in current_status:
+                    time.sleep(TIMECHECK)
+                    current_status = get_workflow_status(
+                        workflow, access_token).get('status')
+                    click.secho(
+                        get_workflow_status_change_msg(
+                            workflow, current_status), fg='green')
+                    if 'finished' in current_status:
+                        sys.exit(0)
+                    elif 'failed' in current_status or \
+                            'stopped' in current_status:
+                        sys.exit(1)
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
@@ -674,10 +692,16 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     help='Additional operatioal options for the workflow execution. '
          'E.g. CACHE=off.',
 )
+@click.option(
+    '--follow', 'follow',
+    is_flag=True,
+    default=False,
+    help='If set, follows the execution of the workflow until termination.',
+)
 @add_access_token_options
 @click.pass_context
 def workflow_run(ctx, file, filenames, name, skip_validation,
-                 access_token, parameters, options):  # noqa: D301
+                 access_token, parameters, options, follow):  # noqa: D301
     """Shortcut to create, upload, start a new workflow.
 
     The `run` command allows to create a new workflow, upload its input files
@@ -706,7 +730,8 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
                workflow=ctx.workflow_name,
                access_token=access_token,
                parameters=parameters,
-               options=options)
+               options=options,
+               follow=follow)
 
 
 @workflow_management_group.command('delete')

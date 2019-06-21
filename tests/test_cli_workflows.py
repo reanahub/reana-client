@@ -288,6 +288,58 @@ def test_workflow_start_successful(status):
             assert expected_message in result.output
 
 
+@pytest.mark.parametrize(
+    "initial_status, final_status, exit_code",
+    [('running', 'finished', 0), ('running', 'failed', 1),
+        ('running', 'stopped', 1)])
+def test_workflow_start_follow(initial_status, final_status, exit_code):
+    """Test start workflow with follow flag."""
+    workflow_name = "mytest.1"
+    initial_reponse = {
+        "status": initial_status,
+        "message": "Server message",
+        "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+        "workflow_name": workflow_name,
+        "user": "00000000-0000-0000-0000-000000000000"}
+    final_reponse = {
+        "status": final_status,
+        "message": "Server message",
+        "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+        "workflow_name": workflow_name,
+        "user": "00000000-0000-0000-0000-000000000000"}
+    initial_expected_message = get_workflow_status_change_msg(
+        workflow_name, initial_status)
+    final_Expected_message = get_workflow_status_change_msg(
+        workflow_name, final_status)
+    status_code = 200
+    mock_http_response = Mock()
+    mock_http_response.status_code = status_code
+    mock_api_client = Mock()
+    mock_start_workflow_result = Mock(
+        return_value=(mock_http_response, mock_http_response))
+    mock_api_client.api.start_workflow.return_value = \
+        Mock(result=mock_start_workflow_result)
+    mock_get_workflow_status_result = Mock(
+        side_effect=[(initial_reponse, mock_http_response),
+                     (final_reponse, mock_http_response)])
+    mock_api_client.api.get_workflow_status.return_value = \
+        Mock(result=mock_get_workflow_status_result)
+    reana_token = '000000'
+    env = {'REANA_SERVER_URL': 'localhost'}
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                mock_api_client):
+            result = runner.invoke(
+                cli,
+                ['start', '-t', reana_token, '-w', workflow_name, '--follow']
+            )
+            assert result.exit_code == exit_code
+            assert initial_expected_message in result.output
+            assert final_Expected_message in result.output
+
+
 def test_workflows_validate(create_yaml_workflow_schema):
     """Test validation of REANA specifications file."""
     message = "is a valid REANA specification file"

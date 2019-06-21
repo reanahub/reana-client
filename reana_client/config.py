@@ -29,5 +29,8 @@ ERROR_MESSAGES = {
         ' REANA_ACCESS_TOKEN environment variable.'
 }
 
+TIMECHECK = 5
+"""Time between workflow status check."""
+
 WORKFLOW_ENGINES = ['serial', 'cwl', 'yadage']
 """Supported workflow engines."""

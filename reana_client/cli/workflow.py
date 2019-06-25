@@ -27,7 +27,7 @@ from reana_client.api.client import (close_interactive_session,
                                      get_workflow_status, get_workflows,
                                      open_interactive_session, start_workflow,
                                      stop_workflow)
-from reana_client.cli.files import upload_files
+from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, filter_data,
                                     format_session_uri, parse_parameters)
@@ -348,6 +348,14 @@ def workflow_start(ctx, workflow, access_token,
                         get_workflow_status_change_msg(
                             workflow, current_status), fg='green')
                     if 'finished' in current_status:
+                        if follow:
+                            click.secho(
+                                        '[INFO] Listing workflow output '
+                                        'files...', bold=True)
+                            ctx.invoke(get_files,
+                                       workflow=workflow,
+                                       access_token=access_token,
+                                       output_format='url')
                         sys.exit(0)
                     elif 'failed' in current_status or \
                             'stopped' in current_status:

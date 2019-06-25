@@ -20,10 +20,11 @@ from reana_client.api.client import (current_rs_api_client, delete_file,
                                      download_file, get_workflow_disk_usage,
                                      get_workflow_status, list_files, mv_files,
                                      upload_to_server)
+from reana_client.api.utils import get_path_from_operation_id
 from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, filter_data,
                                     parse_parameters)
-from reana_client.config import ERROR_MESSAGES
+from reana_client.config import ERROR_MESSAGES, JSON, URL
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import (get_workflow_root, load_reana_spec,
                                 workflow_uuid_or_name)
@@ -54,6 +55,12 @@ def files_group(ctx):
     flag_value='json',
     default=None,
     help='Get output in JSON format.')
+@click.option(
+    '--url',
+    'output_format',
+    flag_value='url',
+    default=None,
+    help='Get URLs of output files.')
 @add_access_token_options
 @click.pass_context
 def get_files(ctx, workflow, _filter,
@@ -70,7 +77,6 @@ def get_files(ctx, workflow, _filter,
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-
     try:
         _url = current_rs_api_client.swagger_spec.api_url
     except MissingAPIClientConfiguration as e:
@@ -90,28 +96,38 @@ def get_files(ctx, workflow, _filter,
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
+
             response = list_files(workflow, access_token)
             headers = ['name', 'size', 'last-modified']
             data = []
+            file_path = get_path_from_operation_id(
+                current_rs_api_client.swagger_spec.spec_dict['paths'],
+                'download_file')
+            urls = []
             for file_ in response:
                 data.append(list(map(str, [file_['name'],
                                            file_['size'],
                                            file_['last-modified']])))
+                urls.append(ctx.obj.reana_server_url +
+                            file_path.format(workflow_id_or_name=workflow,
+                                             file_name=file_['name']))
             tablib_data = tablib.Dataset()
             tablib_data.headers = headers
             for row in data:
                     tablib_data.append(row)
-            if _filter:
+            if output_format == URL:
+                    click.echo('\n'.join(urls))
+            elif _filter:
                 tablib_data, filtered_headers = \
                     filter_data(parsed_filters, headers, tablib_data)
-                if output_format:
+                if output_format == JSON:
                     click.echo(json.dumps(tablib_data))
                 else:
                     tablib_data = [list(item.values()) for item in tablib_data]
                     click_table_printer(filtered_headers, filtered_headers,
                                         tablib_data)
             else:
-                if output_format:
+                if output_format == JSON:
                     click.echo(tablib_data.export(output_format))
                 else:
                     click_table_printer(headers, _filter, data)

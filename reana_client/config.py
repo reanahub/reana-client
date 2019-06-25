@@ -29,8 +29,14 @@ ERROR_MESSAGES = {
         ' REANA_ACCESS_TOKEN environment variable.'
 }
 
+JSON = 'json'
+"""Json output format."""
+
 TIMECHECK = 5
 """Time between workflow status check."""
+
+URL = 'url'
+"""Url output format."""
 
 WORKFLOW_ENGINES = ['serial', 'cwl', 'yadage']
 """Supported workflow engines."""

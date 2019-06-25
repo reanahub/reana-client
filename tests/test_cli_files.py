@@ -69,6 +69,36 @@ def test_list_files_ok():
             assert json_response[0]['name'] in response[0]['name']
 
 
+def test_list_files_url():
+    """Test list workflow workspace files' urls."""
+    status_code = 200
+    response = [
+        {
+            "last-modified": "string",
+            "name": "string",
+            "size": 0
+        }
+    ]
+    env = {'REANA_SERVER_URL': 'localhost'}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    workflow_name = 'mytest'
+    reana_token = '000000'
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            result = runner.invoke(
+                cli, ['ls', '-t', reana_token, '--workflow', workflow_name,
+                      '--url'])
+            assert result.exit_code == 0
+            assert workflow_name in result.output
+            assert response[0]['name'] in result.output
+
+
 def test_download_file():
     """Test file downloading."""
     status_code = 200

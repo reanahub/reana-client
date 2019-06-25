@@ -610,7 +610,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     there is no point in continuing the running the workflow.
 
     Example: \n
-    \t $ reana-client stop -w myanalysis.42--force
+    \t $ reana-client stop -w myanalysis.42 --force
     """
     if not force_stop:
         click.secho('Graceful stop not implement yet. If you really want to '

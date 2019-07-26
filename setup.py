@@ -42,6 +42,7 @@ setup_requires = [
 ]
 
 install_requires = [
+    'typing>=3.7.4 ; python_version=="2.7"',  # workaround for CWL deps
     'click>=7',
     'cwltool==1.0.20181118133959',
     'pyOpenSSL==17.5.0',  # FIXME remove once yadage-schemas solves deps.

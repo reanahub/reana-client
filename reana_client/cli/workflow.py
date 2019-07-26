@@ -17,7 +17,6 @@ import traceback
 import click
 import tablib
 from jsonschema.exceptions import ValidationError
-
 from reana_client.api.client import (close_interactive_session,
                                      create_workflow, current_rs_api_client,
                                      delete_workflow, diff_workflows,
@@ -31,8 +30,8 @@ from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, filter_data,
                                     format_session_uri, parse_parameters)
-from reana_client.config import (ERROR_MESSAGES, reana_yaml_default_file_path,
-                                 TIMECHECK)
+from reana_client.config import (ERROR_MESSAGES, TIMECHECK,
+                                 reana_yaml_default_file_path)
 from reana_client.utils import (get_workflow_name_and_run_number,
                                 get_workflow_status_change_msg, is_uuid_v4,
                                 load_reana_spec,
@@ -194,10 +193,10 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
     help='REANA specifications file describing the workflow and '
          'context which REANA should execute.')
 @click.option(
-    '-n',
-    '--name',
+    '-n', '--name',
+    '-w', '--workflow',
     default='',
-    help='Name of the workflow.')
+    help='Optional name of the workflow. [default is "workflow"]')
 @click.option(
     '--skip-validation',
     is_flag=True,
@@ -215,8 +214,9 @@ def workflow_create(ctx, file, name,
     below.
 
     Examples: \n
-    \t $ reana-client create \n
-    \t $ reana-client create -f ./somedir/myreana.yaml
+    \t $ reana-client create\n
+    \t $ reana-client create -w myanalysis\n
+    \t $ reana-client create -w myanalysis -f myreana.yaml\n
     """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -678,10 +678,10 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     type=click.Path(exists=True, resolve_path=True),
     nargs=-1)
 @click.option(
-    '-n',
-    '--name',
+    '-n', '--name',
+    '-w', '--workflow',
     default='',
-    help='Name of the workflow.')
+    help='Optional name of the workflow. [default is "workflow"]')
 @click.option(
     '--skip-validation',
     is_flag=True,
@@ -716,8 +716,8 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
     and start it in one command.
 
     Examples: \n
-    \t $ reana-client run -n myanalysis-test-small -p myparam=mysmallvalue \n
-    \t $ reana-client run -n myanalysis-test-big -p myparam=mybigvalue
+    \t $ reana-client run -w myanalysis-test-small -p myparam=mysmallvalue \n
+    \t $ reana-client run -w myanalysis-test-big -p myparam=mybigvalue
     """
     # set context parameters for subcommand
     ctx.invoked_by_subcommand = True

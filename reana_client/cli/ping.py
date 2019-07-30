@@ -11,9 +11,9 @@ import logging
 import traceback
 
 import click
-
 from reana_client.api.client import current_rs_api_client
 from reana_client.api.client import ping as rs_ping
+from reana_client.version import __version__
 from reana_commons.errors import MissingAPIClientConfiguration
 
 
@@ -31,7 +31,7 @@ def ping(ctx):  # noqa: D301
     The `ping` command allows to test connection to REANA server.
 
     Examples: \n
-    \t reana-client ping
+    \t $ reana-client ping
     """
     try:
         logging.info('Connecting to {0}'.format(
@@ -53,3 +53,16 @@ def ping(ctx):  # noqa: D301
             'REANA cluster server at {0}.'.format(
                 current_rs_api_client.swagger_spec.api_url),
             fg='red'), err=True)
+
+
+@configuration_group.command('version')
+@click.pass_context
+def version(ctx):  # noqa: D301
+    """Show version.
+
+    The `version` command shows REANA client version.
+
+    Examples: \n
+    \t $ reana-client version
+    """
+    click.echo(__version__)

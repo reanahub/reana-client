@@ -90,8 +90,8 @@ def test_secrets_add(secret):
                 result = runner.invoke(
                     cli, ['secrets-add',
                           '-t', reana_token,
-                          '--from-file', secret_file,
-                          '--from-literal', secret]
+                          '--file', secret_file,
+                          '--env', secret]
                 )
                 assert result.exit_code == 0
                 assert message in result.output
@@ -109,7 +109,7 @@ def test_secrets_add_wrong_format(secret):
 
     result = runner.invoke(
         cli, ['secrets-add', '-t', reana_token,
-              '--from-literal', secret]
+              '--env', secret]
     )
     assert result.exit_code == 1
     assert message in result.output
@@ -136,7 +136,7 @@ def test_secrets_add_already_exist():
                 result = runner.invoke(
                     cli, ['secrets-add',
                           '-t', reana_token,
-                          '--from-literal', 'USER=reanauser']
+                          '--env', 'USER=reanauser']
                 )
                 assert message in result.output
                 assert result.exit_code == 1

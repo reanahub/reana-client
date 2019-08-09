@@ -13,7 +13,7 @@ import traceback
 import click
 from reana_client.api.client import add_secrets, delete_secrets, \
     list_secrets, current_rs_api_client
-from reana_client.cli.utils import add_access_token_options
+from reana_client.cli.utils import add_access_token_options, NotRequiredIf
 from reana_client.config import ERROR_MESSAGES
 from reana_commons.errors import MissingAPIClientConfiguration, \
     REANASecretAlreadyExists, REANASecretDoesNotExist
@@ -33,13 +33,19 @@ def secrets_group(ctx):
 
 @secrets_group.command()
 @click.option(
-    '--from-literal',
+    '--env',
     multiple=True,
+    cls=NotRequiredIf,
+    not_required_if='file',
     help='Secrets to be uploaded from literal string.'
          'e.g. PASSWORD=password123')
 @click.option(
-    '--from-file',
+    '--file',
     multiple=True,
+    cls=NotRequiredIf,
+    type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                    readable=True),
+    not_required_if='env',
     help='Secrets to be uploaded from file.')
 @click.option(
     '--overwrite',
@@ -47,15 +53,15 @@ def secrets_group(ctx):
     default=False,
     help='Overwrite the secret if already present')
 @add_access_token_options
-def secrets_add(from_literal, from_file, overwrite, access_token):  # noqa: D301
+def secrets_add(env, file, overwrite, access_token):  # noqa: D301
     """Add secrets from literal string or from file.
 
     Examples: \n
-    \t $ reana-client secrets-add --from-literal PASSWORD=password \n
-    \t $ reana-client secrets-add --from-file ~/.keytab \n
-    \t $ reana-client secrets-add --from-literal USER=reanauser \n
-    \t                            --from-literal PASSWORD=password \n
-    \t                            --from-file ~/.keytab
+    \t $ reana-client secrets-add --env PASSWORD=password \n
+    \t $ reana-client secrets-add --file ~/.keytab \n
+    \t $ reana-client secrets-add --env USER=reanauser \n
+    \t                            --env PASSWORD=password \n
+    \t                            --file ~/.keytab
     """
     if not access_token:
         click.echo(
@@ -64,10 +70,10 @@ def secrets_add(from_literal, from_file, overwrite, access_token):  # noqa: D301
         sys.exit(1)
 
     secrets_ = {}
-    for literal in from_literal:
+    for literal in env:
         secret = parse_secret_from_literal(literal)
         secrets_.update(secret)
-    for path in from_file:
+    for path in file:
         secret = parse_secret_from_path(path)
         secrets_.update(secret)
     try:

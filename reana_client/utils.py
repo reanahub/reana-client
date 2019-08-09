@@ -311,9 +311,10 @@ def parse_secret_from_path(path):
      via http request.
     """
     try:
-        with open(path, 'rb') as file:
+        with open(os.path.expanduser(path), 'rb') as file:
+            file_name = os.path.basename(path)
             secret = {
-                file.name: {
+                file_name: {
                     'value': base64.b64encode(
                         file.read()).decode('utf-8'),
                     'type': 'file'

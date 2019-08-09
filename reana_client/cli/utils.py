@@ -11,6 +11,7 @@ import functools
 import json
 import os
 import shlex
+import sys
 
 import click
 
@@ -85,3 +86,29 @@ def format_session_uri(reana_server_url, path, access_token):
     return "{reana_server_url}{path}?token={access_token}".format(
         reana_server_url=reana_server_url,
         path=path, access_token=access_token)
+
+
+class NotRequiredIf(click.Option):
+    """Allow only one of two arguments to be missing."""
+
+    def __init__(self, *args, **kwargs):
+        """."""
+        self.not_required_if = kwargs.pop('not_required_if')
+        assert self.not_required_if, "'not_required_if' parameter required"
+        super(NotRequiredIf, self).__init__(*args, **kwargs)
+
+    def handle_parse_result(self, ctx, opts, args):
+        """Overwritten click method."""
+        argument_present = self.name in opts
+        other_argument_present = self.not_required_if in opts
+        if not argument_present and not other_argument_present:
+            click.echo(
+                click.style(
+                    'At least one of the options: `{}` or `{}` is required\n'
+                    .format(self.name, self.not_required_if),
+                    fg='red') + ctx.get_help(),
+                err=True)
+            sys.exit(1)
+
+        return super(NotRequiredIf, self).handle_parse_result(
+            ctx, opts, args)

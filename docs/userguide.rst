@@ -141,28 +141,28 @@ the ``secrets-add`` command:
 .. code-block:: console
 
    $ # You can upload secrets from literal strings:
-   $ reana-client secrets-add --from-literal HTCONDORCERN_USERNAME=johndoe
-                              --from-literal HTCONDORCERN_KEYTAB=.keytab
+   $ reana-client secrets-add --env HTCONDORCERN_USERNAME=johndoe
+                              --env HTCONDORCERN_KEYTAB=.keytab
    Secrets HTCONDORCERN_USERNAME, HTCONDORCERN_KEYTAB were successfully uploaded.
 
    $ # ...and from files:
-   $ reana-client secrets-add --from-file ~/.keytab
+   $ reana-client secrets-add --file ~/.keytab
    Secrets .keytab were successfully uploaded.
 
    $ # ...you can also combine two options in one command:
-   $ reana-client secrets-add --from-literal HTCONDORCERN_USERNAME=johndoe
-                              --from-literal HTCONDORCERN_KEYTAB=.keytab
-                              --from-file ~/.keytab
+   $ reana-client secrets-add --env HTCONDORCERN_USERNAME=johndoe
+                              --env HTCONDORCERN_KEYTAB=.keytab
+                              --file ~/.keytab
    Secrets .keytab, HTCONDORCERN_USERNAME, HTCONDORCERN_KEYTAB were successfully uploaded.
 
    $ # Trying to add a secret that is already added
    $ # will result in a warning and no action will be taken:
-   $ reana-client secrets-add --from-literal HTCONDORCERN_USERNAME=johndoe
+   $ reana-client secrets-add --env HTCONDORCERN_USERNAME=johndoe
    One of the secrets already exists. No secrets were added.
 
    $ # If you are sure that you want to overwrite it you can use
    $ # the ``--overwrite`` option:
-   $ reana-client secrets-add --from-literal HTCONDORCERN_USERNAME=janedoe
+   $ reana-client secrets-add --env HTCONDORCERN_USERNAME=janedoe
                               --overwrite
    Secrets USERNAME were successfully uploaded.
    $ # Note that the ``--overwrite`` option will aply to

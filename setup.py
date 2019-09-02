@@ -44,15 +44,19 @@ setup_requires = [
 install_requires = [
     'typing>=3.7.4 ; python_version=="2.7"',  # workaround for CWL deps
     'click>=7',
+    'cryptography>=2.7',
     'cwltool==1.0.20190815141648',
-    'pyOpenSSL==17.5.0',  # FIXME remove once yadage-schemas solves deps.
+    'pyOpenSSL>=19.0.0',  # FIXME remove once yadage-schemas solves deps.
+    'jsonpointer>=2.0',
+    'jsonschema>=3.0.1',
     'reana-commons>=0.6.0.dev20190604,<0.7.0',
-    'rfc3987==1.3.7',  # FIXME remove once yadage-schemas solves deps.
-    'strict-rfc3339==0.7',  # FIXME remove once yadage-schemas solves deps.
+    'rfc3987>=1.3.8',  # FIXME remove once yadage-schemas solves deps.
+    'six==1.12.0',
+    'strict-rfc3339>=0.7',  # FIXME remove once yadage-schemas solves deps.
     'tablib>=0.12.1,<0.13',
-    'webcolors==1.7',  # FIXME remove once yadage-schemas solves deps.
+    'webcolors==1.9.1',  # FIXME remove once yadage-schemas solves deps.
     'werkzeug>=0.14.1',
-    'yadage-schemas==0.7.16',
+    'yadage-schemas==0.10.6',
 ]
 
 packages = find_packages()

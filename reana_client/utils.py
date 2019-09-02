@@ -44,11 +44,29 @@ def yadage_load(workflow_file, toplevel='.'):
 
     :param workflow_file: A specification file compliant with
         `yadage` workflow specification.
+    :type workflow_file: string
+    :param toplevel: URL/path for the workflow file
+    :type toplevel: string
+
     :returns: A dictionary which represents the valid `yadage` workflow.
     """
-    return yadageschemas.load(workflow_file, toplevel=toplevel,
-                              schema_name='yadage/workflow-schema',
-                              schemadir=None, validate=True)
+    schema_name = 'yadage/workflow-schema'
+    schemadir = None
+
+    specopts = {
+        'toplevel': toplevel,
+        'schema_name': schema_name,
+        'schemadir': schemadir,
+        'load_as_ref': False,
+    }
+
+    validopts = {
+        'schema_name': schema_name,
+        'schemadir': schemadir,
+    }
+
+    return yadageschemas.load(spec=workflow_file, specopts=specopts,
+                              validopts=validopts, validate=True)
 
 
 def cwl_load(workflow_file):

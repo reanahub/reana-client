@@ -13,15 +13,21 @@ import os
 import traceback
 from functools import partial
 
+import requests
 from bravado.exception import HTTPError
 from reana_client.config import ERROR_MESSAGES, WORKFLOW_ENGINES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import (_validate_reana_yaml, get_workflow_root,
                                 is_uuid_v4)
 from reana_commons.api_client import get_current_api_client
-from reana_commons.errors import REANASecretAlreadyExists, \
-    REANASecretDoesNotExist
+from reana_commons.errors import (REANASecretAlreadyExists,
+                                  REANASecretDoesNotExist)
 from werkzeug.local import LocalProxy
+
+try:
+    from urllib.parse import urljoin
+except ImportError:
+    from urlparse import urljoin
 
 current_rs_api_client = LocalProxy(
     partial(get_current_api_client, component='reana-server'))
@@ -245,29 +251,38 @@ def upload_file(workflow_id, file_, file_name, access_token):
     :param access_token: access token of the current user.
     """
     try:
-        (response,
-            http_response) = current_rs_api_client.api.upload_file(
-                workflow_id_or_name=workflow_id,
-                file_content=file_,
-                file_name=file_name,
-                access_token=access_token).result()
-
-        if http_response.status_code == 200:
-            return response
-        else:
-            raise Exception(
-                "Expected status code 200 but replied with "
-                "{status_code}".format(
-                    status_code=http_response.status_code))
-
-    except HTTPError as e:
+        api_url = current_rs_api_client.swagger_spec.__dict__.get('api_url')
+        endpoint = \
+            current_rs_api_client.api.upload_file.operation.path_name.format(
+                workflow_id_or_name=workflow_id)
+        http_response = requests.post(urljoin(api_url, endpoint),
+                                      data=file_,
+                                      params={'file_name': file_name,
+                                              'access_token': access_token},
+                                      headers={'Content-Type':
+                                               'application/octet-stream'},
+                                      verify=False)
+        return http_response.json()
+    except requests.exceptions.ConnectionError:
         logging.debug(
-            'File could not be uploaded: '
-            '\nStatus: {}\nReason: {}\n'
-            'Message: {}'.format(e.response.status_code,
-                                 e.response.reason,
-                                 e.response.json()['message']))
-        raise Exception(e.response.json()['message'])
+            'File could not be uploaded.', exc_info=True)
+        raise Exception(
+            'Could not connect to the server {}'.format(api_url))
+    except requests.exceptions.HTTPError as e:
+        logging.debug(
+            'The server responded with an HTTP error code.', exc_info=True)
+        raise Exception(
+            'Unexpected response from the server: \n{}'.format(e.response))
+    except requests.exceptions.Timeout:
+        logging.debug(
+            'Timeout while trying to establish connection.', exc_info=True)
+        raise Exception('The request to the server has timed out.')
+    except requests.exceptions.RequestException:
+        logging.debug(
+            'Something went wrong while connecting to the server.',
+            exc_info=True)
+        raise Exception('The request to the server has failed for an '
+                        'unknown reason.')
     except Exception as e:
         raise e
 

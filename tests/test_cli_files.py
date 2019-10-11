@@ -132,22 +132,13 @@ def test_download_file():
 
 def test_upload_file(create_yaml_workflow_schema):
     """Test upload file."""
-    status_code = 200
     reana_token = '000000'
     file = 'file.txt'
-    response = [file]
-    env = {'REANA_SERVER_URL': 'localhost'}
+    env = {'REANA_SERVER_URL': 'http://localhost'}
     message = 'was successfully uploaded.'
-    mock_http_response = Mock()
-    mock_http_response.status_code = status_code
-    mock_http_response.raw_bytes = str(response).encode()
-    mock_response = response
     runner = CliRunner(env=env)
     with runner.isolation():
-        with patch(
-                "reana_client.api.client.current_rs_api_client",
-                make_mock_api_client('reana-server')(mock_response,
-                                                     mock_http_response)):
+        with patch("reana_client.api.client.requests.post") as post_request:
             with runner.isolated_filesystem():
                 with open(file, 'w') as f:
                     f.write('test')
@@ -157,6 +148,7 @@ def test_upload_file(create_yaml_workflow_schema):
                     cli, ['upload', '-t', reana_token, '--workflow',
                           'mytest.1', file]
                 )
+                post_request.assert_called_once()
                 assert result.exit_code == 0
                 assert message in result.output
 

@@ -25,7 +25,8 @@ from reana_client.utils import get_workflow_status_change_msg
 def test_workflows_server_not_connected():
     """Test workflows command when server is not connected."""
     runner = CliRunner()
-    result = runner.invoke(cli, ['list'])
+    reana_token = '000000'
+    result = runner.invoke(cli, ['list', '-t', reana_token])
     message = 'REANA client is not connected to any REANA cluster.'
     assert message in result.output
     assert result.exit_code == 1
@@ -408,12 +409,13 @@ def test_run(workflow_start_mock,
     """Test run command, if wrapped commands are called."""
     reana_workflow_schema = "reana.yaml"
     runner = CliRunner()
+    reana_token = '000000'
     with runner.isolated_filesystem():
         with open(reana_workflow_schema, 'w') as f:
             f.write(create_yaml_workflow_schema)
         result = runner.invoke(
             cli,
-            ['run', '-f', reana_workflow_schema],
+            ['run', '-t', reana_token, '-f', reana_workflow_schema],
         )
     assert workflow_create_mock.called is True
     assert upload_file_mock.called is True

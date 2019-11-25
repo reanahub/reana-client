@@ -21,9 +21,10 @@ from reana_client.cli import cli
 
 def test_list_files_server_not_reachable():
     """Test list workflow workspace files when not connected to any cluster."""
+    reana_token = '000000'
     message = 'REANA client is not connected to any REANA cluster.'
     runner = CliRunner()
-    result = runner.invoke(cli, ['ls'])
+    result = runner.invoke(cli, ['ls', '-t', reana_token])
     assert result.exit_code == 1
     assert message in result.output
 

@@ -116,11 +116,6 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
             fg='red', err=True
         )
         sys.exit(1)
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
-        sys.exit(1)
     if _filter:
         parsed_filters = parse_parameters(_filter)
     try:
@@ -229,11 +224,6 @@ def workflow_create(ctx, file, name,
         click.echo(
             click.style('Workflow name cannot be a valid UUIDv4', fg='red'),
             err=True)
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
-        sys.exit(1)
     try:
         reana_specification = load_reana_spec(click.format_filename(file),
                                               skip_validation)
@@ -300,11 +290,6 @@ def workflow_start(ctx, workflow, access_token,
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
-        sys.exit(1)
     parsed_parameters = {'input_parameters':
                          dict(p.split('=') for p in parameters)}
     parsed_parameters['operational_options'] = ' '.join(options).split()
@@ -461,13 +446,6 @@ def workflow_status(ctx, workflow, _filter, output_format,
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
-        sys.exit(1)
-
     if workflow:
         try:
             response = get_workflow_status(workflow, access_token)
@@ -644,11 +622,6 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
                     ' use: --force option', fg='red')
         raise click.Abort()
 
-    if not access_token:
-        click.secho(
-            ERROR_MESSAGES['missing_access_token'], fg='red', err=True)
-        sys.exit(1)
-
     if workflow:
         try:
             logging.info(
@@ -781,12 +754,6 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
-        sys.exit(1)
 
     if workflow:
         try:
@@ -925,10 +892,6 @@ def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
     Examples:\n
     \t $ reana-client open -w myanalysis.42 jupyter
     """
-    if not access_token:
-        click.secho(
-            ERROR_MESSAGES['missing_access_token'], fg='red', err=True)
-        sys.exit(1)
     if workflow:
         try:
             logging.info(
@@ -968,10 +931,6 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
     Examples:\n
     \t $ reana-client close -w myanalysis.42
     """
-    if not access_token:
-        click.secho(
-            ERROR_MESSAGES['missing_access_token'], fg='red', err=True)
-        sys.exit(1)
     if workflow:
         try:
             logging.info(

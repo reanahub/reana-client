@@ -86,11 +86,6 @@ def get_files(ctx, workflow, _filter,
         )
         sys.exit(1)
 
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
-        sys.exit(1)
     if _filter:
         parsed_filters = parse_parameters(_filter)
     if workflow:
@@ -174,12 +169,6 @@ def download_files(ctx, workflow, filenames,
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
-        sys.exit(1)
-
     if not filenames:
         reana_spec = load_reana_spec(os.path.join(get_workflow_root(),
                                      'reana.yaml'),
@@ -247,12 +236,6 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'], fg='red'),
-            err=True)
-        sys.exit(1)
 
     if not filenames:
         reana_spec = load_reana_spec(os.path.join(get_workflow_root(),
@@ -340,12 +323,6 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'], fg='red'),
-            err=True)
-        sys.exit(1)
-
     if workflow:
         for filename in filenames:
             try:
@@ -400,11 +377,6 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'], fg='red'),
-            err=True)
-        sys.exit(1)
     if workflow:
         try:
             current_status = get_workflow_status(workflow,
@@ -458,12 +430,6 @@ def workflow_disk_usage(ctx, workflow, access_token, summarize):  # noqa: D301
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'],
-                        fg='red'), err=True)
-        sys.exit(1)
 
     if workflow:
         try:

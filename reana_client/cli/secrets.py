@@ -63,12 +63,6 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
     \t                            --env PASSWORD=password \n
     \t                            --file ~/.keytab
     """
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'], fg='red'),
-            err=True)
-        sys.exit(1)
-
     secrets_ = {}
     for literal in env:
         secret = parse_secret_from_literal(literal)
@@ -111,12 +105,6 @@ def secrets_delete(secrets, access_token):  # noqa: D301
      Examples: \n
     \t $ reana-client secrets-delete PASSWORD
     """
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'], fg='red'),
-            err=True)
-        sys.exit(1)
-
     try:
         deleted_secrets = delete_secrets(secrets, access_token)
     except REANASecretDoesNotExist as e:
@@ -158,13 +146,6 @@ def secrets_list(access_token):  # noqa: D301
             fg='red', err=True
         )
         sys.exit(1)
-
-    if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES['missing_access_token'], fg='red'),
-            err=True)
-        sys.exit(1)
-
     try:
         secrets = list_secrets(access_token)
         headers = ['name', 'type']

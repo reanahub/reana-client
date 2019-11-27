@@ -31,7 +31,7 @@ def add_access_token_options(func):
     return wrapper
 
 
-def access_token_check(ctx, access_token):
+def access_token_check(ctx, _, access_token):
     """Check if access token is present."""
     if not access_token:
         click.echo(

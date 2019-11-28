@@ -14,7 +14,6 @@ import click
 from reana_client.api.client import current_rs_api_client
 from reana_client.api.client import ping as rs_ping
 from reana_client.version import __version__
-from reana_commons.errors import MissingAPIClientConfiguration
 
 
 @click.group(help='Configuration commands')
@@ -40,10 +39,6 @@ def ping(ctx):  # noqa: D301
         click.echo(click.style('Connected to {0} - Server is running.'.format(
             current_rs_api_client.swagger_spec.api_url), fg='green'))
         logging.debug('Server response:\n{}'.format(response))
-
-    except MissingAPIClientConfiguration as e:
-        click.secho(
-            'REANA client is not connected to any REANA cluster.', fg='red')
 
     except Exception as e:
         logging.debug(traceback.format_exc())

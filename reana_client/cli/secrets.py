@@ -15,8 +15,8 @@ from reana_client.api.client import add_secrets, delete_secrets, \
     list_secrets, current_rs_api_client
 from reana_client.cli.utils import add_access_token_options, NotRequiredIf
 from reana_client.config import ERROR_MESSAGES
-from reana_commons.errors import MissingAPIClientConfiguration, \
-    REANASecretAlreadyExists, REANASecretDoesNotExist
+from reana_commons.errors import (REANASecretAlreadyExists,
+                                  REANASecretDoesNotExist)
 
 from reana_commons.utils import click_table_printer
 
@@ -138,14 +138,6 @@ def secrets_list(access_token):  # noqa: D301
     Examples: \n
     \t $ reana-client secrets-list
     """
-    try:
-        _url = current_rs_api_client.swagger_spec.api_url
-    except MissingAPIClientConfiguration as e:
-        click.secho(
-            'REANA client is not connected to any REANA cluster.',
-            fg='red', err=True
-        )
-        sys.exit(1)
     try:
         secrets = list_secrets(access_token)
         headers = ['name', 'type']

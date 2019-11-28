@@ -28,7 +28,6 @@ from reana_client.config import ERROR_MESSAGES, JSON, URL
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import (get_workflow_root, load_reana_spec,
                                 workflow_uuid_or_name)
-from reana_commons.errors import MissingAPIClientConfiguration
 from reana_commons.utils import click_table_printer
 
 
@@ -77,14 +76,6 @@ def get_files(ctx, workflow, _filter,
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-    try:
-        _url = current_rs_api_client.swagger_spec.api_url
-    except MissingAPIClientConfiguration as e:
-        click.secho(
-            'REANA client is not connected to any REANA cluster.',
-            fg='red', err=True
-        )
-        sys.exit(1)
 
     if _filter:
         parsed_filters = parse_parameters(_filter)

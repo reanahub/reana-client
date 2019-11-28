@@ -40,7 +40,6 @@ from reana_client.utils import (get_workflow_name_and_run_number,
                                 validate_serial_operational_options,
                                 workflow_uuid_or_name)
 from reana_commons.config import INTERACTIVE_SESSION_TYPES
-from reana_commons.errors import MissingAPIClientConfiguration
 from reana_commons.utils import click_table_printer
 
 
@@ -108,14 +107,6 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
     type = 'interactive' if sessions else 'batch'
-    try:
-        _url = current_rs_api_client.swagger_spec.api_url
-    except MissingAPIClientConfiguration as e:
-        click.secho(
-            'REANA client is not connected to any REANA cluster.',
-            fg='red', err=True
-        )
-        sys.exit(1)
     if _filter:
         parsed_filters = parse_parameters(_filter)
     try:

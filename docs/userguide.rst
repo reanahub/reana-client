@@ -141,36 +141,36 @@ the ``secrets-add`` command:
 .. code-block:: console
 
    $ # You can upload secrets from literal strings:
-   $ reana-client secrets-add --env HTCONDORCERN_USERNAME=johndoe
-                              --env HTCONDORCERN_KEYTAB=.keytab
-   Secrets HTCONDORCERN_USERNAME, HTCONDORCERN_KEYTAB were successfully uploaded.
+   $ reana-client secrets-add --env CERN_USER=johndoe
+                              --env CERN_KEYTAB=.keytab
+   Secrets CERN_USER, CERN_KEYTAB were successfully uploaded.
 
    $ # ...and from files:
    $ reana-client secrets-add --file ~/.keytab
    Secrets .keytab were successfully uploaded.
 
    $ # ...you can also combine two options in one command:
-   $ reana-client secrets-add --env HTCONDORCERN_USERNAME=johndoe
-                              --env HTCONDORCERN_KEYTAB=.keytab
+   $ reana-client secrets-add --env CERN_USER=johndoe
+                              --env CERN_KEYTAB=.keytab
                               --file ~/.keytab
-   Secrets .keytab, HTCONDORCERN_USERNAME, HTCONDORCERN_KEYTAB were successfully uploaded.
+   Secrets .keytab, CERN_USER, CERN_KEYTAB were successfully uploaded.
 
    $ # Trying to add a secret that is already added
    $ # will result in a warning and no action will be taken:
-   $ reana-client secrets-add --env HTCONDORCERN_USERNAME=johndoe
+   $ reana-client secrets-add --env CERN_USER=johndoe
    One of the secrets already exists. No secrets were added.
 
    $ # If you are sure that you want to overwrite it you can use
    $ # the ``--overwrite`` option:
-   $ reana-client secrets-add --env HTCONDORCERN_USERNAME=janedoe
+   $ reana-client secrets-add --env CERN_USER=janedoe
                               --overwrite
-   Secrets USERNAME were successfully uploaded.
+   Secrets CERN_USER were successfully uploaded.
    $ # Note that the ``--overwrite`` option will aply to
    $ # all of secrets passed next to it.
 
 
 The added secrets will be available in your workflow execution container either
-as environment variables (see example ``HTCONDORCERN_USERNAME`` above) or as
+as environment variables (see example ``CERN_USER`` above) or as
 mounted files (see ``.keytab`` example above) in the ``/etc/reana/secrets/``
 directory.
 
@@ -185,8 +185,8 @@ the ``secrets-list`` command:
    $ reana-client secrets-list
    NAME                    TYPE
    .keytab                 file
-   HTCONDORCERN_KEYTAB     env
-   HTCONDORCERN_USERNAME   env
+   CERN_KEYTAB             env
+   CERN_USER               env
 
 
 Deleting secrets
@@ -197,8 +197,8 @@ the ``secrets-delete`` command:
 
 .. code-block:: console
 
-   $ reana-client secrets-delete HTCONDORCERN_USERNAME, HTCONDORCERN_KEYTAB
-   Secrets HTCONDORCERN_USERNAME, HTCONDORCERN_KEYTAB were successfully deleted.
+   $ reana-client secrets-delete CERN_USER, CERN_KEYTAB
+   Secrets CERN_USER, CERN_KEYTAB were successfully deleted.
 
 
 Overriding default input parameters

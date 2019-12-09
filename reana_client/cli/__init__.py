@@ -13,7 +13,6 @@ import sys
 import click
 
 from reana_client.cli import workflow, files, ping, secrets
-from reana_client.cli.utils import check_connection
 
 DEBUG_LOG_FORMAT = '[%(asctime)s] p%(process)s ' \
                    '{%(pathname)s:%(lineno)d} ' \
@@ -79,7 +78,6 @@ class ReanaCLI(click.Group):
     default='WARNING')
 @click.pass_context
 @click.pass_obj
-@check_connection
 def cli(obj, ctx, loglevel):
     """REANA client for interacting with REANA server."""
     logging.basicConfig(

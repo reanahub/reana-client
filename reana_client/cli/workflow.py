@@ -28,8 +28,9 @@ from reana_client.api.client import (close_interactive_session,
                                      stop_workflow)
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (add_access_token_options,
-                                    add_workflow_option, filter_data,
-                                    format_session_uri, parse_parameters)
+                                    add_workflow_option, check_connection,
+                                    filter_data, format_session_uri,
+                                    parse_parameters)
 from reana_client.config import (ERROR_MESSAGES, TIMECHECK,
                                  reana_yaml_default_file_path)
 from reana_client.utils import (get_workflow_name_and_run_number,
@@ -89,6 +90,7 @@ def workflow_execution_group(ctx):
     count=True,
     help='Set status information verbosity.')
 @add_access_token_options
+@check_connection
 @click.pass_context
 def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
                        show_all, verbose):  # noqa: D301
@@ -189,6 +191,7 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
     help="If set, specifications file is not validated before "
          "submitting it's contents to REANA server.")
 @add_access_token_options
+@check_connection
 @click.pass_context
 def workflow_create(ctx, file, name,
                     skip_validation, access_token):  # noqa: D301
@@ -241,6 +244,7 @@ def workflow_create(ctx, file, name,
 @workflow_execution_group.command('start')
 @add_workflow_option
 @add_access_token_options
+@check_connection
 @click.option(
     '-p', '--parameter', 'parameters',
     multiple=True,
@@ -361,6 +365,7 @@ def workflow_start(ctx, workflow, access_token,
     default=None,
     help='Get output in JSON format.')
 @add_access_token_options
+@check_connection
 @click.option(
     '-v',
     '--verbose',
@@ -484,6 +489,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
     count=True,
     help='Get output in JSON format.')
 @add_access_token_options
+@check_connection
 @click.pass_context
 def workflow_logs(ctx, workflow, access_token, json_format):  # noqa: D301
     """Get  workflow logs.
@@ -595,6 +601,7 @@ def workflow_validate(ctx, file):  # noqa: D301
     help='Stop a workflow without waiting for jobs to finish.')
 @add_workflow_option
 @add_access_token_options
+@check_connection
 @click.pass_context
 def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     """Stop a running workflow.
@@ -671,6 +678,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     help='If set, follows the execution of the workflow until termination.',
 )
 @add_access_token_options
+@check_connection
 @click.pass_context
 def workflow_run(ctx, file, filenames, name, skip_validation,
                  access_token, parameters, options, follow):  # noqa: D301
@@ -726,6 +734,7 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
 )
 @add_workflow_option
 @add_access_token_options
+@check_connection
 @click.pass_context
 def workflow_delete(ctx, workflow, all_runs, workspace,
                     hard_delete, access_token):  # noqa: D301
@@ -795,6 +804,7 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
     default=5,
     help="Sets number of context lines for workspace diff output.")
 @add_access_token_options
+@check_connection
 @click.pass_context
 def workflow_diff(ctx, workflow_a, workflow_b, brief,
                   access_token, context_lines):  # noqa: D301
@@ -870,6 +880,7 @@ def interactive_group():
     help='Docker image which will be used to spawn the interactive session. '
          'Overrides the default image for the selected type.')
 @add_access_token_options
+@check_connection
 @click.pass_context
 def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
                                       image, access_token):  # noqa: D301
@@ -911,6 +922,7 @@ def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
 @interactive_group.command('close')
 @add_workflow_option
 @add_access_token_options
+@check_connection
 def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
     """Close an interactive session.
 

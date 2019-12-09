@@ -13,7 +13,8 @@ import traceback
 import click
 from reana_client.api.client import add_secrets, delete_secrets, \
     list_secrets, current_rs_api_client
-from reana_client.cli.utils import add_access_token_options, NotRequiredIf
+from reana_client.cli.utils import (add_access_token_options, check_connection,
+                                    NotRequiredIf)
 from reana_client.config import ERROR_MESSAGES
 from reana_commons.errors import (REANASecretAlreadyExists,
                                   REANASecretDoesNotExist)
@@ -53,6 +54,7 @@ def secrets_group(ctx):
     default=False,
     help='Overwrite the secret if already present')
 @add_access_token_options
+@check_connection
 def secrets_add(env, file, overwrite, access_token):  # noqa: D301
     """Add secrets from literal string or from file.
 
@@ -98,6 +100,7 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
 
 @secrets_group.command()
 @add_access_token_options
+@check_connection
 @click.argument('secrets', type=str, nargs=-1)
 def secrets_delete(secrets, access_token):  # noqa: D301
     """Delete user secrets by name.
@@ -132,6 +135,7 @@ def secrets_delete(secrets, access_token):  # noqa: D301
 
 @secrets_group.command()
 @add_access_token_options
+@check_connection
 def secrets_list(access_token):  # noqa: D301
     """List user secrets.
 

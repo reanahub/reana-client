@@ -22,8 +22,8 @@ from reana_client.api.client import (current_rs_api_client, delete_file,
                                      upload_to_server)
 from reana_client.api.utils import get_path_from_operation_id
 from reana_client.cli.utils import (add_access_token_options,
-                                    add_workflow_option, filter_data,
-                                    parse_parameters)
+                                    add_workflow_option, check_connection,
+                                    filter_data, parse_parameters)
 from reana_client.config import ERROR_MESSAGES, JSON, URL
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import (get_workflow_root, load_reana_spec,
@@ -40,6 +40,7 @@ def files_group(ctx):
 
 @files_group.command('ls')
 @add_workflow_option
+@check_connection
 @click.option(
     '--format',
     '_filter',
@@ -136,6 +137,7 @@ def get_files(ctx, workflow, _filter,
     metavar='FILES',
     nargs=-1)
 @add_workflow_option
+@check_connection
 @click.option(
     '-o',
     '--output-directory',
@@ -209,6 +211,7 @@ def download_files(ctx, workflow, filenames,
     type=click.Path(exists=True, resolve_path=True),
     nargs=-1)
 @add_workflow_option
+@check_connection
 @add_access_token_options
 @click.pass_context
 def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
@@ -298,6 +301,7 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
     metavar='SOURCES',
     nargs=-1)
 @add_workflow_option
+@check_connection
 @add_access_token_options
 @click.pass_context
 def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
@@ -354,6 +358,7 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
 @click.argument('source')
 @click.argument('target')
 @add_workflow_option
+@check_connection
 @add_access_token_options
 @click.pass_context
 def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
@@ -402,6 +407,7 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
 
 @files_group.command('du')
 @add_workflow_option
+@check_connection
 @add_access_token_options
 @click.option(
     '-s',

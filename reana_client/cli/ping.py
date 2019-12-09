@@ -13,6 +13,7 @@ import traceback
 import click
 from reana_client.api.client import current_rs_api_client
 from reana_client.api.client import ping as rs_ping
+from reana_client.cli.utils import check_connection
 from reana_client.version import __version__
 
 
@@ -24,6 +25,7 @@ def configuration_group():
 
 @configuration_group.command('ping')
 @click.pass_context
+@check_connection
 def ping(ctx):  # noqa: D301
     """Check connection to REANA server.
 

@@ -11,6 +11,7 @@ import os
 import sys
 
 import click
+import urllib3
 
 from reana_client.cli import workflow, files, ping, secrets
 
@@ -41,6 +42,7 @@ class ReanaCLI(click.Group):
 
     def __init__(self, name=None, commands=None, **attrs):
         """Initialize REANA client commands."""
+        urllib3.disable_warnings()
         click.Group.__init__(self, name, **attrs)
         for group in ReanaCLI.cmd_groups:
             for cmd in group.commands.items():

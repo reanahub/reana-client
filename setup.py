@@ -42,6 +42,7 @@ setup_requires = [
 ]
 
 install_requires = [
+    'PyYAML>=5.1',
     'typing>=3.7.4 ; python_version=="2.7"',  # workaround for CWL deps
     'click>=7',
     'cryptography>=2.7',

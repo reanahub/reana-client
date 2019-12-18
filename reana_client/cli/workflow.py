@@ -643,11 +643,6 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     default=reana_yaml_default_file_path,
     help='REANA specifications file describing the workflow and '
          'context which REANA should execute.')
-@click.argument(
-    'filenames',
-    metavar='SOURCES',
-    type=click.Path(exists=True, resolve_path=True),
-    nargs=-1)
 @click.option(
     '-n', '--name',
     '-w', '--workflow',
@@ -680,7 +675,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
 @add_access_token_options
 @check_connection
 @click.pass_context
-def workflow_run(ctx, file, filenames, name, skip_validation,
+def workflow_run(ctx, file, name, skip_validation,
                  access_token, parameters, options, follow):  # noqa: D301
     """Shortcut to create, upload, start a new workflow.
 
@@ -703,7 +698,7 @@ def workflow_run(ctx, file, filenames, name, skip_validation,
     click.secho('[INFO] Uploading files...', bold=True)
     ctx.invoke(upload_files,
                workflow=ctx.workflow_name,
-               filenames=filenames,
+               filenames=None,
                access_token=access_token)
     click.secho('[INFO] Starting workflow...', bold=True)
     ctx.invoke(workflow_start,

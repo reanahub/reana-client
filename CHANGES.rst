@@ -1,6 +1,20 @@
 Changes
 =======
 
+Version 0.6.0 (2019-12-27)
+--------------------------
+
+- Introduces user secrets management commands ``secrets-add``,
+  ``secrets-list`` and ``secrets-delete``.
+- Enhances ``run`` and ``create`` commands to allow specifying
+  workfow via the ``--workflow`` flag.
+- Introduces new command ``version`` to report client version.
+- Fixes ``upload`` command behaviour for uploading very large files.
+- Simplifies ``run`` command by removing free upload parameters.
+- Upgrades ``cwltool`` to 1.0.20191022103248.
+- Disables SSL verification warnings when talking to self-signed server
+  certificates.
+
 Version 0.5.0 (2019-04-24)
 --------------------------
 

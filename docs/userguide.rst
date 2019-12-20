@@ -241,6 +241,36 @@ analysis inputs, and start the workflow run.
    myanalysis   1            2018-11-07T12:45:18   running   1/1
    $ reana-client download results/plot.png
 
+Running specific parts of analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Serial*
+
+Serial workflows can be executed partially until the step specified by the
+user.  To do so, you need to provide the target step name as an operational
+option to the ``reana-client start`` or ``reana-client run`` commands.
+
+.. code-block:: console
+
+   $ reana-client start -w workflow.1 -o target='gendata'
+   # or
+   $ reana-client run -w workflow.1 -o target='gendata'
+
+*CWL*
+
+CWL allows `executing workflows partially <https://github.com/common-workflow-language/cwltool#running-only-part-of-a-workflow>`_.
+To do so, you need to provide the specific target as an operational option for
+the ``reana-client start`` or ``reana-client run`` commands.
+
+.. code-block:: console
+
+   $ reana-client start -w workflow.1 -o target='gendata'
+   # or
+   $ reana-client run -w workflow.1 -o target='gendata'
+
+*Yadage*
+
+Not implemented yet.
 
 Downloading outputs
 ~~~~~~~~~~~~~~~~~~~

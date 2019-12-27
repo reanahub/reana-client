@@ -19,7 +19,7 @@ readme = open('README.rst').read()
 history = open('CHANGES.rst').read()
 
 tests_require = [
-    'pytest-reana>=0.6.0,<0.7.0',
+    'pytest-reana>=0.7.0.dev20191219,<0.8.0',
 ]
 
 extras_require = {
@@ -49,7 +49,7 @@ install_requires = [
     'cwltool==1.0.20191022103248',
     'pyOpenSSL>=19.0.0',  # FIXME remove once yadage-schemas solves deps.
     'jsonpointer>=2.0',
-    'reana-commons>=0.6.0,<0.7.0',
+    'reana-commons>=0.7.0.dev20191220,<0.8.0',
     'rfc3987>=1.3.8',  # FIXME remove once yadage-schemas solves deps.
     'six==1.12.0',
     'strict-rfc3339>=0.7',  # FIXME remove once yadage-schemas solves deps.

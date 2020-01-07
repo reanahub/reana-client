@@ -868,6 +868,7 @@ def interactive_group():
 @click.argument(
     'interactive-session-type',
     metavar='interactive-session-type',
+    default=INTERACTIVE_SESSION_TYPES[0],
     type=click.Choice(INTERACTIVE_SESSION_TYPES))
 @click.option(
     '-i',

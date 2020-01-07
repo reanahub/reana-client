@@ -244,55 +244,57 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
                           get('directories') or []]
 
     if workflow:
-        for filename in filenames:
-            try:
-                response = upload_to_server(workflow,
-                                            filename,
-                                            access_token)
-                for file_ in response:
-                    if file_.startswith('symlink:'):
-                        click.echo(
-                            click.style('Symlink resolved to {}. Uploaded'
-                                        ' hard copy.'.
-                                        format(file_[len('symlink:'):]),
-                                        fg='green'))
-                    else:
-                        click.echo(
-                            click.style('File {} was successfully uploaded.'.
-                                        format(file_), fg='green'))
-            except FileNotFoundError as e:
-                logging.debug(traceback.format_exc())
-                logging.debug(str(e))
-                click.echo(
-                    click.style(
-                        'File {0} could not be uploaded: {0} does not exist.'.
-                        format(filename),
-                        fg='red'),
-                    err=True)
-                if 'invoked_by_subcommand' in ctx.parent.__dict__:
-                    sys.exit(1)
-            except FileUploadError as e:
-                logging.debug(traceback.format_exc())
-                logging.debug(str(e))
-                click.echo(
-                    click.style(
-                        'Something went wrong while uploading {0}.\n{1}'.
-                        format(filename, str(e)),
-                        fg='red'),
-                    err=True)
-                if 'invoked_by_subcommand' in ctx.parent.__dict__:
-                    sys.exit(1)
-            except Exception as e:
-                logging.debug(traceback.format_exc())
-                logging.debug(str(e))
-                click.echo(
-                    click.style(
-                        'Something went wrong while uploading {}'.
-                        format(filename),
-                        fg='red'),
-                    err=True)
-                if 'invoked_by_subcommand' in ctx.parent.__dict__:
-                    sys.exit(1)
+        if filenames:
+            for filename in filenames:
+                try:
+                    response = upload_to_server(workflow,
+                                                filename,
+                                                access_token)
+                    for file_ in response:
+                        if file_.startswith('symlink:'):
+                            click.echo(
+                                click.style('Symlink resolved to {}. Uploaded'
+                                            ' hard copy.'.
+                                            format(file_[len('symlink:'):]),
+                                            fg='green'))
+                        else:
+                            click.echo(
+                                click.style('File {} was successfully '
+                                            'uploaded.'.format(file_),
+                                            fg='green'))
+                except FileNotFoundError as e:
+                    logging.debug(traceback.format_exc())
+                    logging.debug(str(e))
+                    click.echo(
+                        click.style(
+                            'File {0} could not be uploaded: {0} does not'
+                            ' exist.'.format(filename),
+                            fg='red'),
+                        err=True)
+                    if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                        sys.exit(1)
+                except FileUploadError as e:
+                    logging.debug(traceback.format_exc())
+                    logging.debug(str(e))
+                    click.echo(
+                        click.style(
+                            'Something went wrong while uploading {0}.\n{1}'.
+                            format(filename, str(e)),
+                            fg='red'),
+                        err=True)
+                    if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                        sys.exit(1)
+                except Exception as e:
+                    logging.debug(traceback.format_exc())
+                    logging.debug(str(e))
+                    click.echo(
+                        click.style(
+                            'Something went wrong while uploading {}'.
+                            format(filename),
+                            fg='red'),
+                        err=True)
+                    if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                        sys.exit(1)
 
 
 @files_group.command('rm')

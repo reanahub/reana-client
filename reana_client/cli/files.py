@@ -414,17 +414,29 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
 @click.option(
     '-s',
     '--summarize',
-    count=True,
+    is_flag=True,
     help='Display total.')
+@click.option(
+    '-b',
+    '--bytes',
+    'block_size',
+    flag_value='b',
+    help='Print size in bytes.')
+@click.option(
+    '-k',
+    '--kilobytes',
+    'block_size',
+    flag_value='k',
+    help='Print size in kilobytes.')
 @click.pass_context
-def workflow_disk_usage(ctx, workflow, access_token, summarize):  # noqa: D301
+def workflow_disk_usage(ctx, workflow, access_token, summarize, block_size):  # noqa: D301
     """Get workspace disk usage.
 
     The `du` command allows to chech the disk usage of given workspace.
 
     Examples: \n
-    \t reana-client du -s \n
-    \t $ reana-client du -w myanalysis.42 -s
+    \t $ reana-client du -w myanalysis.42 -s \n
+    \t $ reana-client du -w myanalysis.42 --bytes
     """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -432,7 +444,7 @@ def workflow_disk_usage(ctx, workflow, access_token, summarize):  # noqa: D301
 
     if workflow:
         try:
-            parameters = {'summarize': summarize}
+            parameters = {'summarize': summarize, 'block_size': block_size}
             response = get_workflow_disk_usage(workflow,
                                                parameters,
                                                access_token)

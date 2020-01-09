@@ -57,12 +57,12 @@ def ping():
         raise e
 
 
-def get_workflows(access_token, type, verbose=False):
+def get_workflows(access_token, type, verbose=False, block_size=None):
     """List all existing workflows."""
     try:
         response, http_response = current_rs_api_client.api.\
             get_workflows(access_token=access_token, verbose=verbose,
-                          type=type).result()
+                          type=type, block_size=block_size).result()
         if http_response.status_code == 200:
             return response
         else:

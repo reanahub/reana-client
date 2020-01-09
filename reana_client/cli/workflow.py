@@ -88,12 +88,24 @@ def workflow_execution_group(ctx):
     '-v',
     '--verbose',
     count=True,
-    help='Set status information verbosity.')
+    help='Print out extra information: workflow id, user id, disk usage.')
+@click.option(
+    '-b',
+    '--bytes',
+    'block_size',
+    flag_value='b',
+    help='Print workspace disk size in bytes (to be used with --verbose).')
+@click.option(
+    '-k',
+    '--kilobytes',
+    'block_size',
+    flag_value='k',
+    help='Print workspace disk size in kilobytes (to be used with --verbose)')
 @add_access_token_options
 @check_connection
 @click.pass_context
 def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
-                       show_all, verbose):  # noqa: D301
+                       show_all, verbose, block_size):  # noqa: D301
     """List all workflows and sessions.
 
     The `list` command lists workflows and sessions. By default, the list of
@@ -103,7 +115,8 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
 
     Example: \n
     \t $ reana-client list --all \n
-    \t $ reana-client list --sessions
+    \t $ reana-client list --sessions \n
+    \t $ reana-client list --verbose --bytes
     """
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -112,7 +125,9 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
     if _filter:
         parsed_filters = parse_parameters(_filter)
     try:
-        response = get_workflows(access_token, type, bool(verbose))
+        if not verbose:
+            block_size = None
+        response = get_workflows(access_token, type, bool(verbose), block_size)
         verbose_headers = ['id', 'user', 'size']
         headers = {
             'batch': ['name', 'run_number', 'created', 'status'],

@@ -42,12 +42,9 @@ REANA cloud instance you are using.
 
     .. code-block:: console
 
-       $ eval $(reana-cluster env --include-admin-token)
+       $ eval $(reana-dev setup-environment)
 
-    which will set both environment variables for you. Please see the
-    `REANA-Cluster's Getting Started
-    <http://reana-cluster.readthedocs.io/en/latest/gettingstarted.html>`_ guide
-    for more information.
+    which will set both environment variables for you.
 
 Run example analysis
 --------------------

@@ -18,11 +18,9 @@ from uuid import UUID
 import click
 import yadageschemas
 import yaml
-from cwltool.main import main as cwltool_main
 from jsonschema import ValidationError, validate
 from reana_commons.serial import serial_load
 from reana_commons.utils import get_workflow_status_change_verb
-from six import StringIO
 
 from reana_client.config import reana_yaml_schema_file_path
 
@@ -76,11 +74,11 @@ def cwl_load(workflow_file):
         `cwl` workflow specification.
     :returns: A dictionary which represents the valid `cwl` workflow.
     """
-    mystdout = StringIO()
-    mystderr = StringIO()
-    cwltool_main(argsl=["--pack", "--quiet", workflow_file],
-                 stdout=mystdout, stderr=mystderr)
-    value = mystdout.getvalue()
+    result = \
+        subprocess.run(
+            ['cwltool', '--pack', '--quiet', workflow_file],
+            stdout=subprocess.PIPE)
+    value = result.stdout.decode('utf-8')
     return json.loads(value)
 
 

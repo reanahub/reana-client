@@ -31,6 +31,9 @@ from reana_client.utils import (get_workflow_root, load_reana_spec,
 from reana_commons.utils import click_table_printer
 
 
+FILES_BLACKLIST = ('.git/', '/.git/')
+
+
 @click.group(help='Workspace file management commands')
 @click.pass_context
 def files_group(ctx):
@@ -83,7 +86,6 @@ def get_files(ctx, workflow, _filter,
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
-
             response = list_files(workflow, access_token)
             headers = ['name', 'size', 'last-modified']
             data = []
@@ -92,18 +94,19 @@ def get_files(ctx, workflow, _filter,
                 'download_file')
             urls = []
             for file_ in response:
-                data.append(list(map(str, [file_['name'],
-                                           file_['size'],
-                                           file_['last-modified']])))
-                urls.append(ctx.obj.reana_server_url +
-                            file_path.format(workflow_id_or_name=workflow,
-                                             file_name=file_['name']))
+                if not file_['name'].startswith(FILES_BLACKLIST):
+                    data.append(list(map(str,
+                                         [file_['name'], file_['size'],
+                                          file_['last-modified']])))
+                    urls.append(ctx.obj.reana_server_url +
+                                file_path.format(workflow_id_or_name=workflow,
+                                                 file_name=file_['name']))
             tablib_data = tablib.Dataset()
             tablib_data.headers = headers
             for row in data:
-                    tablib_data.append(row)
+                tablib_data.append(row)
             if output_format == URL:
-                    click.echo('\n'.join(urls))
+                click.echo('\n'.join(urls))
             elif _filter:
                 tablib_data, filtered_headers = \
                     filter_data(parsed_filters, headers, tablib_data)
@@ -451,8 +454,9 @@ def workflow_disk_usage(ctx, workflow, access_token, summarize, block_size):  # 
             headers = ['size', 'name']
             data = []
             for disk_usage_info in response['disk_usage_info']:
-                data.append([disk_usage_info['size'],
-                             '.{}'.format(disk_usage_info['name'])])
+                if not disk_usage_info['name'].startswith(FILES_BLACKLIST):
+                    data.append([disk_usage_info['size'],
+                                '.{}'.format(disk_usage_info['name'])])
             click_table_printer(headers, [], data)
         except Exception as e:
             logging.debug(traceback.format_exc())

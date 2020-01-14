@@ -540,7 +540,8 @@ def workflow_logs(ctx, workflow, access_token, json_format):  # noqa: D301
                         click.secho('job logs'.upper(), fg='green')
                         first = False
                     click.secho('job id: {}'.format(job_id), fg='green')
-                    click.echo(job_logs)
+                    for key, value in job_logs.items():
+                        click.echo('{}: {}'.format(key.upper(), value))
             if workflow_logs.get('engine_specific', None):
                 click.echo('\n')
                 click.secho('engine internal logs'.upper(), fg='green')

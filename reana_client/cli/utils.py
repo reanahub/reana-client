@@ -81,11 +81,11 @@ def parse_parameters(_filter):
         for item in shlex.split(filters):
             if '=' in item:
                 filter_item = {
-                    'column_name': item.split('=')[0],
+                    'column_name': item.split('=')[0].lower(),
                     'column_value': item.split('=')[1]}
             else:
                 filter_item = {
-                    'column_name': item,
+                    'column_name': item.lower(),
                     'column_value': None}
             parsed_filters.append(filter_item)
         return parsed_filters

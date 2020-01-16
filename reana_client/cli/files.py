@@ -48,9 +48,9 @@ def files_group(ctx):
     '--format',
     '_filter',
     multiple=True,
-    help='Format output according to column titles or column values '
-         '(case-sensitive). Use `<colum_name>=<columnn_value>` format. For '
-         'E.g. dislpay FILES named data.txt '
+    help='Format output according to column titles or column values. '
+         'Use `<column_name>=<column_value>` format. For '
+         'E.g. display FILES named data.txt '
          '`--format name=data.txt`.')
 @click.option(
     '--json',

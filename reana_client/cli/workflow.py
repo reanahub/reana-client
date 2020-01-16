@@ -68,9 +68,9 @@ def workflow_execution_group(ctx):
     '--format',
     '_filter',
     multiple=True,
-    help='Format output according to column titles or column values '
-         '(case-sensitive). Use `<colum_name>=<columnn_value>` format. For '
-         'E.g. dislpay workflow with failed status and named test_workflow '
+    help='Format output according to column titles or column values. '
+         'Use `<columm_name>=<column_value>` format. For '
+         'E.g. display workflow with failed status and named test_workflow '
          '`--format status=failed,name=test_workflow`.')
 @click.option(
     '--json',
@@ -369,10 +369,11 @@ def workflow_start(ctx, workflow, access_token,
 @workflow_execution_group.command('status')
 @add_workflow_option
 @click.option(
-    '--filter',
+    '--format',
     '_filter',
     multiple=True,
-    help='Filter output according to column titles (case-sensitive).')
+    help='Format output by displaying only certain columns. '
+         'E.g. --format name,status.')
 @click.option(
     '--json',
     'output_format',
@@ -459,6 +460,9 @@ def workflow_status(ctx, workflow, _filter, output_format,
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
     if workflow:
         try:
+            if _filter:
+                parsed_filters = parse_parameters(_filter)
+                _filter = [item['column_name'] for item in parsed_filters]
             response = get_workflow_status(workflow, access_token)
             headers = ['name', 'run_number', 'created', 'status', 'progress']
             verbose_headers = ['id', 'user', 'command']

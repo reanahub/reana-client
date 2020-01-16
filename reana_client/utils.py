@@ -229,7 +229,7 @@ def get_workflow_root():
         else:
             if workflow_root == parent_dir:
                 click.echo(click.style(
-                    'Not an workflow directory (or any of the parent'
+                    'Not a workflow directory (or any of the parent'
                     ' directories).\nPlease upload from inside'
                     ' the directory containing the reana.yaml '
                     'file of your workflow.', fg='red'))

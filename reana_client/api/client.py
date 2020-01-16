@@ -316,7 +316,7 @@ def get_workflow_logs(workflow_id, access_token):
 
 
 def download_file(workflow_id, file_name, access_token):
-    """Downdload the requested file if it exists.
+    """Download the requested file if it exists.
 
     :param workflow_id: UUID which identifies the workflow.
     :param file_name: File name or path to the file requested.
@@ -324,11 +324,10 @@ def download_file(workflow_id, file_name, access_token):
     """
     try:
         logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-        (response,
-            http_response) = current_rs_api_client.api.download_file(
-                workflow_id_or_name=workflow_id,
-                file_name=file_name,
-                access_token=access_token).result()
+        (_, http_response) = current_rs_api_client.api.download_file(
+            workflow_id_or_name=workflow_id,
+            file_name=file_name,
+            access_token=access_token).result()
 
         if http_response.status_code == 200:
             return http_response.raw_bytes
@@ -424,7 +423,7 @@ def upload_to_server(workflow, paths, access_token):
 
     Shared e.g. by `code upload` and `inputs upload`.
 
-    :param workflow: ID of that Workflow whose workspace should be
+    :param workflow: ID of that workflow whose workspace should be
         used to store the files.
     :param paths: Absolute filepath(s) of files to be uploaded.
     """
@@ -479,7 +478,7 @@ def upload_to_server(workflow, paths, access_token):
                 workflow_root = get_workflow_root()
                 if not path.startswith(workflow_root):
                     raise FileUploadError(
-                        'Files and directories to be uploaded'
+                        'Files and directories to be uploaded '
                         'must be under the workflow root directory.')
                 # Calculate the path that will store the file
                 # in the workflow controller, by subtracting
@@ -494,8 +493,7 @@ def upload_to_server(workflow, paths, access_token):
                               .format(os.path.basename(fname)))
                 logging.info("Uploading '{}' ...".format(fname))
                 try:
-                    response = upload_file(workflow, f, save_path,
-                                           access_token)
+                    upload_file(workflow, f, save_path, access_token)
                     logging.info("File '{}' was successfully "
                                  "uploaded.".format(fname))
                     if symlink:

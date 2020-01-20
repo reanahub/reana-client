@@ -11,7 +11,6 @@ import logging
 import traceback
 
 import click
-from reana_client.api.client import current_rs_api_client
 from reana_client.api.client import ping as rs_ping
 from reana_client.cli.utils import check_connection
 from reana_client.version import __version__
@@ -35,21 +34,19 @@ def ping(ctx):  # noqa: D301
     \t $ reana-client ping
     """
     try:
-        logging.info('Connecting to {0}'.format(
-            current_rs_api_client.swagger_spec.api_url))
+        from reana_client.cli import get_api_url
+        logging.info('Connecting to {0}'.format(get_api_url()))
         response = rs_ping()
-        click.echo(click.style('Connected to {0} - Server is running.'.format(
-            current_rs_api_client.swagger_spec.api_url), fg='green'))
+        click.echo(click.style('Connected to {0} - Server is running.'
+                               .format(get_api_url()), fg='green'))
         logging.debug('Server response:\n{}'.format(response))
 
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        click.echo(click.style(
-            'Could not connect to the selected '
-            'REANA cluster server at {0}.'.format(
-                current_rs_api_client.swagger_spec.api_url),
-            fg='red'), err=True)
+        error_msg = ('Could not connect to the selected REANA cluster'
+                     'server at {0}.'.format(get_api_url()))
+        click.echo(click.style(error_msg, fg='red'), err=True)
 
 
 @configuration_group.command('version')

@@ -15,7 +15,6 @@ import traceback
 
 import click
 
-import tablib
 from reana_client.api.client import (current_rs_api_client, delete_file,
                                      download_file, get_workflow_disk_usage,
                                      get_workflow_status, list_files, mv_files,
@@ -77,6 +76,7 @@ def get_files(ctx, workflow, _filter,
     Examples: \n
     \t $ reana-client ls --workflow myanalysis.42
     """
+    import tablib
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))

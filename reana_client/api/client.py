@@ -252,12 +252,12 @@ def upload_file(workflow_id, file_, file_name, access_token):
     :param file_name: name of a file that will be uploaded.
     :param access_token: access token of the current user.
     """
+    from reana_client.cli import get_api_url
     try:
-        api_url = current_rs_api_client.swagger_spec.__dict__.get('api_url')
         endpoint = \
             current_rs_api_client.api.upload_file.operation.path_name.format(
                 workflow_id_or_name=workflow_id)
-        http_response = requests.post(urljoin(api_url, endpoint),
+        http_response = requests.post(urljoin(get_api_url(), endpoint),
                                       data=file_,
                                       params={'file_name': file_name,
                                               'access_token': access_token},
@@ -269,7 +269,7 @@ def upload_file(workflow_id, file_, file_name, access_token):
         logging.debug(
             'File could not be uploaded.', exc_info=True)
         raise Exception(
-            'Could not connect to the server {}'.format(api_url))
+            'Could not connect to the server {}'.format(get_api_url()))
     except requests.exceptions.HTTPError as e:
         logging.debug(
             'The server responded with an HTTP error code.', exc_info=True)
@@ -326,7 +326,7 @@ def download_file(workflow_id, file_name, access_token):
     """
     try:
         logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-        (_, http_response) = current_rs_api_client.api.download_file(
+        _, http_response = current_rs_api_client.api.download_file(
             workflow_id_or_name=workflow_id,
             file_name=file_name,
             access_token=access_token).result()

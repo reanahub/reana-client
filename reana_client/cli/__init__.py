@@ -71,6 +71,11 @@ class ReanaCLI(click.Group):
                     formatter.write_dl(item['rows'])
 
 
+def get_api_url():
+    """Obtain REANA server API URL."""
+    return os.environ.get('REANA_SERVER_URL')
+
+
 @click.command(cls=ReanaCLI)
 @click.option(
     '--loglevel',

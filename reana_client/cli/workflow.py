@@ -15,7 +15,6 @@ import time
 import traceback
 
 import click
-import tablib
 from jsonschema.exceptions import ValidationError
 from reana_client.api.client import (close_interactive_session,
                                      create_workflow, current_rs_api_client,
@@ -118,6 +117,7 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
     \t $ reana-client list --sessions \n
     \t $ reana-client list --verbose --bytes
     """
+    import tablib
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -222,6 +222,7 @@ def workflow_create(ctx, file, name,
     \t $ reana-client create -w myanalysis\n
     \t $ reana-client create -w myanalysis -f myreana.yaml\n
     """
+    from reana_client.cli import get_api_url
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -236,8 +237,7 @@ def workflow_create(ctx, file, name,
     try:
         reana_specification = load_reana_spec(click.format_filename(file),
                                               skip_validation)
-        logging.info('Connecting to {0}'.format(
-            current_rs_api_client.swagger_spec.api_url))
+        logging.info('Connecting to {0}'.format(get_api_url()))
         response = create_workflow(reana_specification,
                                    name,
                                    access_token)
@@ -306,6 +306,7 @@ def workflow_start(ctx, workflow, access_token,
     \t $ reana-client start -w myanalysis.42 -p sleeptime=10 -p myparam=4 \n
     \t $ reana-client start -w myanalysis.42 -p myparam1=myvalue1 -o CACHE=off
     """
+    from reana_client.cli import get_api_url
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -335,8 +336,7 @@ def workflow_start(ctx, workflow, access_token,
                                 '{0} \n{1}'.format(parameters, str(e))),
                     err=True)
         try:
-            logging.info('Connecting to {0}'.format(
-                current_rs_api_client.swagger_spec.api_url))
+            logging.info('Connecting to {0}'.format(get_api_url()))
             response = start_workflow(workflow,
                                       access_token,
                                       parsed_parameters)
@@ -411,6 +411,8 @@ def workflow_status(ctx, workflow, _filter, output_format,
     \t $ reana-client status -w myanalysis.42 \n
     \t $ reana-client status -w myanalysis.42 -v --json
     """
+    import tablib
+
     def render_progress(finished_jobs, total_jobs):
         if total_jobs:
             return '{0}/{1}'.format(finished_jobs, total_jobs)
@@ -777,14 +779,14 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
     \t $ reana-client delete -w myanalysis.42 \n
     \t $ reana-client delete -w myanalysis.42 --include-records
     """
+    from reana_client.cli import get_api_url
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     if workflow:
         try:
-            logging.info('Connecting to {0}'.format(
-                current_rs_api_client.swagger_spec.api_url))
+            logging.info('Connecting to {0}'.format(get_api_url()))
             response = delete_workflow(workflow,
                                        all_runs,
                                        hard_delete,

@@ -72,6 +72,7 @@ def get_file_dependencies_obj(cwl_obj, basedir):
 def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
                access_token):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
+    from reana_client.api import get_api_url
     logging.basicConfig(
         format='[%(levelname)s] %(message)s',
         stream=sys.stderr,
@@ -106,8 +107,7 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
         reana_spec['workflow']['spec'] = replace_location_in_cwl_spec(
             reana_spec['workflow']['spec'])
 
-        logging.info('Connecting to {0}'.format(
-            current_rs_api_client.swagger_spec.api_url))
+        logging.info('Connecting to {0}'.format(get_api_url()))
         response = create_workflow(reana_spec, 'cwl-test', access_token)
         logging.error(response)
         workflow_name = response['workflow_name']

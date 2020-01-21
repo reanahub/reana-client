@@ -11,7 +11,7 @@ import os
 import sys
 
 import click
-import urllib3
+from urllib3 import disable_warnings
 
 from reana_client.cli import workflow, files, ping, secrets
 
@@ -42,7 +42,7 @@ class ReanaCLI(click.Group):
 
     def __init__(self, name=None, commands=None, **attrs):
         """Initialize REANA client commands."""
-        urllib3.disable_warnings()
+        disable_warnings()
         click.Group.__init__(self, name, **attrs)
         for group in ReanaCLI.cmd_groups:
             for cmd in group.commands.items():
@@ -69,11 +69,6 @@ class ReanaCLI(click.Group):
             for item in rows:
                 with formatter.section(item['group_help']):
                     formatter.write_dl(item['rows'])
-
-
-def get_api_url():
-    """Obtain REANA server API URL."""
-    return os.environ.get('REANA_SERVER_URL')
 
 
 @click.command(cls=ReanaCLI)

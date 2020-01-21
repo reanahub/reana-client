@@ -351,3 +351,8 @@ def parse_secret_from_path(path):
                 .format(path),
                 fg='red'),
             err=True)
+
+
+def get_api_url():
+    """Obtain REANA server API URL."""
+    return os.environ.get('REANA_SERVER_URL')

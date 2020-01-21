@@ -16,15 +16,6 @@ import traceback
 
 import click
 from jsonschema.exceptions import ValidationError
-from reana_client.api.client import (close_interactive_session,
-                                     create_workflow, current_rs_api_client,
-                                     delete_workflow, diff_workflows,
-                                     get_workflow_disk_usage,
-                                     get_workflow_logs,
-                                     get_workflow_parameters,
-                                     get_workflow_status, get_workflows,
-                                     open_interactive_session, start_workflow,
-                                     stop_workflow)
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, check_connection,
@@ -118,6 +109,8 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
     \t $ reana-client list --verbose --bytes
     """
     import tablib
+    from reana_client.api.client import get_workflows
+
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -222,7 +215,8 @@ def workflow_create(ctx, file, name,
     \t $ reana-client create -w myanalysis\n
     \t $ reana-client create -w myanalysis -f myreana.yaml\n
     """
-    from reana_client.cli import get_api_url
+    from reana_client.api.client import create_workflow
+    from reana_client.utils import get_api_url
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -306,7 +300,9 @@ def workflow_start(ctx, workflow, access_token,
     \t $ reana-client start -w myanalysis.42 -p sleeptime=10 -p myparam=4 \n
     \t $ reana-client start -w myanalysis.42 -p myparam1=myvalue1 -o CACHE=off
     """
-    from reana_client.cli import get_api_url
+    from reana_client.utils import get_api_url
+    from reana_client.api.client import (get_workflow_parameters,
+                                         get_workflow_status, start_workflow)
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -412,6 +408,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
     \t $ reana-client status -w myanalysis.42 -v --json
     """
     import tablib
+    from reana_client.api.client import get_workflow_status
 
     def render_progress(finished_jobs, total_jobs):
         if total_jobs:
@@ -533,6 +530,7 @@ def workflow_logs(ctx, workflow, access_token, json_format):  # noqa: D301
     Examples: \n
     \t $ reana-client logs -w myanalysis.42
     """
+    from reana_client.api.client import get_workflow_logs
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -647,6 +645,8 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     Example: \n
     \t $ reana-client stop -w myanalysis.42 --force
     """
+    from reana_client.api.client import get_workflow_status, stop_workflow
+
     if not force_stop:
         click.secho('Graceful stop not implement yet. If you really want to '
                     'stop your workflow without waiting for jobs to finish'
@@ -779,7 +779,8 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
     \t $ reana-client delete -w myanalysis.42 \n
     \t $ reana-client delete -w myanalysis.42 --include-records
     """
-    from reana_client.cli import get_api_url
+    from reana_client.api.client import delete_workflow, get_workflow_status
+    from reana_client.utils import get_api_url
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -846,6 +847,7 @@ def workflow_diff(ctx, workflow_a, workflow_b, brief,
     \t $ reana-client diff myanalysis.42 myotheranalysis.43 \n
     \t $ reana-client diff myanalysis.42 myotheranalysis.43 --brief
     """
+    from reana_client.api.client import diff_workflows
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -923,6 +925,8 @@ def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
     Examples:\n
     \t $ reana-client open -w myanalysis.42 jupyter
     """
+    from reana_client.api.client import open_interactive_session
+
     if workflow:
         try:
             logging.info(
@@ -963,6 +967,8 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
     Examples:\n
     \t $ reana-client close -w myanalysis.42
     """
+    from reana_client.api.client import close_interactive_session
+
     if workflow:
         try:
             logging.info(
@@ -976,5 +982,5 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
             click.secho("Interactive session could not be closed: \n{}"
                         .format(str(e)), fg='red', err=True)
     else:
-            click.secho("Workflow {} does not exist".format(workflow),
-                        fg="red", err=True)
+        click.secho("Workflow {} does not exist".format(workflow),
+                    fg="red", err=True)

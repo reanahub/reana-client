@@ -15,10 +15,6 @@ import traceback
 
 import click
 
-from reana_client.api.client import (current_rs_api_client, delete_file,
-                                     download_file, get_workflow_disk_usage,
-                                     get_workflow_status, list_files, mv_files,
-                                     upload_to_server)
 from reana_client.api.utils import get_path_from_operation_id
 from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, check_connection,
@@ -77,6 +73,8 @@ def get_files(ctx, workflow, _filter,
     \t $ reana-client ls --workflow myanalysis.42
     """
     import tablib
+    from reana_client.api.client import current_rs_api_client, list_files
+
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -161,6 +159,8 @@ def download_files(ctx, workflow, filenames,
     \t $ reana-client download # download all output files \n
     \t $ reana-client download mydata.tmp outputs/myplot.png
     """
+    from reana_client.api.client import download_file
+
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -230,6 +230,8 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
     \t $ reana-client upload -w myanalysis.42 \n
     \t $ reana-client upload -w myanalysis.42 code/mycode.py
     """
+    from reana_client.api.client import upload_to_server
+
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -319,6 +321,8 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
     \t $ reana-client rm -w myanalysis.42 data/mydata.csv \n
     \t $ reana-client rm -w myanalysis.42 'code/\*'
     """
+    from reana_client.api.client import delete_file
+
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -374,6 +378,9 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
     Examples:\n
     \t $ reana-client mv data/input.txt input/input.txt
     """
+    from reana_client.api.client import (get_workflow_status, list_files,
+                                         mv_files)
+
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
@@ -441,6 +448,8 @@ def workflow_disk_usage(ctx, workflow, access_token, summarize, block_size):  # 
     \t $ reana-client du -w myanalysis.42 -s \n
     \t $ reana-client du -w myanalysis.42 --bytes
     """
+    from reana_client.api.client import get_workflow_disk_usage
+
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))

@@ -245,15 +245,14 @@ def test_create_workflow_from_json(create_yaml_workflow_schema):
                 "reana_client.api.client.current_rs_api_client",
                 make_mock_api_client('reana-server')(mock_response,
                                                      mock_http_response)):
-                result = create_workflow_from_json(
-                    workflow_json=workflow_json['workflow'],
-                    name=response['workflow_name'],
-                    access_token=reana_token,
-                    parameters=workflow_json['inputs'],
-                    workflow_engine='serial'
-                )
-                assert response['workflow_name'] == result['workflow_name']
-                assert response['message'] == result['message']
+            result = create_workflow_from_json(
+                workflow_json=workflow_json['workflow'],
+                name=response['workflow_name'],
+                access_token=reana_token,
+                parameters=workflow_json['inputs'],
+                workflow_engine='serial')
+            assert response['workflow_name'] == result['workflow_name']
+            assert response['message'] == result['message']
 
 
 @pytest.mark.parametrize("status", [

@@ -11,8 +11,6 @@ import sys
 import traceback
 
 import click
-from reana_client.api.client import add_secrets, delete_secrets, \
-    list_secrets, current_rs_api_client
 from reana_client.cli.utils import (add_access_token_options, check_connection,
                                     NotRequiredIf)
 from reana_client.config import ERROR_MESSAGES
@@ -65,6 +63,8 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
     \t                            --env PASSWORD=password \n
     \t                            --file ~/.keytab
     """
+    from reana_client.api.client import add_secrets
+
     secrets_ = {}
     for literal in env:
         secret = parse_secret_from_literal(literal)
@@ -108,6 +108,8 @@ def secrets_delete(secrets, access_token):  # noqa: D301
      Examples: \n
     \t $ reana-client secrets-delete PASSWORD
     """
+    from reana_client.api.client import delete_secrets
+
     try:
         deleted_secrets = delete_secrets(secrets, access_token)
     except REANASecretDoesNotExist as e:
@@ -142,6 +144,8 @@ def secrets_list(access_token):  # noqa: D301
     Examples: \n
     \t $ reana-client secrets-list
     """
+    from reana_client.api.client import list_secrets
+
     try:
         secrets = list_secrets(access_token)
         headers = ['name', 'type']

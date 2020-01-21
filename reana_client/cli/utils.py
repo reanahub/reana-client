@@ -47,7 +47,7 @@ def check_connection(func):
     """Check if connected to any REANA cluster."""
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        from reana_client.cli import get_api_url
+        from reana_client.utils import get_api_url
         api_url = get_api_url()
         if not api_url:
             click.secho(

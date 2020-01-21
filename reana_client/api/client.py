@@ -252,7 +252,7 @@ def upload_file(workflow_id, file_, file_name, access_token):
     :param file_name: name of a file that will be uploaded.
     :param access_token: access token of the current user.
     """
-    from reana_client.cli import get_api_url
+    from reana_client.utils import get_api_url
     try:
         endpoint = \
             current_rs_api_client.api.upload_file.operation.path_name.format(

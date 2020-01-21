@@ -24,9 +24,6 @@ from cwltool.load_tool import fetch_document
 from cwltool.main import printdeps
 from cwltool.workflow import findfiles
 
-from reana_client.api.client import (create_workflow, current_rs_api_client,
-                                     get_workflow_logs, start_workflow,
-                                     upload_file)
 from reana_client.cli.utils import add_access_token_options
 from reana_client.config import default_user
 from reana_client.utils import load_workflow_spec
@@ -72,7 +69,10 @@ def get_file_dependencies_obj(cwl_obj, basedir):
 def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
                access_token):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
-    from reana_client.api import get_api_url
+    from reana_client.utils import get_api_url
+    from reana_client.api.client import (create_workflow, get_workflow_logs,
+                                         start_workflow, upload_file)
+
     logging.basicConfig(
         format='[%(levelname)s] %(message)s',
         stream=sys.stderr,

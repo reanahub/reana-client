@@ -280,9 +280,19 @@ def workflow_create(ctx, file, name,
     default=False,
     help='If set, follows the execution of the workflow until termination.',
 )
+@click.option(
+    '--restart', 'restart',
+    is_flag=True,
+    default=False,
+    help='If set, allows to restart workflow on the same workspace. If '
+         'combined with operational options, allows partial workflow '
+         'execution. '
+         'E.g --restart --option FROM=gendata (restarts workflow on the same '
+         'workspace from step named "gendata")',
+)
 @click.pass_context
 def workflow_start(ctx, workflow, access_token,
-                   parameters, options, follow):  # noqa: D301
+                   parameters, options, follow, restart):  # noqa: D301
     """Start previously created workflow.
 
     The `start` command allows to start previously created workflow. The
@@ -303,6 +313,7 @@ def workflow_start(ctx, workflow, access_token,
     parsed_parameters = {'input_parameters':
                          dict(p.split('=') for p in parameters)}
     parsed_parameters['operational_options'] = ' '.join(options).split()
+    parsed_parameters['restart'] = restart
     if workflow:
         if parameters or options:
             try:

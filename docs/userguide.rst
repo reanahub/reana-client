@@ -45,7 +45,7 @@ Note that you can also specify a concrete run number:
 
 .. code-block:: console
 
-   $ export REANA_WORKON=myfirstanalysis.3
+   $ export REANA_WORKON=myfirstanalysis.42
 
 which will permit to work on the third run of the "myfirstanalysis" workflow,
 for example to check out past input and output files.
@@ -214,7 +214,7 @@ Non-existing parameters will be skipped.
 .. code-block:: console
 
    $ reana-client start -p myparam1=myval1 -p myparam2=myval2
-   workflow.1 has been started.
+   myanalysis.42 has been started.
 
 
 Running analysis
@@ -229,12 +229,12 @@ analysis inputs, and start the workflow run.
    $ vim reana.yaml
    $ reana-client run -n myanalysis
    [INFO] Creating a workflow...
-   myanalysis.1
+   myanalysis.42
    [INFO] Uploading files...
    File code/helloworld.py was successfully uploaded.
    File data/names.txt was successfully uploaded.
    [INFO] Starting workflow...
-   myanalysis.1 has been started.
+   myanalysis.42 has been started.
    $ export REANA_WORKON=myanalysis
    $ reana-client status
    NAME         RUN_NUMBER   CREATED               STATUS    PROGRESS
@@ -252,9 +252,31 @@ option to the ``reana-client start`` or ``reana-client run`` commands.
 
 .. code-block:: console
 
-   $ reana-client start -w workflow.1 -o target='gendata'
+   $ reana-client start -w myanalysis.42 -o TARGET='gendata'
    # or
-   $ reana-client run -w workflow.1 -o target='gendata'
+   $ reana-client run -w myanalysis.42 -o TARGET='gendata'
+
+If you want to start workflow execution from a certain step you should use
+operational option ``FROM`` with a desired step name.
+
+.. code-block:: console
+
+   $ reana-client start -w myanalysis.42 -o FROM='fitdata'
+   # or
+   $ reana-client run -w myanalysis.42 -o FROM='fitdata'
+
+If you want to restart workflow on the same workspace you should use
+``--restart`` flag of ``reana-client start``.
+
+Note that workflow restarting can be used in a combination with operational
+options ``FROM`` and ``TARGET``.
+
+.. code-block:: console
+
+   # Restarts workflow on the same workspace from step named fitdata
+   $ reana-client start -w myanalysis.42 -o FROM='fitdata' --restart
+   # Restarts workflow on the same workspace and starts execution from mystep3 to mystep7
+   $ reana-client start -w myanalysis.42 -o FROM='mystep3' -o TARGET='mystep7'--restart
 
 *CWL*
 
@@ -264,9 +286,9 @@ the ``reana-client start`` or ``reana-client run`` commands.
 
 .. code-block:: console
 
-   $ reana-client start -w workflow.1 -o target='gendata'
+   $ reana-client start -w myanalysis.42 -o target='gendata'
    # or
-   $ reana-client run -w workflow.1 -o target='gendata'
+   $ reana-client run -w myanalysis.42 -o target='gendata'
 
 *Yadage*
 
@@ -303,7 +325,7 @@ environment spawned on the remote containerised platform.
 
 .. code-block:: console
 
-   $ reana-client open -w myanalysis.1 jupyter
+   $ reana-client open -w myanalysis.42 jupyter
    https://reana.cern.ch/7cd4d23e-48d1-4f7f-8a3c-3a6d256fb8bc?token=P-IkL_7w25IDHhes8I7DtICWLNQm2WAZ9gkoKC2vq10
    It could take several minutes to start the interactive session.
 
@@ -325,8 +347,8 @@ via ``close`` command.
 
 .. code-block:: console
 
-   $ reana-client close -w myanalysis.1
-   Interactive session for workflow myanalysis.1 was successfully closed
+   $ reana-client close -w myanalysis.42
+   Interactive session for workflow myanalysis.42 was successfully closed
 
 Deleting workflows
 ~~~~~~~~~~~~~~~~~~
@@ -346,7 +368,7 @@ as follows:
 
 .. code-block:: console
 
-   $ reana-client delete --workflow=myanalysis.123
+   $ reana-client delete --workflow=myanalysis.42
 
 After simple deletion the workspace can be accessed to retrieve files uploaded
 there. If you are sure the workspace can also be deleted pass the
@@ -354,7 +376,7 @@ there. If you are sure the workspace can also be deleted pass the
 
 .. code-block:: console
 
-   $ reana-client delete --workflow=myanalysis.123 --include-workspace
+   $ reana-client delete --workflow=myanalysis.42 --include-workspace
 
 To delete all runs of a given workflow, pass the --include-all-runs flag and
 run:
@@ -368,7 +390,7 @@ pass the --include-records flag:
 
 .. code-block:: console
 
-   $ reana-client delete --workflow=myanalysis.1 --include-records
+   $ reana-client delete --workflow=myanalysis.42 --include-records
 
 Stopping workflows
 ~~~~~~~~~~~~~~~~~~

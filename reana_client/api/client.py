@@ -216,6 +216,8 @@ def start_workflow(workflow, access_token, parameters):
     :param access_token: access token of the current user.
     :param parameters: dict of workflow parameters to override the original
         ones (after workflow creation).
+    :param restart: boolean if workflow should be restarted on the same
+        workspace.
     """
     try:
         (response,

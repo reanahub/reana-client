@@ -252,18 +252,18 @@ option to the ``reana-client start`` or ``reana-client run`` commands.
 
 .. code-block:: console
 
-   $ reana-client start -w myanalysis.42 -o TARGET='gendata'
+   $ reana-client start -w myanalysis.42 -o TARGET=gendata
    # or
-   $ reana-client run -w myanalysis.42 -o TARGET='gendata'
+   $ reana-client run -w myanalysis.42 -o TARGET=gendata
 
 If you want to start workflow execution from a certain step you should use
 operational option ``FROM`` with a desired step name.
 
 .. code-block:: console
 
-   $ reana-client start -w myanalysis.42 -o FROM='fitdata'
+   $ reana-client start -w myanalysis.42 -o FROM=fitdata
    # or
-   $ reana-client run -w myanalysis.42 -o FROM='fitdata'
+   $ reana-client run -w myanalysis.42 -o FROM=fitdata
 
 If you want to restart workflow on the same workspace you should use
 ``--restart`` flag of ``reana-client start``.
@@ -274,9 +274,9 @@ options ``FROM`` and ``TARGET``.
 .. code-block:: console
 
    # Restarts workflow on the same workspace from step named fitdata
-   $ reana-client start -w myanalysis.42 -o FROM='fitdata' --restart
+   $ reana-client start -w myanalysis.42 -o FROM=fitdata --restart
    # Restarts workflow on the same workspace and starts execution from mystep3 to mystep7
-   $ reana-client start -w myanalysis.42 -o FROM='mystep3' -o TARGET='mystep7'--restart
+   $ reana-client start -w myanalysis.42 -o FROM=mystep3 -o TARGET=mystep7--restart
 
 *CWL*
 
@@ -286,9 +286,9 @@ the ``reana-client start`` or ``reana-client run`` commands.
 
 .. code-block:: console
 
-   $ reana-client start -w myanalysis.42 -o target='gendata'
+   $ reana-client start -w myanalysis.42 -o --target=gendata
    # or
-   $ reana-client run -w myanalysis.42 -o target='gendata'
+   $ reana-client run -w myanalysis.42 -o --target=gendata
 
 *Yadage*
 

@@ -91,11 +91,17 @@ def workflow_execution_group(ctx):
     'block_size',
     flag_value='k',
     help='Print workspace disk size in kilobytes (to be used with --verbose)')
+@click.option(
+    '--sort',
+    'sort_columm_name',
+    default='CREATED',
+    help='Sort the output by specified column')
 @add_access_token_options
 @check_connection
 @click.pass_context
 def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
-                       show_all, verbose, block_size):  # noqa: D301
+                       show_all, verbose, block_size,
+                       sort_columm_name):  # noqa: D301
     """List all workflows and sessions.
 
     The `list` command lists workflows and sessions. By default, the list of
@@ -136,21 +142,26 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
             name, run_number = get_workflow_name_and_run_number(
                 workflow['name'])
             workflow['name'] = name
-            workflow['run_number'] = run_number
+            workflow['run_number'] = int(run_number)
             if type == 'interactive':
                 workflow['session_uri'] = format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
                     path=workflow['session_uri'],
                     access_token=access_token)
-            data.append([str(workflow[k]) for k in headers[type]])
-        data = sorted(data, key=lambda x: int(x[1]))
+            data.append([workflow[k] for k in headers[type]])
+        sort_column_id = 2
+        if sort_columm_name.lower() in headers[type]:
+            sort_column_id = headers[type].index(sort_columm_name.lower())
+        data = sorted(data, key=lambda x: x[sort_column_id], reverse=True)
         workflow_ids = ['{0}.{1}'.format(w[0], w[1]) for w in data]
         if os.getenv('REANA_WORKON', '') in workflow_ids:
             active_workflow_idx = \
                 workflow_ids.index(os.getenv('REANA_WORKON', ''))
             for idx, row in enumerate(data):
                 if idx == active_workflow_idx:
-                    data[idx][headers[type].index('run_number')] += ' *'
+                    run_number = \
+                        str(data[idx][headers[type].index('run_number')])
+                    run_number += ' *'
         tablib_data = tablib.Dataset()
         tablib_data.headers = headers[type]
         for row in data:

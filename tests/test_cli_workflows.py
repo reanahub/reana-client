@@ -71,6 +71,46 @@ def test_workflows_server_ok():
             assert message in result.output
 
 
+def test_workflows_sorting():
+    """Test workflows sorting."""
+    response = [
+        {
+            "status": "running",
+            "created": "2018-06-13T09:47:35.66097",
+            "user": "00000000-0000-0000-0000-000000000000",
+            "name": "mytest.1",
+            "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+        },
+        {
+            "status": "running",
+            "created": "2018-06-13T09:55:35.66097",
+            "user": "00000000-0000-0000-0000-000000000000",
+            "name": "mytest.2",
+            "id": "256b25f4-4cfb-4684-b7a8-73872ef455a2",
+        }
+    ]
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {'REANA_SERVER_URL': 'localhost', 'REANA_WORKON': 'mytest.1'}
+    reana_token = '000000'
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+                "reana_client.api.client.current_rs_api_client",
+                make_mock_api_client('reana-server')(mock_response,
+                                                     mock_http_response)):
+            result = runner.invoke(
+                cli,
+                ['list', '-t', reana_token, '--sort', 'run_number'])
+            message = (
+                'mytest   2            2018-06-13T09:55:35.66097   running\n'
+                'mytest   1            2018-06-13T09:47:35.66097   running')
+            assert result.exit_code == 0
+            assert message in result.output
+
+
 def test_workflows_sessions():
     """Test list command for getting interactive sessions."""
     response = [

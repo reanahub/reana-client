@@ -142,7 +142,7 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
             name, run_number = get_workflow_name_and_run_number(
                 workflow['name'])
             workflow['name'] = name
-            workflow['run_number'] = int(run_number)
+            workflow['run_number'] = run_number
             if type == 'interactive':
                 workflow['session_uri'] = format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
@@ -347,6 +347,9 @@ def workflow_start(ctx, workflow, access_token,
             response = start_workflow(workflow,
                                       access_token,
                                       parsed_parameters)
+            if parsed_parameters['restart']:
+                workflow = response['workflow_name'] + '.' + \
+                    str(response['run_number'])
             current_status = get_workflow_status(workflow,
                                                  access_token).get('status')
             click.secho(

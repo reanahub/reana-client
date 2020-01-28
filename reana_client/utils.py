@@ -199,9 +199,11 @@ def get_workflow_name_and_run_number(workflow_name):
     """
     # Try to split a dot-separated string.
     try:
-        name, run_number = workflow_name.rsplit('.', 1)
+        name, run_number = workflow_name.split('.', 1)
 
-        if not run_number.isdigit():
+        try:
+            float(run_number)
+        except ValueError:
             # `workflow_name` was split, so it is a dot-separated string
             # but it didn't contain a valid `run_number`.
             # Assume that this dot-separated string is the name of

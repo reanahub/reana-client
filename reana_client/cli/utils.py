@@ -117,6 +117,25 @@ def format_session_uri(reana_server_url, path, access_token):
         path=path, access_token=access_token)
 
 
+def validate_workflow_name(ctx, _, workflow_name):
+    """Validate workflow name."""
+    not_allowed_characters = ['.']
+    if workflow_name:
+        for item in not_allowed_characters:
+            if item in workflow_name:
+                click.echo(
+                    click.style(
+                        'Workflow name {} contains illegal '
+                        'character "{}""'.format(
+                            workflow_name,
+                            item
+                        ),
+                        fg='red'),
+                    err=True)
+                sys.exit(1)
+    return workflow_name
+
+
 class NotRequiredIf(click.Option):
     """Allow only one of two arguments to be missing."""
 

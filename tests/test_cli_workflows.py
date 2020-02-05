@@ -265,6 +265,20 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
                 assert response["workflow_name"] in result.output
 
 
+def test_workflow_create_not_valid_name(create_yaml_workflow_schema):
+    """Test workflow create when creation is successfull."""
+    env = {'REANA_SERVER_URL': 'localhost'}
+    illegal_workflow_name = 'workflow.name'
+    runner = CliRunner(env=env)
+    result = runner.invoke(cli, ['create', '-n', illegal_workflow_name])
+    message = 'Workflow name {} contains illegal character "{}"'.format(
+        illegal_workflow_name,
+        '.'
+    )
+    assert message in result.output
+    assert result.exit_code == 1
+
+
 def test_create_workflow_from_json(create_yaml_workflow_schema):
     """Test create workflow from json specification."""
     status_code = 201

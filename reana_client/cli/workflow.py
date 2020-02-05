@@ -20,7 +20,7 @@ from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, check_connection,
                                     filter_data, format_session_uri,
-                                    parse_parameters)
+                                    parse_parameters, validate_workflow_name)
 from reana_client.config import (ERROR_MESSAGES, TIMECHECK,
                                  reana_yaml_default_file_path)
 from reana_client.utils import (get_workflow_name_and_run_number,
@@ -203,6 +203,7 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
     '-n', '--name',
     '-w', '--workflow',
     default='',
+    callback=validate_workflow_name,
     help='Optional name of the workflow. [default is "workflow"]')
 @click.option(
     '--skip-validation',

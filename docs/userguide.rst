@@ -265,18 +265,21 @@ operational option ``FROM`` with a desired step name.
    # or
    $ reana-client run -w myanalysis.42 -o FROM=fitdata
 
-If you want to restart workflow on the same workspace you should use
-``--restart`` flag of ``reana-client start``.
+If you want to restart a workflow on the same workspace you should use a
+``restart`` command.
 
 Note that workflow restarting can be used in a combination with operational
-options ``FROM`` and ``TARGET``.
+options ``FROM`` and ``TARGET``. You can also pass a modified workflow
+specification with ``-f`` or `--file`` flag.
 
 .. code-block:: console
 
    # Restarts workflow on the same workspace from step named fitdata
-   $ reana-client start -w myanalysis.42 -o FROM=fitdata --restart
+   $ reana-client restart -w myanalysis.42 -o FROM=fitdata
    # Restarts workflow on the same workspace and starts execution from mystep3 to mystep7
-   $ reana-client start -w myanalysis.42 -o FROM=mystep3 -o TARGET=mystep7--restart
+   $ reana-client restart -w myanalysis.42 -o FROM=mystep3 -o TARGET=mystep7
+   # Restarts workflow on the same workspace with a modified workflow specification
+   $ reana-client restart -w myanalysis.42 -f reana.yaml
 
 *CWL*
 

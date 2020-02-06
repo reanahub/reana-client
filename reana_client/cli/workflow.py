@@ -286,19 +286,9 @@ def workflow_create(ctx, file, name,
     default=False,
     help='If set, follows the execution of the workflow until termination.',
 )
-@click.option(
-    '--restart', 'restart',
-    is_flag=True,
-    default=False,
-    help='If set, allows to restart workflow on the same workspace. If '
-         'combined with operational options, allows partial workflow '
-         'execution. '
-         'E.g --restart --option FROM=gendata (restarts workflow on the same '
-         'workspace from step named "gendata")',
-)
 @click.pass_context
 def workflow_start(ctx, workflow, access_token,
-                   parameters, options, follow, restart):  # noqa: D301
+                   parameters, options, follow):  # noqa: D301
     """Start previously created workflow.
 
     The `start` command allows to start previously created workflow. The
@@ -322,7 +312,6 @@ def workflow_start(ctx, workflow, access_token,
     parsed_parameters = {'input_parameters':
                          dict(p.split('=') for p in parameters)}
     parsed_parameters['operational_options'] = ' '.join(options).split()
-    parsed_parameters['restart'] = restart
     if workflow:
         if parameters or options:
             try:
@@ -348,9 +337,6 @@ def workflow_start(ctx, workflow, access_token,
             response = start_workflow(workflow,
                                       access_token,
                                       parsed_parameters)
-            if parsed_parameters['restart']:
-                workflow = response['workflow_name'] + '.' + \
-                    str(response['run_number'])
             current_status = get_workflow_status(workflow,
                                                  access_token).get('status')
             click.secho(
@@ -377,6 +363,114 @@ def workflow_start(ctx, workflow, access_token,
                     elif 'failed' in current_status or \
                             'stopped' in current_status:
                         sys.exit(1)
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            click.echo(
+                click.style('Workflow could not be started: \n{}'
+                            .format(str(e)), fg='red'),
+                err=True)
+            if 'invoked_by_subcommand' in ctx.parent.__dict__:
+                sys.exit(1)
+
+
+@workflow_execution_group.command('restart')
+@add_workflow_option
+@add_access_token_options
+@check_connection
+@click.option(
+    '-p', '--parameter', 'parameters',
+    multiple=True,
+    help='Additional input parameters to override '
+         'original ones from reana.yaml. '
+         'E.g. -p myparam1=myval1 -p myparam2=myval2.',
+)
+@click.option(
+    '-o', '--option', 'options',
+    multiple=True,
+    help='Additional operational options for the workflow execution. '
+         'E.g. CACHE=off. (workflow engine - serial) '
+         'E.g. --debug (workflow engine - cwl)',
+)
+@click.option(
+    '-f',
+    '--file',
+    type=click.Path(exists=True, resolve_path=True),
+    help='REANA specifications file describing the workflow and '
+         'context which REANA should execute.')
+@click.pass_context
+def workflow_restart(ctx, workflow, access_token,
+                     parameters, options, file):  # noqa: D301
+    """Restart previously run workflow.
+
+    The `restart` command allows to rerun previous workflow on the same
+    workspace. The workflow execution can be further influenced by passing a
+    modified REANA specifications file using `-f` or `--file` or input
+    prameters using `-p` or `--parameters` flag and by setting additional
+    operational options using `-o` or `--options`. The input parameters and
+    operational options can be repetitive. For example, to disable caching for
+    the Serial workflow engine, you can set `-o CACHE=off`.
+
+    Examples: \n
+    \t $ reana-client restart -w myanalysis.42 -p sleeptime=10 -p myparam=4 \n
+    \t $ reana-client restart -w myanalysis.42 -p myparam=myvalue -o CACHE=off
+    """
+    from reana_client.utils import get_api_url
+    from reana_client.api.client import (get_workflow_parameters,
+                                         get_workflow_status, start_workflow)
+    logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
+
+    parsed_parameters = {'input_parameters':
+                         dict(p.split('=') for p in parameters)}
+    parsed_parameters['operational_options'] = ' '.join(options).split()
+    parsed_parameters['restart'] = True
+    if file:
+        parsed_parameters['reana_specification'] = \
+            load_reana_spec(click.format_filename(file))
+    if workflow:
+        if parameters or options:
+            try:
+                if 'reana_specification' in parsed_parameters:
+                    workflow_type = \
+                        parsed_parameters['reana_specification']['workflow'][
+                            'type']
+                    original_parameters = \
+                        parsed_parameters['reana_specification'].get(
+                            'inputs', {}).get('parameters', {})
+                else:
+                    response = get_workflow_parameters(workflow, access_token)
+                    workflow_type = response['type']
+                    original_parameters = response['parameters']
+                if workflow_type == 'cwl':
+                    validate_cwl_operational_options(
+                        parsed_parameters['operational_options'])
+                if workflow_type == 'serial':
+                    parsed_parameters['operational_options'] = \
+                        validate_serial_operational_options(
+                            parsed_parameters['operational_options'])
+                parsed_parameters['input_parameters'] = \
+                    validate_input_parameters(
+                        parsed_parameters['input_parameters'],
+                        original_parameters)
+            except Exception as e:
+                click.echo(
+                    click.style('Could not apply given input parameters: '
+                                '{0} \n{1}'.format(parameters, str(e))),
+                    err=True)
+        try:
+            logging.info('Connecting to {0}'.format(get_api_url()))
+            response = start_workflow(workflow,
+                                      access_token,
+                                      parsed_parameters)
+            workflow = response['workflow_name'] + '.' + \
+                str(response['run_number'])
+            current_status = get_workflow_status(workflow,
+                                                 access_token).get('status')
+            click.secho(
+                get_workflow_status_change_msg(workflow, current_status),
+                fg='green')
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))

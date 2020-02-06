@@ -19,6 +19,7 @@ Workflow management commands:
 
 Workflow execution commands:
   logs      Get workflow logs.
+  restart   Restart previously run workflow.
   run       Shortcut to create, upload, start a new workflow.
   start     Start previously created workflow.
   status    Get status of a workflow.

@@ -670,15 +670,6 @@ def workflow_logs(ctx, workflow, access_token, json_format):  # noqa: D301
                 click.echo('\n')
                 click.secho('engine internal logs'.upper(), fg='green')
                 click.secho(workflow_logs['engine_specific'])
-
-        except Exception as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            click.echo(
-                click.style('Workflow status could not be retrieved: \n{}'
-                            .format(str(e)), fg='red'),
-                err=True)
-            click.echo(response)
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))

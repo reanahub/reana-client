@@ -129,7 +129,8 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
         response = get_workflows(access_token, type, bool(verbose), block_size)
         verbose_headers = ['id', 'user', 'size']
         headers = {
-            'batch': ['name', 'run_number', 'created', 'status'],
+            'batch': ['name', 'run_number', 'created', 'started',
+                      'ended', 'status'],
             'interactive': ['name', 'run_number', 'created', 'session_type',
                             'session_uri']
         }
@@ -148,7 +149,17 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
                     reana_server_url=ctx.obj.reana_server_url,
                     path=workflow['session_uri'],
                     access_token=access_token)
-            data.append([workflow[k] for k in headers[type]])
+            row = []
+            for header in headers[type]:
+                if header == 'started':
+                    header = 'run_started_at'
+                elif header == 'ended':
+                    header = 'run_finished_at'
+                value = workflow.get(header)
+                if not value:
+                    value = workflow.get('progress', {}).get(header) or '-'
+                row.append(value)
+            data.append(row)
         sort_column_id = 2
         if sort_columm_name.lower() in headers[type]:
             sort_column_id = headers[type].index(sort_columm_name.lower())
@@ -538,17 +549,28 @@ def workflow_status(ctx, workflow, _filter, output_format,
             finished_jobs = finished_jobs.get('total')
         else:
             finished_jobs = 0
+
+        parsed_response = list(map(
+            str, [name, run_number, row['created'], row['status']]))
         if row['progress']['total'].get('total') or 0 > 0:
             if 'progress' not in headers:
                 headers += ['progress']
+                parsed_response.append(
+                    render_progress(finished_jobs, total_jobs))
 
-        data.append(list(map(
-            str,
-            [name,
-             run_number,
-             row['created'],
-             row['status'],
-             render_progress(finished_jobs, total_jobs)])))
+        if row['status'] in ['running', 'finished', 'failed', 'stopped']:
+            started_at = row['progress'].get('run_started_at')
+            finished_at = row['progress'].get('run_finished_at')
+            if started_at:
+                after_created_pos = headers.index('created') + 1
+                headers.insert(after_created_pos, 'started')
+                parsed_response.insert(after_created_pos, started_at)
+                if finished_at:
+                    after_started_pos = headers.index('started')+1
+                    headers.insert(after_started_pos, 'ended')
+                    parsed_response.insert(after_started_pos, finished_at)
+
+        data.append(parsed_response)
         return data
 
     def add_verbose_data_from_response(response, verbose_headers,
@@ -583,7 +605,7 @@ def workflow_status(ctx, workflow, _filter, output_format,
                 parsed_filters = parse_parameters(_filter)
                 _filter = [item['column_name'] for item in parsed_filters]
             response = get_workflow_status(workflow, access_token)
-            headers = ['name', 'run_number', 'created', 'status', 'progress']
+            headers = ['name', 'run_number', 'created', 'status']
             verbose_headers = ['id', 'user', 'command']
             data = []
             if not isinstance(response, list):

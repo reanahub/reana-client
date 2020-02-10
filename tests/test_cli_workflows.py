@@ -80,6 +80,10 @@ def test_workflows_sorting():
             "user": "00000000-0000-0000-0000-000000000000",
             "name": "mytest.1",
             "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+            "progress": {
+                "run_started_at": "2018-06-13T09:47:40.28223",
+                "run_finished_at": "2018-06-13T10:30:03.70303"
+            }
         },
         {
             "status": "running",
@@ -105,8 +109,12 @@ def test_workflows_sorting():
                 cli,
                 ['list', '-t', reana_token, '--sort', 'run_number'])
             message = (
-                'mytest   2            2018-06-13T09:55:35.66097   running\n'
-                'mytest   1            2018-06-13T09:47:35.66097   running')
+                'mytest   2            2018-06-13T09:55:35.66097   -'
+                '                           -'
+                '                           running\n'
+                'mytest   1            2018-06-13T09:47:35.66097   '
+                '2018-06-13T09:47:40.28223   2018-06-13T10:30:03.70303'
+                '   running')
             assert result.exit_code == 0
             assert message in result.output
 

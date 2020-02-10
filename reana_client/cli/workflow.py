@@ -627,9 +627,16 @@ def workflow_status(ctx, workflow, _filter, output_format,
     count=True,
     help='Get output in JSON format.')
 @add_access_token_options
+@click.option(
+    '-s',
+    '--step',
+    'steps',
+    multiple=True,
+    help='Get logs of a specific step.')
 @check_connection
 @click.pass_context
-def workflow_logs(ctx, workflow, access_token, json_format):  # noqa: D301
+def workflow_logs(ctx, workflow, access_token, json_format,
+                  steps=None):  # noqa: D301
     """Get  workflow logs.
 
     The `logs` command allows to retrieve logs of running workflow. Note that
@@ -638,15 +645,17 @@ def workflow_logs(ctx, workflow, access_token, json_format):  # noqa: D301
 
     Examples: \n
     \t $ reana-client logs -w myanalysis.42
+    \t $ reana-client logs -w myanalysis.42 -s 1st_step
     """
     from reana_client.api.client import get_workflow_logs
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-
     if workflow:
         try:
-            response = get_workflow_logs(workflow, access_token)
+            if steps:
+                steps = list(set(steps))
+            response = get_workflow_logs(workflow, access_token, steps)
             workflow_logs = json.loads(response['logs'])
             if json_format:
                 click.echo(json.dumps(workflow_logs, indent=2))
@@ -657,6 +666,18 @@ def workflow_logs(ctx, workflow, access_token, json_format):  # noqa: D301
                 click.echo(workflow_logs['workflow_logs'])
 
             first = True
+            returned_step_names = \
+                set(workflow_logs['job_logs'][item]['job_name']
+                    for item in workflow_logs['job_logs'].keys())
+            if steps:
+                missing_steps = set(steps).difference(returned_step_names)
+                if missing_steps:
+                    click.echo(
+                        click.style('The logs of step(s) {} were not found, '
+                                    'check for spelling mistakes in the step '
+                                    'names.'
+                                    .format(','.join(missing_steps)),
+                                    fg='red'))
             for job_id, job_logs in workflow_logs['job_logs'].items():
                 if job_logs:
                     if first:

@@ -289,12 +289,13 @@ def upload_file(workflow_id, file_, file_name, access_token):
         raise e
 
 
-def get_workflow_logs(workflow_id, access_token):
+def get_workflow_logs(workflow_id, access_token, steps=None):
     """Get logs from a workflow engine."""
     try:
         (response,
             http_response) = current_rs_api_client.api.get_workflow_logs(
                 workflow_id_or_name=workflow_id,
+                steps=steps,
                 access_token=access_token).result()
 
         if http_response.status_code == 200:

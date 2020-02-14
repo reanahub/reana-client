@@ -266,8 +266,8 @@ def workflow_create(ctx, file, name,
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
         click.echo(
-            click.style('Workflow could not be created: \n{}'
-                        .format(str(e)), fg='red'),
+            click.style('Cannot create workflow {}: \n{}'
+                        .format(name, str(e)), fg='red'),
             err=True)
         if 'invoked_by_subcommand' in ctx.parent.__dict__:
             sys.exit(1)
@@ -378,8 +378,8 @@ def workflow_start(ctx, workflow, access_token,
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
             click.echo(
-                click.style('Workflow could not be started: \n{}'
-                            .format(str(e)), fg='red'),
+                click.style('Cannot start workflow {}: \n{}'
+                            .format(workflow, str(e)), fg='red'),
                 err=True)
             if 'invoked_by_subcommand' in ctx.parent.__dict__:
                 sys.exit(1)
@@ -486,8 +486,8 @@ def workflow_restart(ctx, workflow, access_token,
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
             click.echo(
-                click.style('Workflow could not be started: \n{}'
-                            .format(str(e)), fg='red'),
+                click.style('Cannot start workflow {}: \n{}'
+                            .format(workflow, str(e)), fg='red'),
                 err=True)
             if 'invoked_by_subcommand' in ctx.parent.__dict__:
                 sys.exit(1)
@@ -636,8 +636,8 @@ def workflow_status(ctx, workflow, _filter, output_format,
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
             click.echo(
-                click.style('Workflow status could not be retrieved: \n{}'
-                            .format(str(e)), fg='red'),
+                click.style('Cannot retrieve the status of a workflow {}: \n{}'
+                            .format(workflow, str(e)), fg='red'),
                 err=True)
 
 
@@ -689,8 +689,8 @@ def workflow_logs(ctx, workflow, access_token, json_format,
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
             click.echo(
-                click.style('Workflow logs could not be retrieved: \n{}'
-                            .format(str(e)), fg='red'),
+                click.style('Cannot retrieve the logs of a workflow {}: \n{}'
+                            .format(workflow, str(e)), fg='red'),
                 err=True)
 
 
@@ -779,8 +779,8 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.secho('Workflow could not be stopped: \n{}'.format(str(e)),
-                        fg='red', err=True)
+            click.secho('Cannot stop workflow {}: \n{}'.format(
+                        workflow, str(e)), fg='red', err=True)
 
 
 @workflow_execution_group.command('run')
@@ -920,8 +920,8 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
             click.echo(
-                click.style('Workflow could not be deleted: \n{}'
-                            .format(str(e)), fg='red'),
+                click.style('Cannot delete workflow {} \n{}'
+                            .format(workflow, str(e)), fg='red'),
                 err=True)
 
 
@@ -1063,7 +1063,7 @@ def workflow_open_interactive_session(ctx, workflow, interactive_session_type,
             click.secho("Interactive session could not be opened: \n{}"
                         .format(str(e)), fg='red', err=True)
     else:
-        click.secho("Workflow {} does not exist".format(workflow),
+        click.secho("Cannot find workflow {}".format(workflow),
                     fg="red", err=True)
 
 
@@ -1097,5 +1097,5 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
             click.secho("Interactive session could not be closed: \n{}"
                         .format(str(e)), fg='red', err=True)
     else:
-        click.secho("Workflow {} does not exist".format(workflow),
+        click.secho("Cannot find workflow {} ".format(workflow),
                     fg="red", err=True)

@@ -160,3 +160,82 @@ class NotRequiredIf(click.Option):
 
         return super(NotRequiredIf, self).handle_parse_result(
             ctx, opts, args)
+
+
+def output_user_friendly_logs(workflow_logs, steps):
+    """Output workflow logs in a user-friendly manner.
+
+    :param workflow_logs: Dictionary representing the workflow logs as they
+        are returned from the REST API.
+    :param steps: List of steps to show logs for.
+    """
+    # Colors matching the status colors of REANA-UI
+    status_to_color_mapping = {
+        'running': 'bright_blue',
+        'finished': 'green',
+        'failed': 'red',
+    }
+    key_to_description_mapping = {
+        'workflow_uuid': 'Workflow ID',
+        'compute_backend': 'Compute backend',
+        'backend_job_id': 'Job ID',
+        'docker_img': 'Docker image',
+        'cmd': 'Command',
+        'status': 'Status',
+    }
+    leading_mark = '==>'
+
+    # REANA Workflow Engine logs
+    if workflow_logs.get('workflow_logs'):
+        click.secho('{} Workflow engine logs'.format(leading_mark),
+                    bold=True, fg='yellow')
+        click.echo(workflow_logs['workflow_logs'])
+
+    if workflow_logs.get('engine_specific'):
+        click.echo('\n')
+        click.secho('{} Engine internal logs'.format(leading_mark),
+                    fg='yellow')
+        click.secho(workflow_logs['engine_specific'])
+
+    returned_step_names = \
+        set(workflow_logs['job_logs'][item]['job_name']
+            for item in workflow_logs['job_logs'].keys())
+    if steps:
+        missing_steps = set(steps).difference(returned_step_names)
+        if missing_steps:
+            click.echo(
+                click.style('The logs of step(s) {} were not found, '
+                            'check for spelling mistakes in the step '
+                            'names.'
+                            .format(','.join(missing_steps)),
+                            fg='red'))
+    # Job logs
+    if workflow_logs['job_logs']:
+        click.echo('\n')
+        click.secho('{} Job logs'.format(leading_mark), bold=True, fg='yellow')
+    for job_id, logs_info in workflow_logs['job_logs'].items():
+        if logs_info:
+            job_name_or_id = logs_info['job_name'] or job_id
+            click.secho('{0} Step: {1}'.format(
+                leading_mark, job_name_or_id), bold=True,
+                fg=status_to_color_mapping.get(logs_info['status']))
+            logs_output = logs_info['logs']
+            # extract already used fields
+            del(logs_info['logs'])
+            del(logs_info['job_name'])
+
+            for key, value in logs_info.items():
+                title = click.style('{mark} {description}:'.format(
+                    mark=leading_mark,
+                    description=key_to_description_mapping[key]),
+                    fg=status_to_color_mapping.get(logs_info['status']))
+                click.secho('{title} {value}'.format(title=title, value=value))
+            # show actual log content
+            if logs_output:
+                click.secho('{mark} Logs:'.format(
+                    mark=leading_mark),
+                    fg=status_to_color_mapping.get(logs_info['status']))
+                click.secho(logs_output)
+            else:
+                click.secho('{0} Step {1} emitted no logs.'
+                            .format(leading_mark, job_name_or_id), bold=True)

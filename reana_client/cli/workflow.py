@@ -682,37 +682,9 @@ def workflow_logs(ctx, workflow, access_token, json_format,
             if json_format:
                 click.echo(json.dumps(workflow_logs, indent=2))
                 sys.exit(0)
-
-            if workflow_logs.get('workflow_logs', None):
-                click.secho('workflow engine logs'.upper(), fg='green')
-                click.echo(workflow_logs['workflow_logs'])
-
-            first = True
-            returned_step_names = \
-                set(workflow_logs['job_logs'][item]['job_name']
-                    for item in workflow_logs['job_logs'].keys())
-            if steps:
-                missing_steps = set(steps).difference(returned_step_names)
-                if missing_steps:
-                    click.echo(
-                        click.style('The logs of step(s) {} were not found, '
-                                    'check for spelling mistakes in the step '
-                                    'names.'
-                                    .format(','.join(missing_steps)),
-                                    fg='red'))
-            for job_id, job_logs in workflow_logs['job_logs'].items():
-                if job_logs:
-                    if first:
-                        click.echo('\n')
-                        click.secho('job logs'.upper(), fg='green')
-                        first = False
-                    click.secho('job id: {}'.format(job_id), fg='green')
-                    for key, value in job_logs.items():
-                        click.echo('{}: {}'.format(key.upper(), value))
-            if workflow_logs.get('engine_specific', None):
-                click.echo('\n')
-                click.secho('engine internal logs'.upper(), fg='green')
-                click.secho(workflow_logs['engine_specific'])
+            else:
+                from reana_client.cli.utils import output_user_friendly_logs
+                output_user_friendly_logs(workflow_logs, steps)
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))

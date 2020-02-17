@@ -414,17 +414,23 @@ def workflow_restart(ctx, workflow, access_token,
                      parameters, options, file):  # noqa: D301
     """Restart previously run workflow.
 
-    The `restart` command allows to rerun previous workflow on the same
-    workspace. The workflow execution can be further influenced by passing a
-    modified REANA specifications file using `-f` or `--file` or input
-    prameters using `-p` or `--parameters` flag and by setting additional
-    operational options using `-o` or `--options`. The input parameters and
-    operational options can be repetitive. For example, to disable caching for
-    the Serial workflow engine, you can set `-o CACHE=off`.
+    The `restart` command allows to restart a previous workflow on the same
+    workspace.
+
+    Note that workflow restarting can be used in a combination with operational
+    options ``FROM`` and ``TARGET``. You can also pass a modified workflow
+    specification with ``-f`` or `--file`` flag.
+
+    You can furthermore use modified input prameters using `-p` or
+    `--parameters` flag and by setting additional operational options using
+    `-o` or `--options`.  The input parameters and operational options can be
+    repetitive.
 
     Examples: \n
     \t $ reana-client restart -w myanalysis.42 -p sleeptime=10 -p myparam=4 \n
-    \t $ reana-client restart -w myanalysis.42 -p myparam=myvalue -o CACHE=off
+    \t $ reana-client restart -w myanalysis.42 -p myparam=myvalue\n
+    \t $ reana-client restart -w myanalysis.42 -o TARGET=gendata\n
+    \t $ reana-client restart -w myanalysis.42 -o FROM=fitdata
     """
     from reana_client.utils import get_api_url
     from reana_client.api.client import (get_workflow_parameters,

@@ -107,18 +107,17 @@ def test_download_file():
     env = {'REANA_SERVER_URL': 'localhost'}
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
-    mock_http_response.raw_bytes = str(response).encode()
-    mock_response = response
+    mock_http_response.content = str(response).encode()
+    mock_requests = Mock()
+    mock_requests.get = Mock(return_value=mock_http_response)
+
     reana_token = '000000'
-    response_md5 = hashlib.md5(mock_response.encode('utf-8')).hexdigest()
+    response_md5 = hashlib.md5(response.encode('utf-8')).hexdigest()
     file = 'dummy_file.txt'
     message = 'File {0} downloaded to'.format(file)
     runner = CliRunner(env=env)
     with runner.isolation():
-        with patch(
-                "reana_client.api.client.current_rs_api_client",
-                make_mock_api_client('reana-server')(mock_response,
-                                                     mock_http_response)):
+        with patch("reana_client.api.client.requests", mock_requests):
             result = runner.invoke(
                 cli, ['download', '-t', reana_token, '--workflow', 'mytest.1',
                       file]

@@ -326,14 +326,17 @@ def download_file(workflow_id, file_name, access_token):
     :returns: .
     """
     try:
+        from reana_client.utils import get_api_url
         logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-        _, http_response = current_rs_api_client.api.download_file(
-            workflow_id_or_name=workflow_id,
-            file_name=file_name,
-            access_token=access_token).result()
-
+        endpoint = \
+            current_rs_api_client.api.download_file.operation.path_name.format(
+                workflow_id_or_name=workflow_id, file_name=file_name)
+        http_response = requests.get(urljoin(get_api_url(), endpoint),
+                                     params={'file_name': file_name,
+                                             'access_token': access_token},
+                                     verify=False)
         if http_response.status_code == 200:
-            return http_response.raw_bytes
+            return http_response.content
         else:
             raise Exception(
                 "Expected status code 200 but replied with "

@@ -33,12 +33,15 @@ current_rs_api_client = LocalProxy(
     partial(get_current_api_client, component='reana-server'))
 
 
-def ping():
+def ping(access_token):
     """Health check REANA server."""
     try:
-        response, http_response = current_rs_api_client.api.ping().result()
+        response, http_response = (current_rs_api_client.api
+                                   .get_me(access_token=access_token).result())
         if http_response.status_code == 200:
-            return response['message']
+            response['status'] = 'Connected'
+            response['error'] = False
+            return response
         else:
             raise Exception(
                 "Expected status code 200 but replied with "
@@ -48,13 +51,15 @@ def ping():
     except HTTPError as e:
         logging.debug(
             'REANA server health check failed: '
-            '\nStatus: {}\nReason: {}\n'
-            'Message: {}'.format(e.response.status_code,
-                                 e.response.reason,
-                                 e.response.json()['message']))
-        raise Exception(e.response.json()['message'])
+            '\nStatus: {}\nReason: {}'.format(e.response.status_code,
+                                              e.response.reason))
+        if e.response.status_code == 404:
+            return {'status': 'ERROR: INVALID SERVER', 'error': True}
+        if e.response.status_code == 403:
+            return {'status': 'ERROR: INVALID ACCESS TOKEN', 'error': True}
+        raise Exception(e.response)
     except Exception as e:
-        raise e
+        return {'status': 'ERROR: INVALID SERVER', 'error': True}
 
 
 def get_workflows(access_token, type, verbose=False, block_size=None):

@@ -11,7 +11,7 @@ import logging
 import traceback
 
 import click
-from reana_client.cli.utils import check_connection
+from reana_client.cli.utils import add_access_token_options, check_connection
 from reana_client.version import __version__
 
 
@@ -23,8 +23,9 @@ def configuration_group():
 
 @configuration_group.command('ping')
 @click.pass_context
+@add_access_token_options
 @check_connection
-def ping(ctx):  # noqa: D301
+def ping(ctx, access_token):  # noqa: D301
     """Check connection to REANA server.
 
     The `ping` command allows to test connection to REANA server.
@@ -36,17 +37,25 @@ def ping(ctx):  # noqa: D301
         from reana_client.api.client import ping as rs_ping
         from reana_client.utils import get_api_url
         logging.info('Connecting to {0}'.format(get_api_url()))
-        response = rs_ping()
-        click.echo(click.style('Connected to {0} - Server is running.'
-                               .format(get_api_url()), fg='green'))
+        response = rs_ping(access_token)
+        msg_color = 'red' if response.get('error') else 'green'
+        click.echo(click.style(
+            'REANA server: {0}\n'
+            'Authenticated as: {1} <{2}>\n'
+            'Status: {3}'.format(get_api_url(),
+                                 response.get('full_name') or '',
+                                 response.get('email'),
+                                 response.get('status')),
+            fg=msg_color))
         logging.debug('Server response:\n{}'.format(response))
 
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        error_msg = ('Could not connect to the selected REANA cluster'
-                     'server at {0}.'.format(get_api_url()))
+        error_msg = ('Could not connect to the selected REANA cluster '
+                     'server at {0}:\n{1}'.format(get_api_url(), e))
         click.echo(click.style(error_msg, fg='red'), err=True)
+        ctx.exit(1)
 
 
 @configuration_group.command('version')

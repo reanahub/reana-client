@@ -11,8 +11,8 @@ import os
 
 import pkg_resources
 
-reana_yaml_default_file_path = './reana.yaml'  # e.g. `./.reana.yaml`
-"""REANA specification file default location."""
+reana_yaml_valid_file_names = ['reana.yaml', 'reana.yml']
+"""REANA specification valid file names."""
 
 reana_yaml_schema_file_path = pkg_resources.resource_filename(
         __name__,

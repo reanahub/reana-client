@@ -567,3 +567,23 @@ def test_close_interactive_session():
             result = runner.invoke(cli, ['close', '-t', reana_token,
                                          '-w', workflow])
             assert expected_message == result.output
+
+
+def test_yml_ext_specification(create_yaml_workflow_schema):
+    env = {'REANA_SERVER_URL': 'localhost'}
+    runner = CliRunner(env=env)
+    message = "is a valid REANA specification file"
+    with runner.isolated_filesystem():
+        with open('reana.yml', 'w') as reana_schema:
+            reana_schema.write(create_yaml_workflow_schema)
+        result = runner.invoke(cli, ['validate'])
+        assert result.exit_code == 0
+        assert message in result.output
+
+    message = 'Path "reana.yaml" does not exist.'
+    with runner.isolated_filesystem():
+        with open('reana.json', 'w') as reana_schema:
+            reana_schema.write(create_yaml_workflow_schema)
+        result = runner.invoke(cli, ['validate'])
+        assert result.exit_code != 0
+        assert message in result.output

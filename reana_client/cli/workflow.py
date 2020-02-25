@@ -21,9 +21,9 @@ from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, check_connection,
                                     filter_data, format_session_uri,
                                     parse_parameters, validate_workflow_name)
-from reana_client.config import (ERROR_MESSAGES, TIMECHECK,
-                                 reana_yaml_default_file_path)
-from reana_client.utils import (get_workflow_name_and_run_number,
+from reana_client.config import ERROR_MESSAGES, TIMECHECK
+from reana_client.utils import (get_reana_yaml_file_path,
+                                get_workflow_name_and_run_number,
                                 get_workflow_status_change_msg, is_uuid_v4,
                                 load_reana_spec,
                                 validate_cwl_operational_options,
@@ -207,7 +207,7 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
     '-f',
     '--file',
     type=click.Path(exists=True, resolve_path=True),
-    default=reana_yaml_default_file_path,
+    default=get_reana_yaml_file_path,
     help='REANA specifications file describing the workflow and '
          'context which REANA should execute.')
 @click.option(
@@ -705,7 +705,7 @@ def workflow_logs(ctx, workflow, access_token, json_format,
     '-f',
     '--file',
     type=click.Path(exists=True, resolve_path=True),
-    default=reana_yaml_default_file_path,
+    default=get_reana_yaml_file_path,
     help='REANA specifications file describing the workflow and '
          'context which REANA should execute.')
 @click.pass_context
@@ -794,7 +794,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     '-f',
     '--file',
     type=click.Path(exists=True, resolve_path=True),
-    default=reana_yaml_default_file_path,
+    default=get_reana_yaml_file_path,
     help='REANA specifications file describing the workflow and '
          'context which REANA should execute.')
 @click.option(

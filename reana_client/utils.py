@@ -22,7 +22,8 @@ from jsonschema import ValidationError, validate
 from reana_commons.serial import serial_load
 from reana_commons.utils import get_workflow_status_change_verb
 
-from reana_client.config import reana_yaml_schema_file_path
+from reana_client.config import (reana_yaml_schema_file_path,
+                                 reana_yaml_valid_file_names)
 
 
 def workflow_uuid_or_name(ctx, param, value):
@@ -220,9 +221,8 @@ def get_workflow_name_and_run_number(workflow_name):
 
 def get_workflow_root():
     """Return the current workflow root directory."""
-    reana_yaml = 'reana.yaml'
+    reana_yaml = get_reana_yaml_file_path()
     workflow_root = os.getcwd()
-
     while True:
         file_list = os.listdir(workflow_root)
         parent_dir = os.path.dirname(workflow_root)
@@ -358,3 +358,27 @@ def parse_secret_from_path(path):
 def get_api_url():
     """Obtain REANA server API URL."""
     return os.environ.get('REANA_SERVER_URL')
+
+
+def get_reana_yaml_file_path():
+    """REANA specification file location."""
+    matches = [path for path in reana_yaml_valid_file_names
+               if os.path.exists(path)]
+    if len(matches) == 0:
+        click.echo(
+            click.style(
+                '==> ERROR: No REANA specification file (reana.yaml) found. '
+                'Exiting.', fg='red'))
+        sys.exit(1)
+    if len(matches) > 1:
+        click.echo(
+            click.style(
+                '==> ERROR: Found two REANA specification files ({0}). '
+                'Please use only one. Exiting.'.format(', '.join(matches)),
+                fg='red'))
+        sys.exit(1)
+    for path in reana_yaml_valid_file_names:
+        if os.path.exists(path):
+            return path
+    # If none of the valid paths exists, fall back to reana.yaml.
+    return 'reana.yaml'

@@ -21,8 +21,8 @@ from reana_client.cli.utils import (add_access_token_options,
                                     filter_data, parse_parameters)
 from reana_client.config import ERROR_MESSAGES, JSON, URL
 from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import (get_workflow_root, load_reana_spec,
-                                workflow_uuid_or_name)
+from reana_client.utils import (get_reana_yaml_file_path, get_workflow_root,
+                                load_reana_spec, workflow_uuid_or_name)
 from reana_commons.utils import click_table_printer
 
 
@@ -167,7 +167,7 @@ def download_files(ctx, workflow, filenames,
 
     if not filenames:
         reana_spec = load_reana_spec(os.path.join(get_workflow_root(),
-                                     'reana.yaml'),
+                                     get_reana_yaml_file_path()),
                                      False)
         if 'outputs' in reana_spec:
             filenames = reana_spec['outputs'].get('files') or []
@@ -238,8 +238,7 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
 
     if not filenames:
         reana_spec = load_reana_spec(os.path.join(get_workflow_root(),
-                                     'reana.yaml'),
-                                     False)
+                                                  get_reana_yaml_file_path()))
         if 'inputs' in reana_spec:
             filenames = []
             filenames += [os.path.join(get_workflow_root(), f)

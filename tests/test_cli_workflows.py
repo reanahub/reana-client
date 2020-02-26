@@ -238,9 +238,9 @@ def test_workflow_create_failed():
     env = {'REANA_SERVER_URL': 'localhost'}
     runner = CliRunner(env=env)
     result = runner.invoke(cli, ['create'])
-    message = 'Error: Invalid value for "-f"'
+    message = 'ERROR: No REANA specification file (reana.yaml) found'
     assert message in result.output
-    assert result.exit_code == 2
+    assert result.exit_code == 1
 
 
 def test_workflow_create_successful(create_yaml_workflow_schema):
@@ -569,6 +569,21 @@ def test_close_interactive_session():
             assert expected_message == result.output
 
 
+def test_multiple_specifications(create_yaml_workflow_schema):
+    env = {'REANA_SERVER_URL': 'localhost'}
+    runner = CliRunner(env=env)
+    message = ('ERROR: Found 2 REANA specification files '
+               '(reana.yaml, reana.yml).')
+    with runner.isolated_filesystem():
+        with open('reana.yaml', 'w') as reana_schema:
+            reana_schema.write(create_yaml_workflow_schema)
+        with open('reana.yml', 'w') as reana_schema:
+            reana_schema.write(create_yaml_workflow_schema)
+        result = runner.invoke(cli, ['validate'])
+        assert result.exit_code == 1
+        assert message in result.output
+
+
 def test_yml_ext_specification(create_yaml_workflow_schema):
     env = {'REANA_SERVER_URL': 'localhost'}
     runner = CliRunner(env=env)
@@ -580,7 +595,7 @@ def test_yml_ext_specification(create_yaml_workflow_schema):
         assert result.exit_code == 0
         assert message in result.output
 
-    message = 'Path "reana.yaml" does not exist.'
+    message = 'ERROR: No REANA specification file (reana.yaml) found.'
     with runner.isolated_filesystem():
         with open('reana.json', 'w') as reana_schema:
             reana_schema.write(create_yaml_workflow_schema)

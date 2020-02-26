@@ -373,8 +373,9 @@ def get_reana_yaml_file_path():
     if len(matches) > 1:
         click.echo(
             click.style(
-                '==> ERROR: Found two REANA specification files ({0}). '
-                'Please use only one. Exiting.'.format(', '.join(matches)),
+                '==> ERROR: Found {0} REANA specification files ({1}). '
+                'Please use only one. Exiting.'.format(len(matches),
+                                                       ', '.join(matches)),
                 fg='red'))
         sys.exit(1)
     for path in reana_yaml_valid_file_names:

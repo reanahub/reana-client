@@ -208,8 +208,8 @@ def workflow_workflows(ctx, sessions, _filter, output_format, access_token,
     '--file',
     type=click.Path(exists=True, resolve_path=True),
     default=get_reana_yaml_file_path,
-    help='REANA specifications file describing the workflow and '
-         'context which REANA should execute.')
+    help='REANA specification file describing the workflow to '
+         'execute. [default=reana.yaml]')
 @click.option(
     '-n', '--name',
     '-w', '--workflow',
@@ -407,8 +407,8 @@ def workflow_start(ctx, workflow, access_token,
     '-f',
     '--file',
     type=click.Path(exists=True, resolve_path=True),
-    help='REANA specifications file describing the workflow and '
-         'context which REANA should execute.')
+    help='REANA specification file describing the workflow to '
+         'execute. [default=reana.yaml]')
 @click.pass_context
 def workflow_restart(ctx, workflow, access_token,
                      parameters, options, file):  # noqa: D301
@@ -706,8 +706,8 @@ def workflow_logs(ctx, workflow, access_token, json_format,
     '--file',
     type=click.Path(exists=True, resolve_path=True),
     default=get_reana_yaml_file_path,
-    help='REANA specifications file describing the workflow and '
-         'context which REANA should execute.')
+    help='REANA specification file describing the workflow to '
+         'execute. [default=reana.yaml]')
 @click.pass_context
 def workflow_validate(ctx, file):  # noqa: D301
     """Validate workflow specification file.
@@ -795,8 +795,8 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     '--file',
     type=click.Path(exists=True, resolve_path=True),
     default=get_reana_yaml_file_path,
-    help='REANA specifications file describing the workflow and '
-         'context which REANA should execute.')
+    help='REANA specification file describing the workflow to '
+         'execute. [default=reana.yaml]')
 @click.option(
     '-n', '--name',
     '-w', '--workflow',

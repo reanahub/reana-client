@@ -943,7 +943,7 @@ def workflow_delete(ctx, workflow, all_runs, workspace,
     '-q',
     '--brief',
     is_flag=True,
-    help="If not set, differences in the contents of the files in the two"
+    help="If not set, differences in the contents of the files in the two "
          "workspaces are shown.")
 @click.option(
     '-u',
@@ -983,6 +983,8 @@ def workflow_diff(ctx, workflow_a, workflow_b, brief,
             elif line[0] == '+':
                 line_color = 'green'
             click.secho(line, fg=line_color)
+
+    leading_mark = '==>'
     try:
         response = diff_workflows(workflow_a, workflow_b, brief, access_token,
                                   str(context_lines))
@@ -991,17 +993,21 @@ def workflow_diff(ctx, workflow_a, workflow_b, brief,
             nonempty_sections = {k: v for k, v in specification_diff.items()
                                  if v}
             if nonempty_sections:
-                click.echo('differences in reana specification:'.upper())
+                click.secho('{} Differences in REANA specification:'
+                            .format(leading_mark), bold=True, fg='yellow')
             else:
-                click.echo('No differences in reana specifications.')
+                click.secho('{} No differences in REANA specifications.'
+                            .format(leading_mark), bold=True, fg='yellow')
             for section, content in nonempty_sections.items():
-                click.echo('In {}:'.format(section))
+                click.secho('{} In {}:'.format(leading_mark, section),
+                            fg='yellow')
                 print_color_diff(content)
         click.echo('')  # Leave 1 line for separation
         if response.get('workspace_listing'):
             workspace_diff = json.loads(response.get('workspace_listing')).\
                 splitlines()
-            click.echo('differences in workspace listings:'.upper())
+            click.secho('{} Differences in workspace listings:'
+                        .format(leading_mark), bold=True, fg='yellow')
             print_color_diff(workspace_diff)
 
     except Exception as e:

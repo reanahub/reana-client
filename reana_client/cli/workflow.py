@@ -992,21 +992,23 @@ def workflow_diff(ctx, workflow_a, workflow_b, brief,
             specification_diff = json.loads(response['reana_specification'])
             nonempty_sections = {k: v for k, v in specification_diff.items()
                                  if v}
-            if nonempty_sections:
-                click.secho('{} Differences in REANA specification:'
-                            .format(leading_mark), bold=True, fg='yellow')
-            else:
+            if not nonempty_sections:
                 click.secho('{} No differences in REANA specifications.'
                             .format(leading_mark), bold=True, fg='yellow')
+            # Rewrite section name workflow -> specification
+            if 'workflow' in nonempty_sections:
+                nonempty_sections['specification'] = \
+                    nonempty_sections.pop('workflow')
             for section, content in nonempty_sections.items():
-                click.secho('{} In {}:'.format(leading_mark, section),
-                            fg='yellow')
+                click.secho('{} Differences in workflow {}'
+                            .format(leading_mark, section),
+                            bold=True, fg='yellow')
                 print_color_diff(content)
         click.echo('')  # Leave 1 line for separation
-        if response.get('workspace_listing'):
-            workspace_diff = json.loads(response.get('workspace_listing')).\
-                splitlines()
-            click.secho('{} Differences in workspace listings:'
+        workspace_diff = json.loads(response.get('workspace_listing'))
+        if workspace_diff:
+            workspace_diff = workspace_diff.splitlines()
+            click.secho('{} Differences in workflow workspace'
                         .format(leading_mark), bold=True, fg='yellow')
             print_color_diff(workspace_diff)
 

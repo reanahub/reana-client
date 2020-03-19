@@ -995,7 +995,7 @@ def workflow_diff(ctx, workflow_a, workflow_b, brief,
             if not nonempty_sections:
                 click.secho('{} No differences in REANA specifications.'
                             .format(leading_mark), bold=True, fg='yellow')
-            # Rewrite section name workflow -> specification
+            # Rename section workflow -> specification
             if 'workflow' in nonempty_sections:
                 nonempty_sections['specification'] = \
                     nonempty_sections.pop('workflow')

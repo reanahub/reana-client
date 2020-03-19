@@ -44,12 +44,13 @@ setup_requires = [
 install_requires = [
     'PyYAML>=5.1',
     'typing>=3.7.4 ; python_version=="2.7"',  # workaround for CWL deps
-    'click>=7',
+    'click>=7 ; python_version>="3"',
+    'click==7.0 ; python_version=="2.7"',
     'cryptography>=2.7',
     'cwltool==1.0.20191022103248',
     'pyOpenSSL>=19.0.0',  # FIXME remove once yadage-schemas solves deps.
     'jsonpointer>=2.0',
-    'reana-commons>=0.7.0.dev20200226,<0.8.0',
+    'reana-commons>=0.7.0.dev20200319,<0.8.0',
     'rfc3987>=1.3.8',  # FIXME remove once yadage-schemas solves deps.
     'six==1.12.0',
     'strict-rfc3339>=0.7',  # FIXME remove once yadage-schemas solves deps.

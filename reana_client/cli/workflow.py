@@ -801,6 +801,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     '-n', '--name',
     '-w', '--workflow',
     default='',
+    callback=validate_workflow_name,
     help='Optional name of the workflow. [default is "workflow"]')
 @click.option(
     '--skip-validation',

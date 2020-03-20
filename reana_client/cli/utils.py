@@ -126,7 +126,7 @@ def validate_workflow_name(ctx, _, workflow_name):
                 click.echo(
                     click.style(
                         'Workflow name {} contains illegal '
-                        'character "{}""'.format(
+                        'character "{}"'.format(
                             workflow_name,
                             item
                         ),

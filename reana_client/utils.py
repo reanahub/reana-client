@@ -64,8 +64,13 @@ def yadage_load(workflow_file, toplevel='.'):
         'schemadir': schemadir,
     }
 
-    return yadageschemas.load(spec=workflow_file, specopts=specopts,
-                              validopts=validopts, validate=True)
+    try:
+        return yadageschemas.load(spec=workflow_file, specopts=specopts,
+                                  validopts=validopts, validate=True)
+
+    except ValidationError as e:
+        e.message = str(e)
+        raise e
 
 
 def cwl_load(workflow_file):

@@ -38,7 +38,7 @@ def workflow_uuid_or_name(ctx, param, value):
         return value
 
 
-def yadage_load(workflow_file, toplevel='.'):
+def yadage_load(workflow_file, toplevel='.', **kwargs):
     """Validate and return yadage workflow specification.
 
     :param workflow_file: A specification file compliant with
@@ -124,20 +124,24 @@ def load_reana_spec(filepath, skip_validation=False):
             _validate_reana_yaml(reana_yaml)
 
         kwargs = {}
-        if reana_yaml['workflow']['type'] == 'serial':
+        workflow_type = reana_yaml['workflow']['type']
+        if workflow_type == 'serial':
             kwargs['specification'] = reana_yaml['workflow'].\
                 get('specification')
             kwargs['parameters'] = \
                 reana_yaml.get('inputs', {}).get('parameters', {})
             kwargs['original'] = True
 
+        if 'options' in reana_yaml['workflow']:
+            kwargs.update(reana_yaml['workflow']['options'])
+
         reana_yaml['workflow']['specification'] = load_workflow_spec(
-            reana_yaml['workflow']['type'],
+            workflow_type,
             reana_yaml['workflow'].get('file'),
             **kwargs
         )
 
-        if reana_yaml['workflow']['type'] == 'cwl' and \
+        if workflow_type == 'cwl' and \
                 'inputs' in reana_yaml:
             with open(reana_yaml['inputs']['parameters']['input']) as f:
                 reana_yaml['inputs']['parameters'] = \

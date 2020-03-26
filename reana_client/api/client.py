@@ -17,8 +17,7 @@ import requests
 from bravado.exception import HTTPError
 from reana_client.config import ERROR_MESSAGES, WORKFLOW_ENGINES
 from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import (_validate_reana_yaml, get_workflow_root,
-                                is_uuid_v4)
+from reana_client.utils import _validate_reana_yaml, is_uuid_v4
 from reana_commons.api_client import get_current_api_client
 from reana_commons.errors import (REANASecretAlreadyExists,
                                   REANASecretDoesNotExist)
@@ -344,9 +343,10 @@ def download_file(workflow_id, file_name, access_token):
             return http_response.content
         else:
             raise Exception(
-                "Expected status code 200 but replied with "
-                "{status_code}".format(
-                    status_code=http_response.status_code))
+                "Error {status_code} {reason} {message}".format(
+                    status_code=http_response.status_code,
+                    reason=http_response.reason,
+                    message=http_response.json().get('message')))
 
     except HTTPError as e:
         logging.debug(
@@ -486,15 +486,10 @@ def upload_to_server(workflow, paths, access_token):
                 symlink = True
             with open(path, 'rb') as f:
                 fname = os.path.basename(f.name)
-                workflow_root = get_workflow_root()
-                if not path.startswith(workflow_root):
-                    raise FileUploadError(
-                        'Files and directories to be uploaded '
-                        'must be under the workflow root directory.')
                 # Calculate the path that will store the file
                 # in the workflow controller, by subtracting
                 # the workflow root path from the file path
-                save_path = path.replace(workflow_root, '')
+                save_path = path.replace(os.getcwd(), '')
                 # Remove prepending dirs named "." or as the upload type
                 while len(save_path.split('/')) > 1 and \
                         save_path.split('/')[0] == '.':
@@ -536,6 +531,34 @@ def get_workflow_parameters(workflow, access_token):
     except HTTPError as e:
         logging.debug(
             'Workflow parameters could not be retrieved: '
+            '\nStatus: {}\nReason: {}\n'
+            'Message: {}'.format(e.response.status_code,
+                                 e.response.reason,
+                                 e.response.json()['message']))
+        raise Exception(e.response.json()['message'])
+    except Exception as e:
+        raise e
+
+
+def get_workflow_specification(workflow, access_token):
+    """Get specification of previously created workflow."""
+    try:
+        response, http_response = current_rs_api_client.api\
+            .get_workflow_specification(
+                workflow_id_or_name=workflow,
+                access_token=access_token)\
+            .result()
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(
+                    status_code=http_response.status_code))
+
+    except HTTPError as e:
+        logging.debug(
+            'Workflow specification could not be retrieved: '
             '\nStatus: {}\nReason: {}\n'
             'Message: {}'.format(e.response.status_code,
                                  e.response.reason,

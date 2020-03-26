@@ -224,29 +224,6 @@ def get_workflow_name_and_run_number(workflow_name):
         return workflow_name, ''
 
 
-def get_workflow_root():
-    """Return the current workflow root directory."""
-    reana_yaml = get_reana_yaml_file_path()
-    workflow_root = os.getcwd()
-    while True:
-        file_list = os.listdir(workflow_root)
-        parent_dir = os.path.dirname(workflow_root)
-        if reana_yaml in file_list:
-            break
-        else:
-            if workflow_root == parent_dir:
-                click.echo(click.style(
-                    'Not a workflow directory (or any of the parent'
-                    ' directories).\nPlease upload from inside'
-                    ' the directory containing the reana.yaml '
-                    'file of your workflow.', fg='red'))
-                sys.exit(1)
-            else:
-                workflow_root = parent_dir
-    workflow_root += '/'
-    return workflow_root
-
-
 def validate_cwl_operational_options(operational_options):
     """Validate cwl operational options."""
     forbidden_args = ['--debug', '--tmpdir-prefix', '--tmp-outdir-prefix'

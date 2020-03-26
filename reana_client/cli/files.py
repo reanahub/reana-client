@@ -21,8 +21,8 @@ from reana_client.cli.utils import (add_access_token_options,
                                     filter_data, parse_parameters)
 from reana_client.config import ERROR_MESSAGES, JSON, URL
 from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import (get_reana_yaml_file_path, get_workflow_root,
-                                load_reana_spec, workflow_uuid_or_name)
+from reana_client.utils import (get_reana_yaml_file_path, load_reana_spec,
+                                workflow_uuid_or_name)
 from reana_commons.utils import click_table_printer
 
 
@@ -159,16 +159,16 @@ def download_files(ctx, workflow, filenames,
     \t $ reana-client download # download all output files \n
     \t $ reana-client download mydata.tmp outputs/myplot.png
     """
-    from reana_client.api.client import download_file
+    from reana_client.api.client import (download_file,
+                                         get_workflow_specification)
 
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
     if not filenames:
-        reana_spec = load_reana_spec(os.path.join(get_workflow_root(),
-                                     get_reana_yaml_file_path()),
-                                     False)
+        reana_spec = get_workflow_specification(workflow,
+                                                access_token)['specification']
         if 'outputs' in reana_spec:
             filenames = reana_spec['outputs'].get('files') or []
 
@@ -230,20 +230,20 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
     \t $ reana-client upload -w myanalysis.42 \n
     \t $ reana-client upload -w myanalysis.42 code/mycode.py
     """
-    from reana_client.api.client import upload_to_server
+    from reana_client.api.client import (get_workflow_specification,
+                                         upload_to_server)
 
     logging.debug('command: {}'.format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
-
     if not filenames:
-        reana_spec = load_reana_spec(os.path.join(get_workflow_root(),
-                                                  get_reana_yaml_file_path()))
+        reana_spec = get_workflow_specification(workflow,
+                                                access_token)['specification']
         if 'inputs' in reana_spec:
             filenames = []
-            filenames += [os.path.join(get_workflow_root(), f)
+            filenames += [os.path.join(os.getcwd(), f)
                           for f in reana_spec['inputs'].get('files') or []]
-            filenames += [os.path.join(get_workflow_root(), d)
+            filenames += [os.path.join(os.getcwd(), d)
                           for d in reana_spec['inputs'].
                           get('directories') or []]
 

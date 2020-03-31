@@ -73,7 +73,7 @@ def yadage_load(workflow_file, toplevel='.', **kwargs):
         raise e
 
 
-def cwl_load(workflow_file):
+def cwl_load(workflow_file, **kwargs):
     """Validate and return cwl workflow specification.
 
     :param workflow_file: A specification file compliant with
@@ -88,14 +88,6 @@ def cwl_load(workflow_file):
     return json.loads(value)
 
 
-workflow_load = {
-    'yadage': yadage_load,
-    'cwl': cwl_load,
-    'serial': serial_load,
-}
-"""Dictionary to extend with new workflow specification loaders."""
-
-
 def load_workflow_spec(workflow_type, workflow_file, **kwargs):
     """Validate and return machine readable workflow specifications.
 
@@ -104,6 +96,13 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
         specification.
     :returns: A dictionary which represents the valid workflow specification.
     """
+    workflow_load = {
+        'yadage': yadage_load,
+        'cwl': cwl_load,
+        'serial': serial_load,
+    }
+    """Dictionary to extend with new workflow specification loaders."""
+
     return workflow_load[workflow_type](workflow_file, **kwargs)
 
 
@@ -132,8 +131,9 @@ def load_reana_spec(filepath, skip_validation=False):
                 reana_yaml.get('inputs', {}).get('parameters', {})
             kwargs['original'] = True
 
-        if 'options' in reana_yaml['workflow']:
-            kwargs.update(reana_yaml['workflow']['options'])
+        if 'options' in reana_yaml['inputs']:
+            # TODO: Validate operational options
+            kwargs.update(reana_yaml['inputs']['options'])
 
         reana_yaml['workflow']['specification'] = load_workflow_spec(
             workflow_type,
@@ -228,32 +228,27 @@ def get_workflow_name_and_run_number(workflow_name):
         return workflow_name, ''
 
 
-def validate_cwl_operational_options(operational_options):
-    """Validate cwl operational options."""
-    forbidden_args = ['--debug', '--tmpdir-prefix', '--tmp-outdir-prefix'
-                      '--default-container', '--outdir']
-    for option in operational_options:
-        if option in forbidden_args:
-            click.echo('Operational option {0} are not allowed. \n'
-                       .format(operational_options), err=True)
-            sys.exit(1)
-    cmd = 'cwltool --version {0}'.format(' '.join(operational_options))
-    try:
-        subprocess.check_call(cmd, shell=True)
-    except subprocess.CalledProcessError as err:
-        click.echo('Operational options {0} are not valid. \n'
-                   '{1}'.format(operational_options, err), err=True)
-        sys.exit(1)
-
-
-def validate_serial_operational_options(operational_options):
-    """Return validated serial operational options."""
-    try:
-        return dict(p.split('=') for p in operational_options)
-    except Exception as err:
-        click.echo('Operational options {0} are not valid. \n'
-                   '{1}'.format(operational_options, err), err=True)
-        sys.exit(1)
+def get_workflow_root():
+    """Return the current workflow root directory."""
+    reana_yaml = get_reana_yaml_file_path()
+    workflow_root = os.getcwd()
+    while True:
+        file_list = os.listdir(workflow_root)
+        parent_dir = os.path.dirname(workflow_root)
+        if reana_yaml in file_list:
+            break
+        else:
+            if workflow_root == parent_dir:
+                click.echo(click.style(
+                    'Not a workflow directory (or any of the parent'
+                    ' directories).\nPlease upload from inside'
+                    ' the directory containing the reana.yaml '
+                    'file of your workflow.', fg='red'))
+                sys.exit(1)
+            else:
+                workflow_root = parent_dir
+    workflow_root += '/'
+    return workflow_root
 
 
 def validate_input_parameters(live_parameters, original_parameters):

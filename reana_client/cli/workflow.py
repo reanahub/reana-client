@@ -20,17 +20,18 @@ from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, check_connection,
                                     filter_data, format_session_uri,
-                                    parse_parameters, validate_workflow_name)
+                                    params_tuple_to_dict, parse_parameters,
+                                    validate_workflow_name)
 from reana_client.config import ERROR_MESSAGES, TIMECHECK
 from reana_client.utils import (get_reana_yaml_file_path,
                                 get_workflow_name_and_run_number,
                                 get_workflow_status_change_msg, is_uuid_v4,
                                 load_reana_spec,
-                                validate_cwl_operational_options,
                                 validate_input_parameters,
-                                validate_serial_operational_options,
                                 workflow_uuid_or_name)
 from reana_commons.config import INTERACTIVE_SESSION_TYPES
+from reana_commons.errors import REANAValidationError
+from reana_commons.operational_options import validate_operational_options
 from reana_commons.utils import click_table_printer
 
 
@@ -254,6 +255,7 @@ def workflow_create(ctx, file, name,
     try:
         reana_specification = load_reana_spec(click.format_filename(file),
                                               skip_validation)
+        # TODO: Validate operational options
         logging.info('Connecting to {0}'.format(get_api_url()))
         response = create_workflow(reana_specification,
                                    name,
@@ -280,6 +282,7 @@ def workflow_create(ctx, file, name,
 @click.option(
     '-p', '--parameter', 'parameters',
     multiple=True,
+    callback=params_tuple_to_dict,
     help='Additional input parameters to override '
          'original ones from reana.yaml. '
          'E.g. -p myparam1=myval1 -p myparam2=myval2.',
@@ -287,6 +290,7 @@ def workflow_create(ctx, file, name,
 @click.option(
     '-o', '--option', 'options',
     multiple=True,
+    callback=params_tuple_to_dict,
     help='Additional operational options for the workflow execution. '
          'E.g. CACHE=off. (workflow engine - serial) '
          'E.g. --debug (workflow engine - cwl)',
@@ -320,29 +324,29 @@ def workflow_start(ctx, workflow, access_token,
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    parsed_parameters = {'input_parameters':
-                         dict(p.split('=') for p in parameters)}
-    parsed_parameters['operational_options'] = ' '.join(options).split()
+    parsed_parameters = {'input_parameters': parameters,
+                         'operational_options': options}
     if workflow:
         if parameters or options:
             try:
                 response = get_workflow_parameters(workflow, access_token)
-                if response['type'] == 'cwl':
-                    validate_cwl_operational_options(
+                workflow_type = response['type']
+                original_parameters = response['parameters']
+                parsed_parameters['operational_options'] = \
+                    validate_operational_options(
+                        workflow_type,
                         parsed_parameters['operational_options'])
-                if response['type'] == 'serial':
-                    parsed_parameters['operational_options'] = \
-                        validate_serial_operational_options(
-                            parsed_parameters['operational_options'])
+
                 parsed_parameters['input_parameters'] = \
                     validate_input_parameters(
                         parsed_parameters['input_parameters'],
-                        response['parameters'])
+                        original_parameters)
+            except REANAValidationError as e:
+                click.secho(e.message, err=True, fg='red')
+                sys.exit(1)
             except Exception as e:
-                click.echo(
-                    click.style('Could not apply given input parameters: '
-                                '{0} \n{1}'.format(parameters, str(e))),
-                    err=True)
+                click.secho('Could not apply given input parameters: '
+                            '{0} \n{1}'.format(parameters, str(e)), err=True)
         try:
             logging.info('Connecting to {0}'.format(get_api_url()))
             response = start_workflow(workflow,
@@ -392,6 +396,7 @@ def workflow_start(ctx, workflow, access_token,
 @click.option(
     '-p', '--parameter', 'parameters',
     multiple=True,
+    callback=params_tuple_to_dict,
     help='Additional input parameters to override '
          'original ones from reana.yaml. '
          'E.g. -p myparam1=myval1 -p myparam2=myval2.',
@@ -399,6 +404,7 @@ def workflow_start(ctx, workflow, access_token,
 @click.option(
     '-o', '--option', 'options',
     multiple=True,
+    callback=params_tuple_to_dict,
     help='Additional operational options for the workflow execution. '
          'E.g. CACHE=off. (workflow engine - serial) '
          'E.g. --debug (workflow engine - cwl)',
@@ -439,10 +445,8 @@ def workflow_restart(ctx, workflow, access_token,
     for p in ctx.params:
         logging.debug('{param}: {value}'.format(param=p, value=ctx.params[p]))
 
-    parsed_parameters = {'input_parameters':
-                         dict(p.split('=') for p in parameters)}
-    parsed_parameters['operational_options'] = ' '.join(options).split()
-    parsed_parameters['restart'] = True
+    parsed_parameters = {'input_parameters': parameters,
+                         'operational_options': options, 'restart': True}
     if file:
         parsed_parameters['reana_specification'] = \
             load_reana_spec(click.format_filename(file))
@@ -460,22 +464,22 @@ def workflow_restart(ctx, workflow, access_token,
                     response = get_workflow_parameters(workflow, access_token)
                     workflow_type = response['type']
                     original_parameters = response['parameters']
-                if workflow_type == 'cwl':
-                    validate_cwl_operational_options(
+
+                parsed_parameters['operational_options'] = \
+                    validate_operational_options(
+                        workflow_type,
                         parsed_parameters['operational_options'])
-                if workflow_type == 'serial':
-                    parsed_parameters['operational_options'] = \
-                        validate_serial_operational_options(
-                            parsed_parameters['operational_options'])
                 parsed_parameters['input_parameters'] = \
                     validate_input_parameters(
                         parsed_parameters['input_parameters'],
                         original_parameters)
+
+            except REANAValidationError as e:
+                click.secho(e.message, err=True, fg='red')
+                sys.exit(1)
             except Exception as e:
-                click.echo(
-                    click.style('Could not apply given input parameters: '
-                                '{0} \n{1}'.format(parameters, str(e))),
-                    err=True)
+                click.secho('Could not apply given input parameters: '
+                            '{0} \n{1}'.format(parameters, str(e)), err=True)
         try:
             logging.info('Connecting to {0}'.format(get_api_url()))
             response = start_workflow(workflow,
@@ -811,6 +815,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
 @click.option(
     '-p', '--parameter', 'parameters',
     multiple=True,
+    callback=params_tuple_to_dict,
     help='Additional input parameters to override '
          'original ones from reana.yaml. '
          'E.g. -p myparam1=myval1 -p myparam2=myval2.',
@@ -818,6 +823,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
 @click.option(
     '-o', '--option', 'options',
     multiple=True,
+    callback=params_tuple_to_dict,
     help='Additional operatioal options for the workflow execution. '
          'E.g. CACHE=off.',
 )

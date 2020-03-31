@@ -136,6 +136,21 @@ def validate_workflow_name(ctx, _, workflow_name):
     return workflow_name
 
 
+def params_tuple_to_dict(ctx, param, value):
+    """Convert tuple params to dictionary. e.g `(foo=bar)` to `{'foo': 'bar'}`.
+
+    :param options: A tuple with CLI operational options.
+    :returns: A dictionary representation of the given options.
+    """
+    try:
+        return dict(op.split('=') for op in value)
+    except ValueError as err:
+        click.secho('==> ERROR: Input parameter "{0}" is not valid. '
+                    'It must follow format "param=value".'
+                    .format(' '.join(value)), err=True, fg='red'),
+        sys.exit(1)
+
+
 class NotRequiredIf(click.Option):
     """Allow only one of two arguments to be missing."""
 

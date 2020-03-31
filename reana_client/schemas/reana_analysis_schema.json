@@ -109,6 +109,12 @@
             "title": "Analysis parameters.",
             "description": "Key value data structure which represents the analysis parameters.",
             "optional": true
+        },
+        "options": {
+          "id": "/properties/workflow/properties/options",
+          "type": "object",
+          "title": "Workflow operational options.",
+          "description": "Extra operational options accepted by workflow engines."
         }
       }
     },
@@ -133,12 +139,6 @@
           "type": "string",
           "title": "Workflow engine.",
           "description": "Name which represents a supported workflow engine to be used to reproduce the analysis."
-        },
-        "options": {
-          "id": "/properties/workflow/properties/options",
-          "type": "object",
-          "title": "Workflow additional options.",
-          "description": "Extra options accepted by workflow engines, e.g. `toplevel` for Yadage workflows."
         },
         "resources": {
           "id": "/properties/workflow/properties/resources",

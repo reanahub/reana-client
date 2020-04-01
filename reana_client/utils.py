@@ -20,6 +20,8 @@ import yadageschemas
 import yaml
 from jsonschema import ValidationError, validate
 from reana_commons.serial import serial_load
+from reana_commons.errors import REANAValidationError
+from reana_commons.operational_options import validate_operational_options
 from reana_commons.utils import get_workflow_status_change_verb
 
 from reana_client.config import (reana_yaml_schema_file_path,
@@ -109,19 +111,12 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
 def load_reana_spec(filepath, skip_validation=False):
     """Load and validate reana specification file.
 
-    :raises IOError: Error while reading REANA spec file from given filepath`.
+    :raises IOError: Error while reading REANA spec file from given `filepath`.
     :raises ValidationError: Given REANA spec file does not validate against
         REANA specification.
     """
-    try:
-        with open(filepath) as f:
-            reana_yaml = yaml.load(f.read(), Loader=yaml.FullLoader)
 
-        if not skip_validation:
-            logging.info('Validating REANA specification file: {filepath}'
-                         .format(filepath=filepath))
-            _validate_reana_yaml(reana_yaml)
-
+    def _prepare_kwargs(reana_yaml):
         kwargs = {}
         workflow_type = reana_yaml['workflow']['type']
         if workflow_type == 'serial':
@@ -132,13 +127,30 @@ def load_reana_spec(filepath, skip_validation=False):
             kwargs['original'] = True
 
         if 'options' in reana_yaml['inputs']:
-            # TODO: Validate operational options
+            try:
+                reana_yaml['inputs']['options'] = validate_operational_options(
+                    workflow_type,
+                    reana_yaml['inputs']['options'])
+            except REANAValidationError as e:
+                click.secho(e.message, err=True, fg='red')
+                sys.exit(1)
             kwargs.update(reana_yaml['inputs']['options'])
+        return kwargs
 
+    try:
+        with open(filepath) as f:
+            reana_yaml = yaml.load(f.read(), Loader=yaml.FullLoader)
+
+        if not skip_validation:
+            logging.info('Validating REANA specification file: {filepath}'
+                         .format(filepath=filepath))
+            _validate_reana_yaml(reana_yaml)
+
+        workflow_type = reana_yaml['workflow']['type']
         reana_yaml['workflow']['specification'] = load_workflow_spec(
             workflow_type,
             reana_yaml['workflow'].get('file'),
-            **kwargs
+            **_prepare_kwargs(reana_yaml)
         )
 
         if workflow_type == 'cwl' and \

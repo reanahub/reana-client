@@ -255,7 +255,6 @@ def workflow_create(ctx, file, name,
     try:
         reana_specification = load_reana_spec(click.format_filename(file),
                                               skip_validation)
-        # TODO: Validate operational options
         logging.info('Connecting to {0}'.format(get_api_url()))
         response = create_workflow(reana_specification,
                                    name,

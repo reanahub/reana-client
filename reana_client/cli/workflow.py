@@ -20,7 +20,7 @@ from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (add_access_token_options,
                                     add_workflow_option, check_connection,
                                     filter_data, format_session_uri,
-                                    params_tuple_to_dict, parse_parameters,
+                                    key_value_to_dict, parse_parameters,
                                     validate_workflow_name)
 from reana_client.config import ERROR_MESSAGES, TIMECHECK
 from reana_client.utils import (get_reana_yaml_file_path,
@@ -281,7 +281,7 @@ def workflow_create(ctx, file, name,
 @click.option(
     '-p', '--parameter', 'parameters',
     multiple=True,
-    callback=params_tuple_to_dict,
+    callback=key_value_to_dict,
     help='Additional input parameters to override '
          'original ones from reana.yaml. '
          'E.g. -p myparam1=myval1 -p myparam2=myval2.',
@@ -289,7 +289,7 @@ def workflow_create(ctx, file, name,
 @click.option(
     '-o', '--option', 'options',
     multiple=True,
-    callback=params_tuple_to_dict,
+    callback=key_value_to_dict,
     help='Additional operational options for the workflow execution. '
          'E.g. CACHE=off. (workflow engine - serial) '
          'E.g. --debug (workflow engine - cwl)',
@@ -331,10 +331,9 @@ def workflow_start(ctx, workflow, access_token,
                 response = get_workflow_parameters(workflow, access_token)
                 workflow_type = response['type']
                 original_parameters = response['parameters']
-                parsed_parameters['operational_options'] = \
-                    validate_operational_options(
-                        workflow_type,
-                        parsed_parameters['operational_options'])
+                validate_operational_options(
+                    workflow_type,
+                    parsed_parameters['operational_options'])
 
                 parsed_parameters['input_parameters'] = \
                     validate_input_parameters(
@@ -395,7 +394,7 @@ def workflow_start(ctx, workflow, access_token,
 @click.option(
     '-p', '--parameter', 'parameters',
     multiple=True,
-    callback=params_tuple_to_dict,
+    callback=key_value_to_dict,
     help='Additional input parameters to override '
          'original ones from reana.yaml. '
          'E.g. -p myparam1=myval1 -p myparam2=myval2.',
@@ -403,7 +402,7 @@ def workflow_start(ctx, workflow, access_token,
 @click.option(
     '-o', '--option', 'options',
     multiple=True,
-    callback=params_tuple_to_dict,
+    callback=key_value_to_dict,
     help='Additional operational options for the workflow execution. '
          'E.g. CACHE=off. (workflow engine - serial) '
          'E.g. --debug (workflow engine - cwl)',
@@ -814,7 +813,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
 @click.option(
     '-p', '--parameter', 'parameters',
     multiple=True,
-    callback=params_tuple_to_dict,
+    callback=key_value_to_dict,
     help='Additional input parameters to override '
          'original ones from reana.yaml. '
          'E.g. -p myparam1=myval1 -p myparam2=myval2.',
@@ -822,8 +821,8 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
 @click.option(
     '-o', '--option', 'options',
     multiple=True,
-    callback=params_tuple_to_dict,
-    help='Additional operatioal options for the workflow execution. '
+    callback=key_value_to_dict,
+    help='Additional operational options for the workflow execution. '
          'E.g. CACHE=off.',
 )
 @click.option(

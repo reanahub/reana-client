@@ -136,7 +136,7 @@ def validate_workflow_name(ctx, _, workflow_name):
     return workflow_name
 
 
-def params_tuple_to_dict(ctx, param, value):
+def key_value_to_dict(ctx, param, value):
     """Convert tuple params to dictionary. e.g `(foo=bar)` to `{'foo': 'bar'}`.
 
     :param options: A tuple with CLI operational options.

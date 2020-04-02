@@ -19,9 +19,9 @@ import click
 import yadageschemas
 import yaml
 from jsonschema import ValidationError, validate
-from reana_commons.serial import serial_load
 from reana_commons.errors import REANAValidationError
 from reana_commons.operational_options import validate_operational_options
+from reana_commons.serial import serial_load
 from reana_commons.utils import get_workflow_status_change_verb
 
 from reana_client.config import (reana_yaml_schema_file_path,
@@ -67,8 +67,8 @@ def yadage_load(workflow_file, toplevel='.', **kwargs):
     }
 
     try:
-        return yadageschemas.load(spec=workflow_file, specopts=specopts,
-                                  validopts=validopts, validate=True)
+        yadageschemas.load(spec=workflow_file, specopts=specopts,
+                           validopts=validopts, validate=True)
 
     except ValidationError as e:
         e.message = str(e)
@@ -115,7 +115,6 @@ def load_reana_spec(filepath, skip_validation=False):
     :raises ValidationError: Given REANA spec file does not validate against
         REANA specification.
     """
-
     def _prepare_kwargs(reana_yaml):
         kwargs = {}
         workflow_type = reana_yaml['workflow']['type']

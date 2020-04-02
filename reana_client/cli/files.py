@@ -21,7 +21,7 @@ from reana_client.cli.utils import (add_access_token_options,
                                     filter_data, parse_parameters)
 from reana_client.config import ERROR_MESSAGES, JSON, URL
 from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import (get_reana_yaml_file_path, load_reana_spec,
+from reana_client.utils import (get_reana_yaml_file_path,
                                 workflow_uuid_or_name)
 from reana_commons.utils import click_table_printer
 

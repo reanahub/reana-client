@@ -83,10 +83,9 @@ def cwl_load(workflow_file, **kwargs):
     :returns: A dictionary which represents the valid `cwl` workflow.
     """
     result = \
-        subprocess.run(
-            ['cwltool', '--pack', '--quiet', workflow_file],
-            stdout=subprocess.PIPE)
-    value = result.stdout.decode('utf-8')
+        subprocess.check_output(
+            ['cwltool', '--pack', '--quiet', workflow_file])
+    value = result.decode('utf-8')
     return json.loads(value)
 
 

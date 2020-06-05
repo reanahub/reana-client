@@ -12,7 +12,7 @@ docs_differ_error_msg='Current reana-client differs with the documentation. Plea
 python_version=$(python -c 'import sys;  print(sys.version_info.major)')
 
 pydocstyle reana_client && \
-isort -rc -c -df **/*.py && \
+black --check . && \
 reana-client --help > cmd_list.txt && \
 diff -q -w docs/cmd_list.txt cmd_list.txt  && \
 rm cmd_list.txt && \

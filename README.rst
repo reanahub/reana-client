@@ -20,6 +20,9 @@
 .. image:: https://img.shields.io/github/license/reanahub/reana.svg
    :target: https://github.com/reanahub/reana-client/blob/master/LICENSE
 
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black
+
 About
 -----
 

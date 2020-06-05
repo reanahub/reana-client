@@ -1,6 +1,22 @@
 Changes
 =======
 
+Version master (UNRELEASED)
+---------------------------
+
+- Enriches disk usage output format.
+- Adds new command to restart workflows.
+- Optimizes CLI performance.
+- Adds option to get logs of a specific step.
+- Enhances logs formatting using marks and colors.
+- Switches from Bravado to ``requests`` to perform better performant downloads.
+- Validates user access token and improves output of ``ping`` command.
+- Accepts both ``reana.yaml`` and ``reana.yml`` filenames.
+- Includes better formatting for ``diff`` command.
+- Prevents including a dot as part of the workflow name.
+- Allows passing workflow operational options in the ``reana.yaml``.
+- Adds Black formatter support.
+
 Version 0.6.0 (2019-12-27)
 --------------------------
 

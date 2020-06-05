@@ -11,32 +11,31 @@ import os
 
 import pkg_resources
 
-reana_yaml_valid_file_names = ['reana.yaml', 'reana.yml']
+reana_yaml_valid_file_names = ["reana.yaml", "reana.yml"]
 """REANA specification valid file names."""
 
 reana_yaml_schema_file_path = pkg_resources.resource_filename(
-        __name__,
-        'schemas/reana_analysis_schema.json')
+    __name__, "schemas/reana_analysis_schema.json"
+)
 """REANA specification schema location."""
 
-default_user = '00000000-0000-0000-0000-000000000000'
+default_user = "00000000-0000-0000-0000-000000000000"
 """Default user to use when submitting workflows to REANA Server."""
 
 ERROR_MESSAGES = {
-        'missing_access_token':
-        'Please provide your access token by using'
-        ' the -t/--access-token flag, or by setting the'
-        ' REANA_ACCESS_TOKEN environment variable.'
+    "missing_access_token": "Please provide your access token by using"
+    " the -t/--access-token flag, or by setting the"
+    " REANA_ACCESS_TOKEN environment variable."
 }
 
-JSON = 'json'
+JSON = "json"
 """Json output format."""
 
 TIMECHECK = 5
 """Time between workflow status check."""
 
-URL = 'url'
+URL = "url"
 """Url output format."""
 
-WORKFLOW_ENGINES = ['serial', 'cwl', 'yadage']
+WORKFLOW_ENGINES = ["serial", "cwl", "yadage"]
 """Supported workflow engines."""

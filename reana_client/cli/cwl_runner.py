@@ -42,115 +42,125 @@ def get_file_dependencies_obj(cwl_obj, basedir):
     # Load de document
     loading_context = LoadingContext()
     document_loader, workflow_obj, uri = fetch_document(
-        cwl_obj, resolver=loading_context.resolver,
-        fetcher_constructor=loading_context.fetcher_constructor)
+        cwl_obj,
+        resolver=loading_context.resolver,
+        fetcher_constructor=loading_context.fetcher_constructor,
+    )
     in_memory_buffer = io.StringIO() if PY3 else io.BytesIO()
     # Get dependencies
-    printdeps(workflow_obj, document_loader, in_memory_buffer, 'primary', uri,
-              basedir=basedir)
-    file_dependencies_obj = yaml.load(in_memory_buffer.getvalue(),
-                                      Loader=yaml.FullLoader)
+    printdeps(
+        workflow_obj, document_loader, in_memory_buffer, "primary", uri, basedir=basedir
+    )
+    file_dependencies_obj = yaml.load(
+        in_memory_buffer.getvalue(), Loader=yaml.FullLoader
+    )
     in_memory_buffer.close()
     return file_dependencies_obj
 
 
 @click.command()
 @click.version_option(version=__version__)
-@click.option('--quiet', is_flag=True,
-              help='No diagnostic output')
-@click.option('--outdir', type=click.Path(),
-              help='Output directory, defaults to the current directory')
-@click.option('--basedir', type=click.Path(),
-              help='Base directory.')
+@click.option("--quiet", is_flag=True, help="No diagnostic output")
+@click.option(
+    "--outdir",
+    type=click.Path(),
+    help="Output directory, defaults to the current directory",
+)
+@click.option("--basedir", type=click.Path(), help="Base directory.")
 @add_access_token_options
-@click.argument('processfile', required=False)
-@click.argument('jobfile')
+@click.argument("processfile", required=False)
+@click.argument("jobfile")
 @click.pass_context
-def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile,
-               access_token):
+def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
     from reana_client.utils import get_api_url
-    from reana_client.api.client import (create_workflow, get_workflow_logs,
-                                         start_workflow, upload_file)
+    from reana_client.api.client import (
+        create_workflow,
+        get_workflow_logs,
+        start_workflow,
+        upload_file,
+    )
 
     logging.basicConfig(
-        format='[%(levelname)s] %(message)s',
+        format="[%(levelname)s] %(message)s",
         stream=sys.stderr,
-        level=logging.INFO if quiet else logging.DEBUG)
+        level=logging.INFO if quiet else logging.DEBUG,
+    )
     try:
-        basedir = basedir or os.path.abspath(
-            os.path.dirname(processfile))
+        basedir = basedir or os.path.abspath(os.path.dirname(processfile))
         if processfile:
             with open(jobfile) as f:
                 reana_spec = {
                     "workflow": {"type": "cwl"},
-                    "inputs":
-                        {"parameters":
-                            {"input": yaml.load(f, Loader=yaml.FullLoader)}}}
+                    "inputs": {
+                        "parameters": {"input": yaml.load(f, Loader=yaml.FullLoader)}
+                    },
+                }
 
-            reana_spec['workflow']['spec'] = load_workflow_spec(
-                reana_spec['workflow']['type'],
-                processfile,
+            reana_spec["workflow"]["spec"] = load_workflow_spec(
+                reana_spec["workflow"]["type"], processfile,
             )
         else:
             with open(jobfile) as f:
                 job = yaml.load(f, Loader=yaml.FullLoader)
-            reana_spec = {"workflow": {"type": "cwl"},
-                          "parameters": {"input": ""}}
+            reana_spec = {"workflow": {"type": "cwl"}, "parameters": {"input": ""}}
 
-            reana_spec['workflow']['spec'] = load_workflow_spec(
-                reana_spec['workflow']['type'],
-                job['cwl:tool']
+            reana_spec["workflow"]["spec"] = load_workflow_spec(
+                reana_spec["workflow"]["type"], job["cwl:tool"]
             )
-            del job['cwl:tool']
-            reana_spec['inputs']['parameters'] = {'input': job}
-        reana_spec['workflow']['spec'] = replace_location_in_cwl_spec(
-            reana_spec['workflow']['spec'])
+            del job["cwl:tool"]
+            reana_spec["inputs"]["parameters"] = {"input": job}
+        reana_spec["workflow"]["spec"] = replace_location_in_cwl_spec(
+            reana_spec["workflow"]["spec"]
+        )
 
-        logging.info('Connecting to {0}'.format(get_api_url()))
-        response = create_workflow(reana_spec, 'cwl-test', access_token)
+        logging.info("Connecting to {0}".format(get_api_url()))
+        response = create_workflow(reana_spec, "cwl-test", access_token)
         logging.error(response)
-        workflow_name = response['workflow_name']
-        workflow_id = response['workflow_id']
-        logging.info('Workflow {0}/{1} has been created.'.format(
-            workflow_name, workflow_id))
+        workflow_name = response["workflow_name"]
+        workflow_id = response["workflow_id"]
+        logging.info(
+            "Workflow {0}/{1} has been created.".format(workflow_name, workflow_id)
+        )
 
         file_dependencies_list = []
         for cwlobj in [processfile, jobfile]:
-            file_dependencies_list.append(
-                get_file_dependencies_obj(cwlobj, basedir))
+            file_dependencies_list.append(get_file_dependencies_obj(cwlobj, basedir))
         files_to_upload = findfiles(file_dependencies_list)
         for cwl_file_object in files_to_upload:
-            file_path = cwl_file_object.get('location')
+            file_path = cwl_file_object.get("location")
             abs_file_path = os.path.join(basedir, file_path)
-            with open(abs_file_path, 'r') as f:
+            with open(abs_file_path, "r") as f:
                 upload_file(workflow_id, f, file_path, access_token)
-                logging.error('File {} uploaded.'.format(file_path))
+                logging.error("File {} uploaded.".format(file_path))
 
         response = start_workflow(
-            workflow_id, access_token, reana_spec['inputs']['parameters'])
+            workflow_id, access_token, reana_spec["inputs"]["parameters"]
+        )
         logging.error(response)
 
         first_logs = ""
         while True:
             sleep(1)
-            logging.error('Polling workflow logs')
+            logging.error("Polling workflow logs")
             response = get_workflow_logs(workflow_id, access_token)
-            logs = response['logs']
+            logs = response["logs"]
             if logs != first_logs:
 
-                logging.error(logs[len(first_logs):])
+                logging.error(logs[len(first_logs) :])
                 first_logs = logs
 
-            if "Final process status" in logs or \
-               "Traceback (most recent call last)" in logs:
+            if (
+                "Final process status" in logs
+                or "Traceback (most recent call last)" in logs
+            ):
                 # click.echo(response['status'])
                 break
         try:
-            out = re.search("success{[\S\s]*",
-                            logs).group().replace("success", "")
+            out = re.search("success{[\S\s]*", logs).group().replace("success", "")
             import ast
             import json
+
             json_output = json.dumps(ast.literal_eval(str(out)))
         except AttributeError:
             logging.error("Workflow execution failed")
@@ -175,13 +185,13 @@ def replace_location_in_cwl_spec(spec):
     Recursively replace absolute paths with relative in a normalized (packed)
     workflow.
     """
-    if spec.get('$graph'):
+    if spec.get("$graph"):
         result = spec.copy()
-        result['$graph'] = []
-        for tool in spec['$graph']:
-            result['$graph'].append(replace_location_in_cwl_tool(tool))
+        result["$graph"] = []
+        for tool in spec["$graph"]:
+            result["$graph"].append(replace_location_in_cwl_tool(tool))
         return result
-    elif spec.get('inputs'):
+    elif spec.get("inputs"):
         return replace_location_in_cwl_tool(spec)
     else:
         return spec
@@ -191,33 +201,34 @@ def replace_location_in_cwl_tool(spec):
     """Recursively replace absolute paths with relative."""
     # tools
     inputs_parameters = []
-    for param in spec['inputs']:
-        if param['type'] == "File":
-            if param.get('default', ''):
-                location = "location" if param['default'].get(
-                    "location") else "path"
-                param['default'][location] = param['default'][location].split(
-                    '/')[-1]
+    for param in spec["inputs"]:
+        if param["type"] == "File":
+            if param.get("default", ""):
+                location = "location" if param["default"].get("location") else "path"
+                param["default"][location] = param["default"][location].split("/")[-1]
         inputs_parameters.append(param)
-    spec['inputs'] = inputs_parameters
+    spec["inputs"] = inputs_parameters
     # workflows
     if spec.get("steps"):
         steps = []
-        for tool in spec['steps']:
+        for tool in spec["steps"]:
             tool_inputs = []
-            for param in tool['in']:
-                if param.get('default') and type(param['default']) is dict:
-                    if param['default'].get('class',
-                                            param['default'].get('type')) == \
-                            'File':
-                        location = "location" if param['default'].get(
-                            "location") else "path"
-                        param['default'][location] = \
-                            param['default'][location].split('/')[-1]
+            for param in tool["in"]:
+                if param.get("default") and type(param["default"]) is dict:
+                    if (
+                        param["default"].get("class", param["default"].get("type"))
+                        == "File"
+                    ):
+                        location = (
+                            "location" if param["default"].get("location") else "path"
+                        )
+                        param["default"][location] = param["default"][location].split(
+                            "/"
+                        )[-1]
                 tool_inputs.append(param)
-            tool['in'] = tool_inputs
+            tool["in"] = tool_inputs
             steps.append(tool)
-        spec['steps'] = steps
+        spec["steps"] = steps
     return spec
 
 

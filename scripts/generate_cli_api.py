@@ -12,22 +12,22 @@ import click
 from reana_client.cli import cli
 
 
-def _print_code_block(content, lang=''):
-    print('```{}'.format(lang))
+def _print_code_block(content, lang=""):
+    print("```{}".format(lang))
     print(content)
-    print('```')
+    print("```")
 
 
 def generate_cli_docs():
     """Generate Markdown friendly CLI API documentation."""
-    print('# reana-client CLI API\n')
+    print("# reana-client CLI API\n")
     with click.Context(cli) as ctx:
-        _print_code_block(cli.get_help(ctx), lang='console')
+        _print_code_block(cli.get_help(ctx), lang="console")
 
     for cmd_group in cli.cmd_groups:
-        print('\n## {}'.format(cmd_group.help))
+        print("\n## {}".format(cmd_group.help))
         for cmd_obj in cmd_group.commands.values():
-            print('\n### {}\n'.format(cmd_obj.name))
+            print("\n### {}\n".format(cmd_obj.name))
             print(cmd_obj.help)
 
 

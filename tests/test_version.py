@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
@@ -15,4 +14,5 @@ from __future__ import absolute_import, print_function
 def test_version():
     """Test version import."""
     from reana_client import __version__
+
     assert __version__

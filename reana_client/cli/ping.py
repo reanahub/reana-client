@@ -15,13 +15,13 @@ from reana_client.cli.utils import add_access_token_options, check_connection
 from reana_client.version import __version__
 
 
-@click.group(help='Configuration commands')
+@click.group(help="Configuration commands")
 def configuration_group():
     """Configuration commands."""
     pass
 
 
-@configuration_group.command('ping')
+@configuration_group.command("ping")
 @click.pass_context
 @add_access_token_options
 @check_connection
@@ -36,29 +36,37 @@ def ping(ctx, access_token):  # noqa: D301
     try:
         from reana_client.api.client import ping as rs_ping
         from reana_client.utils import get_api_url
-        logging.info('Connecting to {0}'.format(get_api_url()))
+
+        logging.info("Connecting to {0}".format(get_api_url()))
         response = rs_ping(access_token)
-        msg_color = 'red' if response.get('error') else 'green'
-        click.echo(click.style(
-            'REANA server: {0}\n'
-            'Authenticated as: {1} <{2}>\n'
-            'Status: {3}'.format(get_api_url(),
-                                 response.get('full_name') or '',
-                                 response.get('email'),
-                                 response.get('status')),
-            fg=msg_color))
-        logging.debug('Server response:\n{}'.format(response))
+        msg_color = "red" if response.get("error") else "green"
+        click.echo(
+            click.style(
+                "REANA server: {0}\n"
+                "Authenticated as: {1} <{2}>\n"
+                "Status: {3}".format(
+                    get_api_url(),
+                    response.get("full_name") or "",
+                    response.get("email"),
+                    response.get("status"),
+                ),
+                fg=msg_color,
+            )
+        )
+        logging.debug("Server response:\n{}".format(response))
 
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        error_msg = ('Could not connect to the selected REANA cluster '
-                     'server at {0}:\n{1}'.format(get_api_url(), e))
-        click.echo(click.style(error_msg, fg='red'), err=True)
+        error_msg = (
+            "Could not connect to the selected REANA cluster "
+            "server at {0}:\n{1}".format(get_api_url(), e)
+        )
+        click.echo(click.style(error_msg, fg="red"), err=True)
         ctx.exit(1)
 
 
-@configuration_group.command('version')
+@configuration_group.command("version")
 @click.pass_context
 def version(ctx):  # noqa: D301
     """Show version.

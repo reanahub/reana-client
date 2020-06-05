@@ -24,23 +24,26 @@ from reana_commons.operational_options import validate_operational_options
 from reana_commons.serial import serial_load
 from reana_commons.utils import get_workflow_status_change_verb
 
-from reana_client.config import (reana_yaml_schema_file_path,
-                                 reana_yaml_valid_file_names)
+from reana_client.config import reana_yaml_schema_file_path, reana_yaml_valid_file_names
 
 
 def workflow_uuid_or_name(ctx, param, value):
     """Get UUID of workflow from configuration / cache file based on name."""
     if not value:
-        click.echo(click.style(
-            'Workflow name must be provided either with '
-            '`--workflow` option or with REANA_WORKON '
-            'environment variable', fg='red'),
-            err=True)
+        click.echo(
+            click.style(
+                "Workflow name must be provided either with "
+                "`--workflow` option or with REANA_WORKON "
+                "environment variable",
+                fg="red",
+            ),
+            err=True,
+        )
     else:
         return value
 
 
-def yadage_load(workflow_file, toplevel='.', **kwargs):
+def yadage_load(workflow_file, toplevel=".", **kwargs):
     """Validate and return yadage workflow specification.
 
     :param workflow_file: A specification file compliant with
@@ -51,24 +54,25 @@ def yadage_load(workflow_file, toplevel='.', **kwargs):
 
     :returns: A dictionary which represents the valid `yadage` workflow.
     """
-    schema_name = 'yadage/workflow-schema'
+    schema_name = "yadage/workflow-schema"
     schemadir = None
 
     specopts = {
-        'toplevel': toplevel,
-        'schema_name': schema_name,
-        'schemadir': schemadir,
-        'load_as_ref': False,
+        "toplevel": toplevel,
+        "schema_name": schema_name,
+        "schemadir": schemadir,
+        "load_as_ref": False,
     }
 
     validopts = {
-        'schema_name': schema_name,
-        'schemadir': schemadir,
+        "schema_name": schema_name,
+        "schemadir": schemadir,
     }
 
     try:
-        yadageschemas.load(spec=workflow_file, specopts=specopts,
-                           validopts=validopts, validate=True)
+        yadageschemas.load(
+            spec=workflow_file, specopts=specopts, validopts=validopts, validate=True
+        )
 
     except ValidationError as e:
         e.message = str(e)
@@ -82,10 +86,8 @@ def cwl_load(workflow_file, **kwargs):
         `cwl` workflow specification.
     :returns: A dictionary which represents the valid `cwl` workflow.
     """
-    result = \
-        subprocess.check_output(
-            ['cwltool', '--pack', '--quiet', workflow_file])
-    value = result.decode('utf-8')
+    result = subprocess.check_output(["cwltool", "--pack", "--quiet", workflow_file])
+    value = result.decode("utf-8")
     return json.loads(value)
 
 
@@ -98,9 +100,9 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
     :returns: A dictionary which represents the valid workflow specification.
     """
     workflow_load = {
-        'yadage': yadage_load,
-        'cwl': cwl_load,
-        'serial': serial_load,
+        "yadage": yadage_load,
+        "cwl": cwl_load,
+        "serial": serial_load,
     }
     """Dictionary to extend with new workflow specification loaders."""
 
@@ -114,25 +116,24 @@ def load_reana_spec(filepath, skip_validation=False):
     :raises ValidationError: Given REANA spec file does not validate against
         REANA specification.
     """
+
     def _prepare_kwargs(reana_yaml):
         kwargs = {}
-        workflow_type = reana_yaml['workflow']['type']
-        if workflow_type == 'serial':
-            kwargs['specification'] = reana_yaml['workflow'].\
-                get('specification')
-            kwargs['parameters'] = \
-                reana_yaml.get('inputs', {}).get('parameters', {})
-            kwargs['original'] = True
+        workflow_type = reana_yaml["workflow"]["type"]
+        if workflow_type == "serial":
+            kwargs["specification"] = reana_yaml["workflow"].get("specification")
+            kwargs["parameters"] = reana_yaml.get("inputs", {}).get("parameters", {})
+            kwargs["original"] = True
 
-        if 'options' in reana_yaml['inputs']:
+        if "options" in reana_yaml["inputs"]:
             try:
-                reana_yaml['inputs']['options'] = validate_operational_options(
-                    workflow_type,
-                    reana_yaml['inputs']['options'])
+                reana_yaml["inputs"]["options"] = validate_operational_options(
+                    workflow_type, reana_yaml["inputs"]["options"]
+                )
             except REANAValidationError as e:
-                click.secho(e.message, err=True, fg='red')
+                click.secho(e.message, err=True, fg="red")
                 sys.exit(1)
-            kwargs.update(reana_yaml['inputs']['options'])
+            kwargs.update(reana_yaml["inputs"]["options"])
         return kwargs
 
     try:
@@ -140,29 +141,33 @@ def load_reana_spec(filepath, skip_validation=False):
             reana_yaml = yaml.load(f.read(), Loader=yaml.FullLoader)
 
         if not skip_validation:
-            logging.info('Validating REANA specification file: {filepath}'
-                         .format(filepath=filepath))
+            logging.info(
+                "Validating REANA specification file: {filepath}".format(
+                    filepath=filepath
+                )
+            )
             _validate_reana_yaml(reana_yaml)
 
-        workflow_type = reana_yaml['workflow']['type']
-        reana_yaml['workflow']['specification'] = load_workflow_spec(
+        workflow_type = reana_yaml["workflow"]["type"]
+        reana_yaml["workflow"]["specification"] = load_workflow_spec(
             workflow_type,
-            reana_yaml['workflow'].get('file'),
+            reana_yaml["workflow"].get("file"),
             **_prepare_kwargs(reana_yaml)
         )
 
-        if workflow_type == 'cwl' and \
-                'inputs' in reana_yaml:
-            with open(reana_yaml['inputs']['parameters']['input']) as f:
-                reana_yaml['inputs']['parameters'] = \
-                    yaml.load(f, Loader=yaml.FullLoader)
+        if workflow_type == "cwl" and "inputs" in reana_yaml:
+            with open(reana_yaml["inputs"]["parameters"]["input"]) as f:
+                reana_yaml["inputs"]["parameters"] = yaml.load(
+                    f, Loader=yaml.FullLoader
+                )
 
         return reana_yaml
     except IOError as e:
         logging.info(
-            'Something went wrong when reading specifications file from '
-            '{filepath} : \n'
-            '{error}'.format(filepath=filepath, error=e.strerror))
+            "Something went wrong when reading specifications file from "
+            "{filepath} : \n"
+            "{error}".format(filepath=filepath, error=e.strerror)
+        )
         raise e
     except Exception as e:
         raise e
@@ -176,21 +181,20 @@ def _validate_reana_yaml(reana_yaml):
         REANA specification schema.
     """
     try:
-        with open(reana_yaml_schema_file_path, 'r') as f:
+        with open(reana_yaml_schema_file_path, "r") as f:
             reana_yaml_schema = json.loads(f.read())
 
             validate(reana_yaml, reana_yaml_schema)
 
     except IOError as e:
         logging.info(
-            'Something went wrong when reading REANA validation schema from '
-            '{filepath} : \n'
-            '{error}'.format(filepath=reana_yaml_schema_file_path,
-                             error=e.strerror))
+            "Something went wrong when reading REANA validation schema from "
+            "{filepath} : \n"
+            "{error}".format(filepath=reana_yaml_schema_file_path, error=e.strerror)
+        )
         raise e
     except ValidationError as e:
-        logging.info('Invalid REANA specification: {error}'
-                     .format(error=e.message))
+        logging.info("Invalid REANA specification: {error}".format(error=e.message))
         raise e
 
 
@@ -202,7 +206,7 @@ def is_uuid_v4(uuid_or_name):
     except Exception:
         return False
 
-    return uuid.hex == uuid_or_name.replace('-', '')
+    return uuid.hex == uuid_or_name.replace("-", "")
 
 
 def get_workflow_name_and_run_number(workflow_name):
@@ -219,7 +223,7 @@ def get_workflow_name_and_run_number(workflow_name):
     """
     # Try to split a dot-separated string.
     try:
-        name, run_number = workflow_name.split('.', 1)
+        name, run_number = workflow_name.split(".", 1)
 
         try:
             float(run_number)
@@ -228,14 +232,14 @@ def get_workflow_name_and_run_number(workflow_name):
             # but it didn't contain a valid `run_number`.
             # Assume that this dot-separated string is the name of
             # the workflow and return just this without a `run_number`.
-            return workflow_name, ''
+            return workflow_name, ""
 
         return name, run_number
 
     except ValueError:
         # Couldn't split. Probably not a dot-separated string.
         # Return the name given as parameter without a `run_number`.
-        return workflow_name, ''
+        return workflow_name, ""
 
 
 def get_workflow_root():
@@ -249,15 +253,19 @@ def get_workflow_root():
             break
         else:
             if workflow_root == parent_dir:
-                click.echo(click.style(
-                    'Not a workflow directory (or any of the parent'
-                    ' directories).\nPlease upload from inside'
-                    ' the directory containing the reana.yaml '
-                    'file of your workflow.', fg='red'))
+                click.echo(
+                    click.style(
+                        "Not a workflow directory (or any of the parent"
+                        " directories).\nPlease upload from inside"
+                        " the directory containing the reana.yaml "
+                        "file of your workflow.",
+                        fg="red",
+                    )
+                )
                 sys.exit(1)
             else:
                 workflow_root = parent_dir
-    workflow_root += '/'
+    workflow_root += "/"
     return workflow_root
 
 
@@ -267,10 +275,12 @@ def validate_input_parameters(live_parameters, original_parameters):
     for parameter in parsed_input_parameters.keys():
         if parameter not in original_parameters:
             click.echo(
-                click.style('Given parameter - {0}, is not in '
-                            'reana.yaml'.format(parameter),
-                            fg='red'),
-                err=True)
+                click.style(
+                    "Given parameter - {0}, is not in " "reana.yaml".format(parameter),
+                    fg="red",
+                ),
+                err=True,
+            )
             del live_parameters[parameter]
     return live_parameters
 
@@ -281,9 +291,9 @@ def get_workflow_status_change_msg(workflow, status):
     :param workflow: Workflow name whose status changed.
     :param status: String which represents the status the workflow changed to.
     """
-    return '{workflow} {verb} {status}'.format(
-        workflow=workflow, verb=get_workflow_status_change_verb(status),
-        status=status)
+    return "{workflow} {verb} {status}".format(
+        workflow=workflow, verb=get_workflow_status_change_verb(status), status=status
+    )
 
 
 def parse_secret_from_literal(literal):
@@ -294,13 +304,11 @@ def parse_secret_from_literal(literal):
     via http request.
     """
     try:
-        key, value = literal.split('=', 1)
+        key, value = literal.split("=", 1)
         secret = {
             key: {
-                'value': base64.b64encode(
-                    value.encode('utf-8')
-                ).decode('utf-8'),
-                'type': 'env'
+                "value": base64.b64encode(value.encode("utf-8")).decode("utf-8"),
+                "type": "env",
             }
         }
         return secret
@@ -311,10 +319,11 @@ def parse_secret_from_literal(literal):
         click.echo(
             click.style(
                 'Option "{0}" is invalid: \n'
-                'For literal strings use "SECRET_NAME=VALUE" format'
-                .format(literal),
-                fg='red'),
-            err=True)
+                'For literal strings use "SECRET_NAME=VALUE" format'.format(literal),
+                fg="red",
+            ),
+            err=True,
+        )
 
 
 def parse_secret_from_path(path):
@@ -325,13 +334,12 @@ def parse_secret_from_path(path):
      via http request.
     """
     try:
-        with open(os.path.expanduser(path), 'rb') as file:
+        with open(os.path.expanduser(path), "rb") as file:
             file_name = os.path.basename(path)
             secret = {
                 file_name: {
-                    'value': base64.b64encode(
-                        file.read()).decode('utf-8'),
-                    'type': 'file'
+                    "value": base64.b64encode(file.read()).decode("utf-8"),
+                    "type": "file",
                 }
             }
         return secret
@@ -340,37 +348,43 @@ def parse_secret_from_path(path):
         logging.debug(str(e))
         click.echo(
             click.style(
-                'File {0} could not be uploaded: {0} does not exist.'
-                .format(path),
-                fg='red'),
-            err=True)
+                "File {0} could not be uploaded: {0} does not exist.".format(path),
+                fg="red",
+            ),
+            err=True,
+        )
 
 
 def get_api_url():
     """Obtain REANA server API URL."""
-    return os.environ.get('REANA_SERVER_URL')
+    return os.environ.get("REANA_SERVER_URL")
 
 
 def get_reana_yaml_file_path():
     """REANA specification file location."""
-    matches = [path for path in reana_yaml_valid_file_names
-               if os.path.exists(path)]
+    matches = [path for path in reana_yaml_valid_file_names if os.path.exists(path)]
     if len(matches) == 0:
         click.echo(
             click.style(
-                '==> ERROR: No REANA specification file (reana.yaml) found. '
-                'Exiting.', fg='red'))
+                "==> ERROR: No REANA specification file (reana.yaml) found. "
+                "Exiting.",
+                fg="red",
+            )
+        )
         sys.exit(1)
     if len(matches) > 1:
         click.echo(
             click.style(
-                '==> ERROR: Found {0} REANA specification files ({1}). '
-                'Please use only one. Exiting.'.format(len(matches),
-                                                       ', '.join(matches)),
-                fg='red'))
+                "==> ERROR: Found {0} REANA specification files ({1}). "
+                "Please use only one. Exiting.".format(
+                    len(matches), ", ".join(matches)
+                ),
+                fg="red",
+            )
+        )
         sys.exit(1)
     for path in reana_yaml_valid_file_names:
         if os.path.exists(path):
             return path
     # If none of the valid paths exists, fall back to reana.yaml.
-    return 'reana.yaml'
+    return "reana.yaml"

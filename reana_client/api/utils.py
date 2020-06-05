@@ -14,6 +14,6 @@ def get_path_from_operation_id(paths_dict, operation_id):
     for path in paths:
         methods = paths_dict[path].keys()
         for method in methods:
-            if paths_dict[path][method]['operationId'] == operation_id:
+            if paths_dict[path][method]["operationId"] == operation_id:
                 return path
     return None

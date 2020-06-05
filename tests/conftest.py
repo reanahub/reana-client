@@ -16,8 +16,7 @@ import pytest
 @pytest.fixture()
 def create_yaml_workflow_schema():
     """Return dummy yaml workflow schema."""
-    reana_yaml_schema = \
-        '''
+    reana_yaml_schema = """
         version: 0.4.0
         inputs:
           files:
@@ -39,5 +38,5 @@ def create_yaml_workflow_schema():
                 commands:
                   - python "${helloworld}" --sleeptime ${sleeptime} \
                   --inputfile "${inputfile}" --outputfile "${outputfile}"
-        '''
+        """
     return reana_yaml_schema

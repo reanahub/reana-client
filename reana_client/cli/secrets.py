@@ -11,19 +11,20 @@ import sys
 import traceback
 
 import click
-from reana_client.cli.utils import (add_access_token_options, check_connection,
-                                    NotRequiredIf)
+from reana_client.cli.utils import (
+    add_access_token_options,
+    check_connection,
+    NotRequiredIf,
+)
 from reana_client.config import ERROR_MESSAGES
-from reana_commons.errors import (REANASecretAlreadyExists,
-                                  REANASecretDoesNotExist)
+from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
 
 from reana_commons.utils import click_table_printer
 
-from reana_client.utils import parse_secret_from_path, \
-    parse_secret_from_literal
+from reana_client.utils import parse_secret_from_path, parse_secret_from_literal
 
 
-@click.group(help='Secret management commands')
+@click.group(help="Secret management commands")
 @click.pass_context
 def secrets_group(ctx):
     """Top level wrapper for secrets management."""
@@ -32,25 +33,26 @@ def secrets_group(ctx):
 
 @secrets_group.command()
 @click.option(
-    '--env',
+    "--env",
     multiple=True,
     cls=NotRequiredIf,
-    not_required_if='file',
-    help='Secrets to be uploaded from literal string.'
-         'e.g. PASSWORD=password123')
+    not_required_if="file",
+    help="Secrets to be uploaded from literal string." "e.g. PASSWORD=password123",
+)
 @click.option(
-    '--file',
+    "--file",
     multiple=True,
     cls=NotRequiredIf,
-    type=click.Path(exists=True, file_okay=True, dir_okay=False,
-                    readable=True),
-    not_required_if='env',
-    help='Secrets to be uploaded from file.')
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
+    not_required_if="env",
+    help="Secrets to be uploaded from file.",
+)
 @click.option(
-    '--overwrite',
+    "--overwrite",
     is_flag=True,
     default=False,
-    help='Overwrite the secret if already present')
+    help="Overwrite the secret if already present",
+)
 @add_access_token_options
 @check_connection
 def secrets_add(env, file, overwrite, access_token):  # noqa: D301
@@ -78,30 +80,34 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
         logging.debug(str(e), exc_info=True)
         click.echo(
             click.style(
-                'One of the secrets already exists. No secrets were added. '
-                'If you want to overwrite it use --overwrite option.',
-                fg='red'),
-            err=True)
+                "One of the secrets already exists. No secrets were added. "
+                "If you want to overwrite it use --overwrite option.",
+                fg="red",
+            ),
+            err=True,
+        )
         sys.exit(1)
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         click.echo(
-            click.style(
-                'Something went wrong while uploading secrets',
-                fg='red'),
-            err=True)
+            click.style("Something went wrong while uploading secrets", fg="red"),
+            err=True,
+        )
     else:
         click.echo(
-            click.style('Secrets {} were successfully uploaded.'.format(
-                ', '.join(secrets_.keys())),
-                fg='green')
+            click.style(
+                "Secrets {} were successfully uploaded.".format(
+                    ", ".join(secrets_.keys())
+                ),
+                fg="green",
+            )
         )
 
 
 @secrets_group.command()
 @add_access_token_options
 @check_connection
-@click.argument('secrets', type=str, nargs=-1)
+@click.argument("secrets", type=str, nargs=-1)
 def secrets_delete(secrets, access_token):  # noqa: D301
     """Delete user secrets by name.
 
@@ -116,23 +122,30 @@ def secrets_delete(secrets, access_token):  # noqa: D301
         logging.debug(str(e), exc_info=True)
         click.echo(
             click.style(
-                str('Secrets {} do not exist. Nothing was deleted'
-                    .format(e.missing_secrets_list)
-                    ),
-                fg='red'),
-            err=True)
+                str(
+                    "Secrets {} do not exist. Nothing was deleted".format(
+                        e.missing_secrets_list
+                    )
+                ),
+                fg="red",
+            ),
+            err=True,
+        )
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         click.echo(
-            click.style(
-                'Something went wrong while deleting secrets',
-                fg='red'),
-            err=True)
+            click.style("Something went wrong while deleting secrets", fg="red"),
+            err=True,
+        )
     else:
         click.echo(
-            click.style('Secrets {} were successfully deleted.'.format(
-                ', '.join(deleted_secrets)),
-                fg='green'))
+            click.style(
+                "Secrets {} were successfully deleted.".format(
+                    ", ".join(deleted_secrets)
+                ),
+                fg="green",
+            )
+        )
 
 
 @secrets_group.command()
@@ -148,17 +161,15 @@ def secrets_list(access_token):  # noqa: D301
 
     try:
         secrets = list_secrets(access_token)
-        headers = ['name', 'type']
+        headers = ["name", "type"]
         data = []
         for secret_ in secrets:
-            data.append(list(map(str, [secret_['name'],
-                                       secret_['type']])))
+            data.append(list(map(str, [secret_["name"], secret_["type"]])))
 
         click_table_printer(headers, headers, data)
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         click.echo(
-            click.style(
-                'Something went wrong while listing secrets',
-                fg='red'),
-            err=True)
+            click.style("Something went wrong while listing secrets", fg="red"),
+            err=True,
+        )

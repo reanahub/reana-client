@@ -21,20 +21,20 @@ from reana_client.cli import cli
 
 def test_list_files_server_not_reachable():
     """Test list workflow workspace files when not connected to any cluster."""
-    reana_token = '000000'
-    message = 'REANA client is not connected to any REANA cluster.'
+    reana_token = "000000"
+    message = "REANA client is not connected to any REANA cluster."
     runner = CliRunner()
-    result = runner.invoke(cli, ['ls', '-t', reana_token])
+    result = runner.invoke(cli, ["ls", "-t", reana_token])
     assert result.exit_code == 1
     assert message in result.output
 
 
 def test_list_files_server_no_token():
     """Test list workflow workspace files when access token is not set."""
-    message = 'Please provide your access token'
-    env = {'REANA_SERVER_URL': 'localhost'}
+    message = "Please provide your access token"
+    env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    result = runner.invoke(cli, ['ls'])
+    result = runner.invoke(cli, ["ls"])
     assert result.exit_code == 1
     assert message in result.output
 
@@ -42,89 +42,76 @@ def test_list_files_server_no_token():
 def test_list_files_ok():
     """Test list workflow workspace files successfull."""
     status_code = 200
-    response = [
-        {
-            "last-modified": "string",
-            "name": "string",
-            "size": 0
-        }
-    ]
-    env = {'REANA_SERVER_URL': 'localhost'}
+    response = [{"last-modified": "string", "name": "string", "size": 0}]
+    env = {"REANA_SERVER_URL": "localhost"}
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    reana_token = '000000'
+    reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
             "reana_client.api.client.current_rs_api_client",
-                make_mock_api_client('reana-server')(mock_response,
-                                                     mock_http_response)):
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
             result = runner.invoke(
-                cli, ['ls', '-t', reana_token, '--workflow', 'mytest.1',
-                      '--json'])
+                cli, ["ls", "-t", reana_token, "--workflow", "mytest.1", "--json"]
+            )
             json_response = json.loads(result.output)
             assert result.exit_code == 0
             assert isinstance(json_response, list)
             assert len(json_response) == 1
-            assert json_response[0]['name'] in response[0]['name']
+            assert json_response[0]["name"] in response[0]["name"]
 
 
 def test_list_files_url():
     """Test list workflow workspace files' urls."""
     status_code = 200
-    response = [
-        {
-            "last-modified": "string",
-            "name": "string",
-            "size": 0
-        }
-    ]
-    env = {'REANA_SERVER_URL': 'localhost'}
+    response = [{"last-modified": "string", "name": "string", "size": 0}]
+    env = {"REANA_SERVER_URL": "localhost"}
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    workflow_name = 'mytest'
-    reana_token = '000000'
+    workflow_name = "mytest"
+    reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
             "reana_client.api.client.current_rs_api_client",
-                make_mock_api_client('reana-server')(mock_response,
-                                                     mock_http_response)):
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
             result = runner.invoke(
-                cli, ['ls', '-t', reana_token, '--workflow', workflow_name,
-                      '--url'])
+                cli, ["ls", "-t", reana_token, "--workflow", workflow_name, "--url"]
+            )
             assert result.exit_code == 0
             assert workflow_name in result.output
-            assert response[0]['name'] in result.output
+            assert response[0]["name"] in result.output
 
 
 def test_download_file():
     """Test file downloading."""
     status_code = 200
-    response = 'Content of file to download'
-    env = {'REANA_SERVER_URL': 'localhost'}
+    response = "Content of file to download"
+    env = {"REANA_SERVER_URL": "localhost"}
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     mock_http_response.content = str(response).encode()
     mock_requests = Mock()
     mock_requests.get = Mock(return_value=mock_http_response)
 
-    reana_token = '000000'
-    response_md5 = hashlib.md5(response.encode('utf-8')).hexdigest()
-    file = 'dummy_file.txt'
-    message = 'File {0} downloaded to'.format(file)
+    reana_token = "000000"
+    response_md5 = hashlib.md5(response.encode("utf-8")).hexdigest()
+    file = "dummy_file.txt"
+    message = "File {0} downloaded to".format(file)
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch("reana_client.api.client.requests", mock_requests):
             result = runner.invoke(
-                cli, ['download', '-t', reana_token, '--workflow', 'mytest.1',
-                      file]
+                cli, ["download", "-t", reana_token, "--workflow", "mytest.1", file]
             )
             assert result.exit_code == 0
             assert os.path.isfile(file) is True
-            file_md5 = hashlib.md5(open(file, 'rb').read()).hexdigest()
+            file_md5 = hashlib.md5(open(file, "rb").read()).hexdigest()
             assert file_md5 == response_md5
             assert message in result.output
             os.remove(file)
@@ -132,21 +119,20 @@ def test_download_file():
 
 def test_upload_file(create_yaml_workflow_schema):
     """Test upload file."""
-    reana_token = '000000'
-    file = 'file.txt'
-    env = {'REANA_SERVER_URL': 'http://localhost'}
-    message = 'was successfully uploaded.'
+    reana_token = "000000"
+    file = "file.txt"
+    env = {"REANA_SERVER_URL": "http://localhost"}
+    message = "was successfully uploaded."
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch("reana_client.api.client.requests.post") as post_request:
             with runner.isolated_filesystem():
-                with open(file, 'w') as f:
-                    f.write('test')
-                with open('reana.yaml', 'w') as reana_schema:
+                with open(file, "w") as f:
+                    f.write("test")
+                with open("reana.yaml", "w") as reana_schema:
                     reana_schema.write(create_yaml_workflow_schema)
                 result = runner.invoke(
-                    cli, ['upload', '-t', reana_token, '--workflow',
-                          'mytest.1', file]
+                    cli, ["upload", "-t", reana_token, "--workflow", "mytest.1", file]
                 )
                 post_request.assert_called_once()
                 assert result.exit_code == 0
@@ -156,29 +142,29 @@ def test_upload_file(create_yaml_workflow_schema):
 def test_delete_file():
     """Test delete file."""
     status_code = 200
-    reana_token = '000000'
-    filename1 = 'file1'
-    filename2 = 'problematic_file'
-    filename2_error_message = '{} could not be deleted.'.format(filename2)
-    response = {'deleted': {filename1: {'size': 19}},
-                'failed': {filename2: {'error': filename2_error_message}}}
-    message1 = 'file1 was successfully deleted'
+    reana_token = "000000"
+    filename1 = "file1"
+    filename2 = "problematic_file"
+    filename2_error_message = "{} could not be deleted.".format(filename2)
+    response = {
+        "deleted": {filename1: {"size": 19}},
+        "failed": {filename2: {"error": filename2_error_message}},
+    }
+    message1 = "file1 was successfully deleted"
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     mock_http_response.raw_bytes = str(response).encode()
     mock_response = response
-    env = {'REANA_SERVER_URL': 'localhost'}
+    env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
-                "reana_client.api.client.current_rs_api_client",
-                make_mock_api_client('reana-server')(mock_response,
-                                                     mock_http_response)):
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
             with runner.isolated_filesystem():
                 result = runner.invoke(
-                    cli,
-                    ['rm', '-t', reana_token,
-                     '--workflow', 'mytest.1', filename1]
+                    cli, ["rm", "-t", reana_token, "--workflow", "mytest.1", filename1]
                 )
                 assert result.exit_code == 0
                 assert message1 in result.output
@@ -188,26 +174,24 @@ def test_delete_file():
 def test_delete_non_existing_file():
     """Test delete non existing file."""
     status_code = 200
-    reana_token = '000000'
-    filename = 'file11'
-    response = {'deleted': {}, 'failed': {}}
-    message = '{} did not match any existing file.'.format(filename)
+    reana_token = "000000"
+    filename = "file11"
+    response = {"deleted": {}, "failed": {}}
+    message = "{} did not match any existing file.".format(filename)
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     mock_http_response.raw_bytes = str(response).encode()
     mock_response = response
-    env = {'REANA_SERVER_URL': 'localhost'}
+    env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
-                "reana_client.api.client.current_rs_api_client",
-                make_mock_api_client('reana-server')(mock_response,
-                                                     mock_http_response)):
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
             with runner.isolated_filesystem():
                 result = runner.invoke(
-                    cli,
-                    ['rm', '-t', reana_token, '--workflow', 'mytest.1',
-                     filename]
+                    cli, ["rm", "-t", reana_token, "--workflow", "mytest.1", filename]
                 )
                 assert result.exit_code == 0
                 assert message in result.output
@@ -216,28 +200,25 @@ def test_delete_non_existing_file():
 def test_move_file_running_workflow():
     """Test move files when workflow is running."""
     status_code = 200
-    reana_token = '000000'
-    src_file = 'file11'
-    target = 'file2'
-    response = {"status": "running",
-                "logs": "",
-                "name": "mytest.1"}
-    message = 'File(s) could not be moved for running workflow'
+    reana_token = "000000"
+    src_file = "file11"
+    target = "file2"
+    response = {"status": "running", "logs": "", "name": "mytest.1"}
+    message = "File(s) could not be moved for running workflow"
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     mock_http_response.raw_bytes = str(response).encode()
     mock_response = response
-    env = {'REANA_SERVER_URL': 'localhost'}
+    env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
-                "reana_client.api.client.current_rs_api_client",
-                make_mock_api_client('reana-server')(mock_response,
-                                                     mock_http_response)):
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
             result = runner.invoke(
                 cli,
-                ['mv', '-t', reana_token, '--workflow', 'mytest.1',
-                 src_file, target]
+                ["mv", "-t", reana_token, "--workflow", "mytest.1", src_file, target],
             )
             assert result.exit_code == 1
             assert message in result.output

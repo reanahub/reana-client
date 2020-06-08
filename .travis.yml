@@ -44,9 +44,8 @@ matrix:
 
 before_install:
   - travis_retry pip install --upgrade pip setuptools py
+  - if [ "$TRAVIS_PYTHON_VERSION" == "2.7" ]; then travis_retry pip install requirements-builder==0.3.0 click==7.0; fi
   - travis_retry pip install twine wheel coveralls requirements-builder
-  # requirements-builder in python2 only works with click<=7.0
-  - travis_retry pip install click==7.0
   - requirements-builder -e $EXTRAS --level=min setup.py > .travis-lowest-requirements.txt
   - requirements-builder -e $EXTRAS --level=pypi setup.py > .travis-release-requirements.txt
   - requirements-builder -e $EXTRAS --level=dev --req requirements-dev.txt setup.py > .travis-devel-requirements.txt

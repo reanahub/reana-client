@@ -1,6 +1,12 @@
 Changes
 =======
 
+Version 0.6.1 (2020-06-09)
+--------------------------
+
+- Fixes installation troubles for REANA 0.6.x release series by pinning several
+  dependencies.
+
 Version 0.6.0 (2019-12-27)
 --------------------------
 

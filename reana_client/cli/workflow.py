@@ -714,9 +714,12 @@ def workflow_status(
 @click.option(
     "-s", "--step", "steps", multiple=True, help="Get logs of a specific step."
 )
+@click.option("--failed", "failed", is_flag=True, help="Get logs of failed steps.")
 @check_connection
 @click.pass_context
-def workflow_logs(ctx, workflow, access_token, json_format, steps=None):  # noqa: D301
+def workflow_logs(
+    ctx, workflow, access_token, json_format, failed, steps=None
+):  # noqa: D301
     """Get  workflow logs.
 
     The `logs` command allows to retrieve logs of running workflow. Note that
@@ -738,6 +741,17 @@ def workflow_logs(ctx, workflow, access_token, json_format, steps=None):  # noqa
                 steps = list(set(steps))
             response = get_workflow_logs(workflow, access_token, steps)
             workflow_logs = json.loads(response["logs"])
+
+            if failed:
+                finished_steps = [
+                    key
+                    for key, value in workflow_logs["job_logs"].items()
+                    if value["status"] != "failed"
+                ]
+
+                for job_id in finished_steps:
+                    del workflow_logs["job_logs"][job_id]
+
             if json_format:
                 click.echo(json.dumps(workflow_logs, indent=2))
                 sys.exit(0)

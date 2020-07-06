@@ -35,7 +35,7 @@ current_rs_api_client = LocalProxy(
 def ping(access_token):
     """Health check REANA server."""
     try:
-        response, http_response = current_rs_api_client.api.get_me(
+        response, http_response = current_rs_api_client.api.get_you(
             access_token=access_token
         ).result()
         if http_response.status_code == 200:

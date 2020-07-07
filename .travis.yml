@@ -52,9 +52,9 @@ before_install:
   - travis_retry pip uninstall click -y
 
 install:
-  - pip install -r requirements-dev.txt
-  - travis_retry pip install -r .travis-${REQUIREMENTS}-requirements.txt
-  - travis_retry pip install -e .[$EXTRAS]
+  - pip install -I -r requirements-dev.txt
+  - travis_retry pip install -I -r .travis-${REQUIREMENTS}-requirements.txt
+  - travis_retry pip install -I -e .[$EXTRAS]
 
 script:
   - ./run-tests.sh

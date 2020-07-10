@@ -4,6 +4,7 @@ Changes
 Version master (UNRELEASED)
 ---------------------------
 
+- Adds option to filter job logs according to compute backend, docker image, status and steps.
 - Enriches disk usage output format.
 - Adds new command to restart workflows.
 - Optimizes CLI performance.

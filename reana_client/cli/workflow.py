@@ -712,11 +712,14 @@ def workflow_status(
 @click.option("--json", "json_format", count=True, help="Get output in JSON format.")
 @add_access_token_options
 @click.option(
-    "-s", "--step", "steps", multiple=True, help="Get logs of a specific step."
+    "--filter",
+    "filters",
+    multiple=True,
+    help="Filter job logs to include only those steps that match certain filtering criteria. Use --filter name=value pairs. Available filters are compute_backend, docker_img, status and step.",
 )
 @check_connection
 @click.pass_context
-def workflow_logs(ctx, workflow, access_token, json_format, steps=None):  # noqa: D301
+def workflow_logs(ctx, workflow, access_token, json_format, filters=None):  # noqa: D301
     """Get  workflow logs.
 
     The `logs` command allows to retrieve logs of running workflow. Note that
@@ -729,22 +732,87 @@ def workflow_logs(ctx, workflow, access_token, json_format, steps=None):  # noqa
     """
     from reana_client.api.client import get_workflow_logs
 
+    available_filters = {
+        "step": "job_name",
+        "compute_backend": "compute_backend",
+        "docker_img": "docker_img",
+        "status": "status",
+    }
+    compute_backends = {
+        "kubernetes": "Kubernetes",
+        "htcondor": "HTCondor",
+        "slurm": "Slurm",
+    }
+    steps = []
+    chosen_filters = dict()
+
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     if workflow:
+        if filters:
+            try:
+                for f in filters:
+                    key, value = f.split("=")
+                    if key not in available_filters:
+                        click.echo(
+                            click.style(
+                                "Error: filter '{}' is not valid.\nAvailable filters are '{}'.".format(
+                                    key, "' '".join(sorted(available_filters.keys())),
+                                ),
+                                fg="red",
+                            ),
+                            err=True,
+                        )
+                        sys.exit(1)
+                    elif key == "step":
+                        steps.append(value)
+                    else:
+                        # Case insensitive for compute backends
+                        value = (
+                            compute_backends[value.lower()]
+                            if key == "compute_backend"
+                            and value.lower() in compute_backends
+                            else value
+                        )
+                        chosen_filters[key] = value
+            except Exception as e:
+                logging.debug(traceback.format_exc())
+                logging.debug(str(e))
+                click.echo(
+                    click.style(
+                        "Error: please provide complete --filter name=value pairs, for example --filter status=running.\nAvailable filters are '{}'.".format(
+                            "' '".join(sorted(available_filters.keys()))
+                        ),
+                        fg="red",
+                    ),
+                    err=True,
+                )
+                sys.exit(1)
         try:
-            if steps:
-                steps = list(set(steps))
-            response = get_workflow_logs(workflow, access_token, steps)
+            response = get_workflow_logs(
+                workflow, access_token, None if not steps else list(set(steps))
+            )
             workflow_logs = json.loads(response["logs"])
+            if filters:
+                for key, value in chosen_filters.items():
+                    unwanted_steps = [
+                        k
+                        for k, v in workflow_logs["job_logs"].items()
+                        if v[available_filters[key]] != value
+                    ]
+                    for job_id in unwanted_steps:
+                        del workflow_logs["job_logs"][job_id]
+
             if json_format:
                 click.echo(json.dumps(workflow_logs, indent=2))
                 sys.exit(0)
             else:
                 from reana_client.cli.utils import output_user_friendly_logs
 
-                output_user_friendly_logs(workflow_logs, steps)
+            output_user_friendly_logs(
+                workflow_logs, None if not steps else list(set(steps))
+            )
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))

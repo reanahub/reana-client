@@ -86,6 +86,25 @@ def add_workflow_option(func):
     return wrapper
 
 
+def add_pagination_options(func):
+    """Add pagination related options to click commands."""
+
+    @click.option(
+        "--page",
+        default=1,
+        type=int,
+        help="Results page number (to be used with --size).",
+    )
+    @click.option(
+        "--size", type=int, help="Size of results per page (to be used with --page).",
+    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 def parse_parameters(_filter):
     """Return parsed filter parameters."""
     try:

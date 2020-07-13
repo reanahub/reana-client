@@ -19,6 +19,7 @@ from jsonschema.exceptions import ValidationError
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (
     add_access_token_options,
+    add_pagination_options,
     add_workflow_option,
     check_connection,
     filter_data,
@@ -107,6 +108,7 @@ def workflow_execution_group(ctx):
     help="Sort the output by specified column",
 )
 @add_access_token_options
+@add_pagination_options
 @check_connection
 @click.pass_context
 def workflow_workflows(
@@ -119,6 +121,8 @@ def workflow_workflows(
     verbose,
     block_size,
     sort_columm_name,
+    page,
+    size,
 ):  # noqa: D301
     """List all workflows and sessions.
 
@@ -144,7 +148,14 @@ def workflow_workflows(
     try:
         if not verbose:
             block_size = None
-        response = get_workflows(access_token, type, bool(verbose), block_size)
+        response = get_workflows(
+            access_token,
+            type,
+            verbose=bool(verbose),
+            block_size=block_size,
+            page=page,
+            size=size,
+        )
         verbose_headers = ["id", "user", "size"]
         headers = {
             "batch": ["name", "run_number", "created", "started", "ended", "status"],

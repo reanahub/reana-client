@@ -42,7 +42,7 @@ def test_list_files_server_no_token():
 def test_list_files_ok():
     """Test list workflow workspace files successfull."""
     status_code = 200
-    response = [{"last-modified": "string", "name": "string", "size": 0}]
+    response = {"items": [{"last-modified": "string", "name": "string", "size": 0}]}
     env = {"REANA_SERVER_URL": "localhost"}
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
@@ -61,13 +61,13 @@ def test_list_files_ok():
             assert result.exit_code == 0
             assert isinstance(json_response, list)
             assert len(json_response) == 1
-            assert json_response[0]["name"] in response[0]["name"]
+            assert json_response[0]["name"] in response["items"][0]["name"]
 
 
 def test_list_files_url():
     """Test list workflow workspace files' urls."""
     status_code = 200
-    response = [{"last-modified": "string", "name": "string", "size": 0}]
+    response = {"items": [{"last-modified": "string", "name": "string", "size": 0}]}
     env = {"REANA_SERVER_URL": "localhost"}
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
@@ -85,7 +85,7 @@ def test_list_files_url():
             )
             assert result.exit_code == 0
             assert workflow_name in result.output
-            assert response[0]["name"] in result.output
+            assert response["items"][0]["name"] in result.output
 
 
 def test_download_file():

@@ -728,9 +728,19 @@ def workflow_status(
     multiple=True,
     help="Filter job logs to include only those steps that match certain filtering criteria. Use --filter name=value pairs. Available filters are compute_backend, docker_img, status and step.",
 )
+@add_pagination_options
 @check_connection
 @click.pass_context
-def workflow_logs(ctx, workflow, access_token, json_format, filters=None):  # noqa: D301
+def workflow_logs(
+    ctx,
+    workflow,
+    access_token,
+    json_format,
+    steps=None,
+    filters=None,
+    page=None,
+    size=None,
+):  # noqa: D301
     """Get  workflow logs.
 
     The `logs` command allows to retrieve logs of running workflow. Note that
@@ -802,7 +812,11 @@ def workflow_logs(ctx, workflow, access_token, json_format, filters=None):  # no
                 sys.exit(1)
         try:
             response = get_workflow_logs(
-                workflow, access_token, None if not steps else list(set(steps))
+                workflow,
+                access_token,
+                steps=None if not steps else list(set(steps)),
+                page=page,
+                size=size,
             )
             workflow_logs = json.loads(response["logs"])
             if filters:

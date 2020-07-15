@@ -76,12 +76,11 @@ def get_workflows(
             size=size,
         ).result()
         if http_response.status_code == 200:
-            return response
-        else:
-            raise Exception(
-                "Expected status code 200 but replied with "
-                "{status_code}".format(status_code=http_response.status_code)
-            )
+            return response.get("items")
+        raise Exception(
+            "Expected status code 200 but replied with "
+            "{status_code}".format(status_code=http_response.status_code)
+        )
 
     except HTTPError as e:
         logging.debug(
@@ -311,11 +310,15 @@ def upload_file(workflow_id, file_, file_name, access_token):
         raise e
 
 
-def get_workflow_logs(workflow_id, access_token, steps=None):
+def get_workflow_logs(workflow_id, access_token, steps=None, page=None, size=None):
     """Get logs from a workflow engine."""
     try:
         (response, http_response) = current_rs_api_client.api.get_workflow_logs(
-            workflow_id_or_name=workflow_id, steps=steps, access_token=access_token
+            workflow_id_or_name=workflow_id,
+            steps=steps,
+            access_token=access_token,
+            page=page,
+            size=size,
         ).result()
 
         if http_response.status_code == 200:
@@ -421,7 +424,7 @@ def delete_file(workflow_id, file_name, access_token):
         raise e
 
 
-def list_files(workflow_id, access_token):
+def list_files(workflow_id, access_token, page=None, size=None):
     """Return the list of file for a given workflow workspace.
 
     :param workflow_id: UUID which identifies the workflow.
@@ -430,16 +433,18 @@ def list_files(workflow_id, access_token):
     """
     try:
         (response, http_response) = current_rs_api_client.api.get_files(
-            workflow_id_or_name=workflow_id, access_token=access_token
+            workflow_id_or_name=workflow_id,
+            access_token=access_token,
+            page=page,
+            size=size,
         ).result()
 
         if http_response.status_code == 200:
-            return response
-        else:
-            raise Exception(
-                "Expected status code 200 but replied with "
-                "{status_code}".format(status_code=http_response.status_code)
-            )
+            return response.get("items")
+        raise Exception(
+            "Expected status code 200 but replied with "
+            "{status_code}".format(status_code=http_response.status_code)
+        )
 
     except HTTPError as e:
         logging.debug(

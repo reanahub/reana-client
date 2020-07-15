@@ -44,15 +44,17 @@ def test_workflows_no_token():
 
 def test_workflows_server_ok():
     """Test workflows command when server is reachable."""
-    response = [
-        {
-            "status": "running",
-            "created": "2018-06-13T09:47:35.66097",
-            "user": "00000000-0000-0000-0000-000000000000",
-            "name": "mytest.1",
-            "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
-        }
-    ]
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+            }
+        ]
+    }
     status_code = 200
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
@@ -73,26 +75,28 @@ def test_workflows_server_ok():
 
 def test_workflows_sorting():
     """Test workflows sorting."""
-    response = [
-        {
-            "status": "running",
-            "created": "2018-06-13T09:47:35.66097",
-            "user": "00000000-0000-0000-0000-000000000000",
-            "name": "mytest.1",
-            "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
-            "progress": {
-                "run_started_at": "2018-06-13T09:47:40.28223",
-                "run_finished_at": "2018-06-13T10:30:03.70303",
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "progress": {
+                    "run_started_at": "2018-06-13T09:47:40.28223",
+                    "run_finished_at": "2018-06-13T10:30:03.70303",
+                },
             },
-        },
-        {
-            "status": "running",
-            "created": "2018-06-13T09:55:35.66097",
-            "user": "00000000-0000-0000-0000-000000000000",
-            "name": "mytest.2",
-            "id": "256b25f4-4cfb-4684-b7a8-73872ef455a2",
-        },
-    ]
+            {
+                "status": "running",
+                "created": "2018-06-13T09:55:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.2",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a2",
+            },
+        ]
+    }
     status_code = 200
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
@@ -122,18 +126,20 @@ def test_workflows_sorting():
 
 def test_workflows_sessions():
     """Test list command for getting interactive sessions."""
-    response = [
-        {
-            "created": "2019-03-19T14:37:58",
-            "id": "29136cd0-b259-4d48-8c1e-afe3572df408",
-            "name": "workflow.1",
-            "session_type": "jupyter",
-            "session_uri": "/29136cd0-b259-4d48-8c1e-afe3572df408",
-            "size": "0",
-            "status": "created",
-            "user": "00000000-0000-0000-0000-000000000000",
-        }
-    ]
+    response = {
+        "items": [
+            {
+                "created": "2019-03-19T14:37:58",
+                "id": "29136cd0-b259-4d48-8c1e-afe3572df408",
+                "name": "workflow.1",
+                "session_type": "jupyter",
+                "session_uri": "/29136cd0-b259-4d48-8c1e-afe3572df408",
+                "size": "0",
+                "status": "created",
+                "user": "00000000-0000-0000-0000-000000000000",
+            }
+        ]
+    }
     status_code = 200
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
@@ -154,16 +160,18 @@ def test_workflows_sessions():
 
 def test_workflows_valid_json():
     """Test workflows command with --json and -v flags."""
-    response = [
-        {
-            "status": "running",
-            "created": "2018-06-13T09:47:35.66097",
-            "user": "00000000-0000-0000-0000-000000000000",
-            "name": "mytest.1",
-            "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
-            "size": "0K",
-        }
-    ]
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": "0K",
+            }
+        ]
+    }
     status_code = 200
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
@@ -191,22 +199,24 @@ def test_workflows_valid_json():
 
 def test_workflows_filter():
     """Test workflows command with --filter."""
-    response = [
-        {
-            "status": "running",
-            "created": "2018-06-13T09:47:35.66097",
-            "user": "00000000-0000-0000-0000-000000000000",
-            "name": "mytest.1",
-            "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
-        },
-        {
-            "status": "failed",
-            "created": "2018-06-14T09:47:35.66097",
-            "user": "00000000-0000-0000-0000-000000000000",
-            "name": "mytest.2",
-            "id": "256b25f4-4cfb-4684-b7a8-73872ef455a2",
-        },
-    ]
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+            },
+            {
+                "status": "failed",
+                "created": "2018-06-14T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.2",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a2",
+            },
+        ]
+    }
     status_code = 200
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code

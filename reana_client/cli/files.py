@@ -18,6 +18,7 @@ import click
 from reana_client.api.utils import get_path_from_operation_id
 from reana_client.cli.utils import (
     add_access_token_options,
+    add_pagination_options,
     add_workflow_option,
     check_connection,
     filter_data,
@@ -66,8 +67,11 @@ def files_group(ctx):
     help="Get URLs of output files.",
 )
 @add_access_token_options
+@add_pagination_options
 @click.pass_context
-def get_files(ctx, workflow, _filter, output_format, access_token):  # noqa: D301
+def get_files(
+    ctx, workflow, _filter, output_format, access_token, page, size
+):  # noqa: D301
     """List workspace files.
 
     The `ls` command lists workspace files of a workflow specified by the
@@ -89,7 +93,7 @@ def get_files(ctx, workflow, _filter, output_format, access_token):  # noqa: D30
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
-            response = list_files(workflow, access_token)
+            response = list_files(workflow, access_token, page, size)
             headers = ["name", "size", "last-modified"]
             data = []
             file_path = get_path_from_operation_id(

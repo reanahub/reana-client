@@ -1,10 +1,7 @@
 Contributing
 ============
 
-Issues
-------
-
-Bug reports, feature requests, and other contributions are welcome. If you find
+Bug reports, issues, feature requests, and other contributions are welcome. If you find
 a demonstrable problem that is caused by the REANA code, please:
 
 1. Search for `already reported problems
@@ -13,11 +10,8 @@ a demonstrable problem that is caused by the REANA code, please:
    latest `master` branch.
 3. Create an issue, ideally with **a test case**.
 
-Pull requests
--------------
-
-If you create a feature branch, you can run the tests to ensure that everything
-is operating correctly:
+If you create a pull request fixing a bug or implementing a feature, you can run
+the tests to ensure that everything is operating correctly:
 
 .. code-block:: console
 

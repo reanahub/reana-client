@@ -1,6 +1,6 @@
-==============
- REANA-Client
-==============
+############
+REANA-Client
+############
 
 .. image:: https://img.shields.io/pypi/pyversions/reana-client.svg
    :target: https://pypi.org/pypi/reana-client
@@ -24,29 +24,45 @@
    :target: https://github.com/psf/black
 
 About
------
+=====
 
 REANA-Client is a component of the `REANA <http://www.reana.io/>`_ reusable and
 reproducible research data analysis platform. It provides a command-line tool
 that allows researchers to submit, run, and manage their computational
 workflows.
 
-Features
---------
-
 - seed workspace with input code and data
 - run computational workflows on remote compute clouds
 - list submitted workflows and enquire about their statuses
 - download results of finished workflows
 
+
+Installation
+============
+
+.. code-block:: console
+
+   $ # create new virtual environment
+   $ virtualenv ~/.virtualenvs/reana
+   $ source ~/.virtualenvs/reana/bin/activate
+   $ # install reana-client
+   $ pip install reana-client
+
+Usage
+=====
+
+The detailed information on how to install and use REANA can be found in
+`docs.reana.io <https://docs.reana.io>`_.
+
+
 Useful links
-------------
+============
 
-- `documentation <https://reana-client.readthedocs.io/>`_
-- `releases <https://github.com/reanahub/reana-client/releases>`_
-- `known issues <https://github.com/reanahub/reana-client/issues>`_
-- `source code <https://github.com/reanahub/reana-client>`_
+- `REANA project home page <http://www.reana.io/>`_
+- `REANA user documentation <https://docs.reana.io>`_
+- `REANA user support forum <https://forum.reana.io>`_
 
-For more information about the REANA reusable analysis platform, please see the
-`REANA project <http://www.reana.io>`_ home page and the general `REANA
-documentation <http://reana.readthedocs.io/>`_ pages.
+- `REANA-Client releases <https://reana-client.readthedocs.io/en/latest#changes>`_
+- `REANA-Client developer documentation <https://reana-client.readthedocs.io/>`_
+- `REANA-Client known issues <https://github.com/reanahub/reana-client/issues>`_
+- `REANA-Client source code <https://github.com/reanahub/reana-client>`_

@@ -9,9 +9,6 @@
    :numbered:
 
    introduction
-   gettingstarted
-   userguide
-   developerguide
    cliapi
    apidocs
    contributing

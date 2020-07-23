@@ -24,10 +24,3 @@ is operating correctly:
     $ ./run-tests.sh
 
 Each pull request should preserve or increase code coverage.
-
-Kanban
-------
-
-We are using Kanban technique for keeping track of ongoing tasks. Please see
-our `Kanban boards <https://github.com/orgs/reanahub/projects>`_ and look for
-issues that are "ready for work".

@@ -71,7 +71,3 @@ target/
 
 # Visual Studio Code files
 .vscode/*
-
-# Docs autogeneration
-cmd_list.txt
-cli_api.md

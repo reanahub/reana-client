@@ -21,4 +21,3 @@ recursive-include docs *.py
 recursive-include docs *.png
 recursive-include docs *.rst
 recursive-include tests *.py
-recursive-include scripts *.py

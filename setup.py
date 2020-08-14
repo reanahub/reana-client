@@ -45,7 +45,7 @@ install_requires = [
     "cwltool==1.0.20191022103248",
     "pyOpenSSL>=19.0.0",  # FIXME remove once yadage-schemas solves deps.
     "jsonpointer>=2.0",
-    "reana-commons>=0.7.0.dev20200625,<0.8.0",
+    "reana-commons>=0.7.0a4,<0.8.0",
     "rfc3987>=1.3.8",  # FIXME remove once yadage-schemas solves deps.
     "six==1.12.0",
     "strict-rfc3339>=0.7",  # FIXME remove once yadage-schemas solves deps.

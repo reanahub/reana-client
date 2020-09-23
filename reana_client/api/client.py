@@ -62,6 +62,32 @@ def ping(access_token):
         return {"status": "ERROR: INVALID SERVER", "error": True}
 
 
+def get_user_quota(access_token):
+    """Retrieve user quota usage and limits."""
+    try:
+        response, http_response = current_rs_api_client.api.get_you(
+            access_token=access_token
+        ).result()
+        if http_response.status_code == 200:
+            return response["quota"]
+        raise Exception(
+            "Expected status code 200 but replied with "
+            "{status_code}".format(status_code=http_response.status_code)
+        )
+
+    except HTTPError as e:
+        logging.debug(
+            "User quotas could not be retrieved: "
+            "\nStatus: {}\nReason: {}\n"
+            "Message: {}".format(
+                e.response.status_code, e.response.reason, e.response.json()["message"]
+            )
+        )
+        raise Exception(e.response.json()["message"])
+    except Exception as e:
+        raise e
+
+
 def get_workflows(
     access_token,
     type,

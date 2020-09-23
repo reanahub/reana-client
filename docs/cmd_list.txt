@@ -7,6 +7,9 @@ Options:
                                   Sets log level
   --help                          Show this message and exit.
 
+Quota commands:
+  quota-show  Show user quota.
+
 Configuration commands:
   ping     Check connection to REANA server.
   version  Show version.

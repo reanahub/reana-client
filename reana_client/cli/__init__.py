@@ -13,7 +13,7 @@ import sys
 import click
 from urllib3 import disable_warnings
 
-from reana_client.cli import workflow, files, ping, secrets
+from reana_client.cli import workflow, files, ping, secrets, quotas
 
 DEBUG_LOG_FORMAT = (
     "[%(asctime)s] p%(process)s "
@@ -36,6 +36,7 @@ class ReanaCLI(click.Group):
     """REANA command line interface."""
 
     cmd_groups = [
+        quotas.quota_group,
         ping.configuration_group,
         workflow.workflow_management_group,
         workflow.workflow_execution_group,

@@ -165,6 +165,7 @@ def workflow_workflows(
                 "created",
                 "session_type",
                 "session_uri",
+                "session_status",
             ],
         }
         if verbose:

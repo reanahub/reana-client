@@ -39,3 +39,14 @@ URL = "url"
 
 WORKFLOW_ENGINES = ["serial", "cwl", "yadage"]
 """Supported workflow engines."""
+
+RUN_STATUSES = [
+    "created",
+    "running",
+    "finished",
+    "failed",
+    "deleted",
+    "stopped",
+    "queued",
+]
+"""Available run statuses."""

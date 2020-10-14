@@ -21,8 +21,8 @@ from reana_client.cli.utils import (
     add_pagination_options,
     add_workflow_option,
     check_connection,
-    filter_data,
-    parse_parameters,
+    format_data,
+    parse_format_parameters,
 )
 from reana_client.config import ERROR_MESSAGES, JSON, URL
 from reana_client.errors import FileDeletionError, FileUploadError
@@ -45,7 +45,7 @@ def files_group(ctx):
 @check_connection
 @click.option(
     "--format",
-    "_filter",
+    "_format",
     multiple=True,
     help="Format output according to column titles or column values. "
     "Use `<column_name>=<column_value>` format. For "
@@ -70,7 +70,7 @@ def files_group(ctx):
 @add_pagination_options
 @click.pass_context
 def get_files(
-    ctx, workflow, _filter, output_format, access_token, page, size
+    ctx, workflow, _format, output_format, access_token, page, size
 ):  # noqa: D301
     """List workspace files.
 
@@ -88,8 +88,8 @@ def get_files(
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
 
-    if _filter:
-        parsed_filters = parse_parameters(_filter)
+    if _format:
+        parsed_format_filters = parse_format_parameters(_format)
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
@@ -122,9 +122,9 @@ def get_files(
                 tablib_data.append(row)
             if output_format == URL:
                 click.echo("\n".join(urls))
-            elif _filter:
-                tablib_data, filtered_headers = filter_data(
-                    parsed_filters, headers, tablib_data
+            elif _format:
+                tablib_data, filtered_headers = format_data(
+                    parsed_format_filters, headers, tablib_data
                 )
                 if output_format == JSON:
                     click.echo(json.dumps(tablib_data))
@@ -135,7 +135,7 @@ def get_files(
                 if output_format == JSON:
                     click.echo(tablib_data.export(output_format))
                 else:
-                    click_table_printer(headers, _filter, data)
+                    click_table_printer(headers, _format, data)
 
         except Exception as e:
             logging.debug(traceback.format_exc())

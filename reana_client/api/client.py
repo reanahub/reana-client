@@ -63,7 +63,14 @@ def ping(access_token):
 
 
 def get_workflows(
-    access_token, type, verbose=False, block_size=None, page=None, size=None
+    access_token,
+    type,
+    verbose=False,
+    block_size=None,
+    page=None,
+    size=None,
+    status=None,
+    search=None,
 ):
     """List all existing workflows."""
     try:
@@ -74,6 +81,8 @@ def get_workflows(
             block_size=block_size,
             page=page,
             size=size,
+            status=status,
+            search=search,
         ).result()
         if http_response.status_code == 200:
             return response.get("items")

@@ -16,7 +16,7 @@ import sys
 import click
 
 from reana_client.utils import workflow_uuid_or_name
-from reana_client.config import ERROR_MESSAGES
+from reana_client.config import ERROR_MESSAGES, RUN_STATUSES
 from reana_commons.errors import MissingAPIClientConfiguration
 
 
@@ -105,11 +105,11 @@ def add_pagination_options(func):
     return wrapper
 
 
-def parse_parameters(_filter):
+def parse_format_parameters(_format):
     """Return parsed filter parameters."""
     try:
         parsed_filters = []
-        filters = " ".join(_filter).replace(",", " ")
+        filters = " ".join(_format).replace(",", " ")
         for item in shlex.split(filters):
             if "=" in item:
                 filter_item = {
@@ -127,7 +127,48 @@ def parse_parameters(_filter):
         )
 
 
-def filter_data(parsed_filters, headers, tablib_data):
+def parse_filter_parameters(filters):
+    """Return parsed filter parameters."""
+    try:
+        status_filters = []
+        search_filters = None
+        filters = " ".join(filters).split(",")
+        for item in filters:
+            if "=" in item:
+                filter_name = item.split("=")[0].lower()
+                filter_value = item.split("=")[1]
+                if filter_name == "status":
+                    if filter_value in RUN_STATUSES:
+                        status_filters.append(filter_value)
+                    else:
+                        click.secho(
+                            "==> ERROR: Input status value {} is not valid. ".format(
+                                filter_value
+                            ),
+                            err=True,
+                            fg="red",
+                        ),
+                        sys.exit(1)
+                elif filter_name == "name":
+                    search_filters = filter_value
+                else:
+                    click.secho(
+                        "==> ERROR: Filter {} is not valid.".format(filter_name),
+                        err=True,
+                        fg="red",
+                    ),
+                    sys.exit(1)
+            else:
+                raise click.BadParameter("Wrong input format")
+        return status_filters, search_filters
+    except ValueError as e:
+        click.echo(
+            click.style("Wrong filter format \n{0}".format(e.message), fg="red"),
+            err=True,
+        )
+
+
+def format_data(parsed_filters, headers, tablib_data):
     """Return filtered data."""
     parsed_filters = [i for i in parsed_filters if i["column_name"] in headers]
     column_headers = [i["column_name"] for i in parsed_filters] or None

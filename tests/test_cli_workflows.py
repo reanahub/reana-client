@@ -197,8 +197,8 @@ def test_workflows_valid_json():
             assert "user" in json_response[0]
 
 
-def test_workflows_filter():
-    """Test workflows command with --filter."""
+def test_workflows_format():
+    """Test workflows command with --format."""
     response = {
         "items": [
             {
@@ -224,7 +224,7 @@ def test_workflows_filter():
     env = {"REANA_SERVER_URL": "localhost"}
     reana_token = "000000"
     runner = CliRunner(env=env)
-    filter_ = "status=failed"
+    _format = "status=failed"
     with runner.isolation():
         with patch(
             "reana_client.api.client.current_rs_api_client",
@@ -232,7 +232,7 @@ def test_workflows_filter():
         ):
             result = runner.invoke(
                 cli,
-                ["list", "-t", reana_token, "--json", '--format="{}"'.format(filter_)],
+                ["list", "-t", reana_token, "--json", '--format="{}"'.format(_format)],
             )
             json_response = json.loads(result.output)
             assert result.exit_code == 0
@@ -240,6 +240,43 @@ def test_workflows_filter():
             assert len(json_response) == 1
             assert "status" in json_response[0]
             assert json_response[0]["status"] == "failed"
+
+
+def test_workflows_filter():
+    """Test workflows command with --filter."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    filter = "status=running"
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli, ["list", "-t", reana_token, "--json", "--filter", filter],
+            )
+            json_response = json.loads(result.output)
+            assert result.exit_code == 0
+            assert isinstance(json_response, list)
+            assert len(json_response) == 1
+            assert "status" in json_response[0]
+            assert "running" in json_response[0]["status"]
 
 
 def test_workflow_create_failed():

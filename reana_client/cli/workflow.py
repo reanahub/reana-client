@@ -22,13 +22,14 @@ from reana_client.cli.utils import (
     add_pagination_options,
     add_workflow_option,
     check_connection,
-    filter_data,
+    format_data,
     format_session_uri,
     key_value_to_dict,
-    parse_parameters,
+    parse_format_parameters,
+    parse_filter_parameters,
     validate_workflow_name,
 )
-from reana_client.config import ERROR_MESSAGES, TIMECHECK
+from reana_client.config import ERROR_MESSAGES, TIMECHECK, RUN_STATUSES
 from reana_client.utils import (
     get_reana_yaml_file_path,
     get_workflow_name_and_run_number,
@@ -64,10 +65,10 @@ def workflow_execution_group(ctx):
 )
 @click.option(
     "--format",
-    "_filter",
+    "_format",
     multiple=True,
     help="Format output according to column titles or column values. "
-    "Use `<columm_name>=<column_value>` format. For "
+    "Use `<columm_name>=<column_value>` format. "
     "E.g. display workflow with failed status and named test_workflow "
     "`--format status=failed,name=test_workflow`.",
 )
@@ -107,6 +108,14 @@ def workflow_execution_group(ctx):
     default="CREATED",
     help="Sort the output by specified column",
 )
+@click.option(
+    "--filter",
+    "filters",
+    multiple=True,
+    help="Filter workflow that contains certain filtering criteria. "
+    "Use --filter `<columm_name>=<column_value>` pairs. "
+    "Available filters are `name` and `status`.",
+)
 @add_access_token_options
 @add_pagination_options
 @check_connection
@@ -114,7 +123,7 @@ def workflow_execution_group(ctx):
 def workflow_workflows(
     ctx,
     sessions,
-    _filter,
+    _format,
     output_format,
     access_token,
     show_all,
@@ -123,6 +132,7 @@ def workflow_workflows(
     sort_columm_name,
     page,
     size,
+    filters,
 ):  # noqa: D301
     """List all workflows and sessions.
 
@@ -143,8 +153,13 @@ def workflow_workflows(
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     type = "interactive" if sessions else "batch"
-    if _filter:
-        parsed_filters = parse_parameters(_filter)
+
+    status_filter = None
+    search_filter = None
+    if filters:
+        status_filter, search_filter = parse_filter_parameters(filters)
+    if _format:
+        parsed_format_filters = parse_format_parameters(_format)
     try:
         if not verbose:
             block_size = None
@@ -155,6 +170,8 @@ def workflow_workflows(
             block_size=block_size,
             page=page,
             size=size,
+            status=status_filter,
+            search=search_filter,
         )
         verbose_headers = ["id", "user", "size"]
         headers = {
@@ -210,9 +227,9 @@ def workflow_workflows(
         for row in data:
             tablib_data.append(row=row, tags=row)
 
-        if _filter:
-            tablib_data, filtered_headers = filter_data(
-                parsed_filters, headers[type], tablib_data
+        if _format:
+            tablib_data, filtered_headers = format_data(
+                parsed_format_filters, headers[type], tablib_data
             )
             if output_format:
                 click.echo(json.dumps(tablib_data))
@@ -223,7 +240,7 @@ def workflow_workflows(
             if output_format:
                 click.echo(tablib_data.export(output_format))
             else:
-                click_table_printer(headers[type], _filter, data)
+                click_table_printer(headers[type], _format, data)
 
     except Exception as e:
         logging.debug(traceback.format_exc())
@@ -572,7 +589,7 @@ def workflow_restart(
 @add_workflow_option
 @click.option(
     "--format",
-    "_filter",
+    "_format",
     multiple=True,
     help="Format output by displaying only certain columns. "
     "E.g. --format name,status.",
@@ -589,7 +606,7 @@ def workflow_restart(
 @click.option("-v", "--verbose", count=True, help="Set status information verbosity.")
 @click.pass_context
 def workflow_status(
-    ctx, workflow, _filter, output_format, access_token, verbose
+    ctx, workflow, _format, output_format, access_token, verbose
 ):  # noqa: D301
     """Get status of a workflow.
 
@@ -675,9 +692,9 @@ def workflow_status(
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     if workflow:
         try:
-            if _filter:
-                parsed_filters = parse_parameters(_filter)
-                _filter = [item["column_name"] for item in parsed_filters]
+            if _format:
+                parsed_filters = parse_format_parameters(_format)
+                _format = [item["column_name"] for item in parsed_filters]
             response = get_workflow_status(workflow, access_token)
             headers = ["name", "run_number", "created", "status"]
             verbose_headers = ["id", "user", "command"]
@@ -698,12 +715,12 @@ def workflow_status(
                 for row in data:
                     tablib_data.append(row)
 
-                if _filter:
-                    tablib_data = tablib_data.subset(rows=None, cols=list(_filter))
+                if _format:
+                    tablib_data = tablib_data.subset(rows=None, cols=list(_format))
 
                 click.echo(tablib_data.export(output_format))
             else:
-                click_table_printer(headers, _filter, data)
+                click_table_printer(headers, _format, data)
 
         except Exception as e:
             logging.debug(traceback.format_exc())
@@ -791,12 +808,20 @@ def workflow_logs(
                         steps.append(value)
                     else:
                         # Case insensitive for compute backends
-                        value = (
-                            compute_backends[value.lower()]
-                            if key == "compute_backend"
+                        if (
+                            key == "compute_backend"
                             and value.lower() in compute_backends
-                            else value
-                        )
+                        ):
+                            value = compute_backends[value.lower()]
+                        elif key == "status" and value not in RUN_STATUSES:
+                            click.secho(
+                                "==> ERROR: Input status value {} is not valid. ".format(
+                                    value
+                                ),
+                                err=True,
+                                fg="red",
+                            ),
+                            sys.exit(1)
                         chosen_filters[key] = value
             except Exception as e:
                 logging.debug(traceback.format_exc())

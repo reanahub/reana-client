@@ -182,6 +182,7 @@ def format_data(parsed_filters, headers, tablib_data):
                 and filter_["column_value"] != item[filter_["column_name"]]
             ):
                 tablib_data.remove(item)
+                break
     return tablib_data, column_headers or []
 
 

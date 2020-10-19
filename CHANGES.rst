@@ -1,22 +1,22 @@
 Changes
 =======
 
-Version master (UNRELEASED)
----------------------------
+Version 0.7.0 (2020-10-20)
+--------------------------
 
-- Adds option to filter job logs according to compute backend, docker image, status and steps.
-- Enriches disk usage output format.
-- Adds new command to restart workflows.
-- Optimizes CLI performance.
-- Adds option to get logs of a specific step.
-- Enhances logs formatting using marks and colors.
-- Switches from Bravado to ``requests`` to perform better performant downloads.
-- Validates user access token and improves output of ``ping`` command.
-- Accepts both ``reana.yaml`` and ``reana.yml`` filenames.
-- Includes better formatting for ``diff`` command.
-- Prevents including a dot as part of the workflow name.
-- Allows passing workflow operational options in the ``reana.yaml``.
-- Adds Black formatter support.
+- Adds option to ``logs`` command to filter job logs according to compute backend, docker image, status and step name.
+- Adds new ``restart`` command to restart previously run or failed workflows.
+- Adds possibility to specify operational options in the ``reana.yaml`` of the workflow.
+- Fixes user experience by preventing dots as part of the workflow name to avoid confusion with restart runs.
+- Changes ``du`` command output format.
+- Changes file loading to optimise CLI performance.
+- Changes ``logs`` command to enhance formatting using marks and colours.
+- Changes from Bravado to requests to improve download performance.
+- Changes ``ping`` command to perform user access token validation.
+- Changes defaults to accept both ``reana.yaml`` and ``reana.yml`` filenames.
+- Changes ``diff`` command to improve output formatting.
+- Changes code formatting to respect ``black`` coding style.
+- Changes documentation to single-page layout.
 
 Version 0.6.1 (2020-06-09)
 --------------------------

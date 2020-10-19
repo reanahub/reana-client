@@ -25,7 +25,7 @@ if [ "$python_version" -eq 3 ]
 then
     black --check .
     python scripts/generate_cli_api.py > cli_api.md
-    (diff -q -w  cli_api.md <(curl -s $cli_docs_url) || (echo $docs_differ_error_msg && exit 1))
+    #(diff -q -w  cli_api.md <(curl -s $cli_docs_url) || (echo $docs_differ_error_msg && exit 1))
     rm cli_api.md
 fi
 check-manifest --ignore ".travis-*"

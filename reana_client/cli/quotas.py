@@ -11,10 +11,12 @@ import logging
 import sys
 
 import click
+
 from reana_client.cli.utils import (
+    NotRequiredIf,
     add_access_token_options,
     check_connection,
-    NotRequiredIf,
+    human_readable_or_raw_option,
 )
 
 
@@ -31,6 +33,7 @@ def quota_group():
     pass
 
 
+@quota_group.command("quota-show")
 @click.option(
     "--resource",
     "resource",
@@ -52,11 +55,13 @@ def quota_group():
     type=click.Choice(["limit", "usage"], case_sensitive=False),
     help="Specify quota report type. e.g. limit, usage.",
 )
-@quota_group.command("quota-show")
-@click.pass_context
+@human_readable_or_raw_option
 @add_access_token_options
+@click.pass_context
 @check_connection
-def quota_show(ctx, access_token, resource, resources, report):  # noqa: D301
+def quota_show(
+    ctx, access_token, resource, resources, report, human_readable_or_raw
+):  # noqa: D301
     """Show user quota.
 
     The `quota-show` command displays quota usage for the user.
@@ -93,28 +98,37 @@ def quota_show(ctx, access_token, resource, resources, report):  # noqa: D301
                 err=True,
             )
             sys.exit(1)
-
         if not report:
-            usage = quota[resource]["usage"]
-            limit = quota[resource]["limit"]
-            health = quota[resource]["health"]
-            percentage = usage_percentage(usage["raw"], limit["raw"])
-            limit_str = (
-                "out of {} used".format(limit["human_readable"])
-                if limit["raw"] > 0
-                else "used"
+            human_readable_or_raw = (
+                "human_readable"  # when no report always show human readable
             )
+            usage = quota[resource].get("usage")
+            limit = quota[resource].get("limit")
+            limit_str = ""
+            percentage = ""
+            kwargs = dict()
+            if limit and limit.get("raw", 0) > 0:
+                health = quota[resource].get("health")
+                percentage = usage_percentage(usage.get("raw"), limit.get("raw"))
+                limit_str = "out of {} used".format(limit.get(human_readable_or_raw))
+                kwargs = dict(fg=REANA_RESOURCE_HEALTH_COLORS.get(health))
+            else:
+                limit_str = "used"
+
             return click.echo(
                 click.style(
-                    "{} {} {}".format(usage["human_readable"], limit_str, percentage),
-                    fg=REANA_RESOURCE_HEALTH_COLORS.get(health),
+                    "{} {} {}".format(
+                        usage[human_readable_or_raw], limit_str, percentage
+                    ),
+                    **kwargs
                 )
             )
 
         result = (
-            quota[resource][report]["human_readable"]
-            if quota[resource]["limit"]["raw"] > 0
-            else "No limit set."
+            quota[resource][report][human_readable_or_raw]
+            if quota[resource].get(report)
+            and quota[resource].get(report).get("raw", 0) > 0
+            else "No {}.".format(report)
         )
         return click.echo(result)
 

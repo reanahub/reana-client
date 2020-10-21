@@ -16,6 +16,11 @@ import traceback
 
 import click
 from jsonschema.exceptions import ValidationError
+from reana_commons.config import INTERACTIVE_SESSION_TYPES
+from reana_commons.errors import REANAValidationError
+from reana_commons.operational_options import validate_operational_options
+from reana_commons.utils import click_table_printer
+
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (
     add_access_token_options,
@@ -24,12 +29,13 @@ from reana_client.cli.utils import (
     check_connection,
     format_data,
     format_session_uri,
+    human_readable_or_raw_option,
     key_value_to_dict,
-    parse_format_parameters,
     parse_filter_parameters,
+    parse_format_parameters,
     validate_workflow_name,
 )
-from reana_client.config import ERROR_MESSAGES, TIMECHECK, RUN_STATUSES
+from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
 from reana_client.utils import (
     get_reana_yaml_file_path,
     get_workflow_name_and_run_number,
@@ -39,10 +45,6 @@ from reana_client.utils import (
     validate_input_parameters,
     workflow_uuid_or_name,
 )
-from reana_commons.config import INTERACTIVE_SESSION_TYPES
-from reana_commons.errors import REANAValidationError
-from reana_commons.operational_options import validate_operational_options
-from reana_commons.utils import click_table_printer
 
 
 @click.group(help="Workflow management commands")
@@ -88,20 +90,7 @@ def workflow_execution_group(ctx):
     count=True,
     help="Print out extra information: workflow id, user id, disk usage.",
 )
-@click.option(
-    "-b",
-    "--bytes",
-    "block_size",
-    flag_value="b",
-    help="Print workspace disk size in bytes (to be used with --verbose).",
-)
-@click.option(
-    "-k",
-    "--kilobytes",
-    "block_size",
-    flag_value="k",
-    help="Print workspace disk size in kilobytes (to be used with --verbose)",
-)
+@human_readable_or_raw_option
 @click.option(
     "--sort",
     "sort_columm_name",
@@ -128,7 +117,7 @@ def workflow_workflows(
     access_token,
     show_all,
     verbose,
-    block_size,
+    human_readable_or_raw,
     sort_columm_name,
     page,
     size,
@@ -161,13 +150,10 @@ def workflow_workflows(
     if _format:
         parsed_format_filters = parse_format_parameters(_format)
     try:
-        if not verbose:
-            block_size = None
         response = get_workflows(
             access_token,
             type,
             verbose=bool(verbose),
-            block_size=block_size,
             page=page,
             size=size,
             status=status_filter,
@@ -189,6 +175,7 @@ def workflow_workflows(
             headers[type] += verbose_headers
         data = []
         for workflow in response:
+            workflow["size"] = workflow["size"][human_readable_or_raw]
             if workflow["status"] == "deleted" and not show_all:
                 continue
             name, run_number = get_workflow_name_and_run_number(workflow["name"])

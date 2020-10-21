@@ -37,6 +37,25 @@ def add_access_token_options(func):
     return wrapper
 
 
+def human_readable_or_raw_option(func):
+    """Add human readable option to click commands."""
+
+    @click.option(
+        "-h",
+        "--human-readable",
+        "human_readable_or_raw",
+        is_flag=True,
+        default=False,
+        callback=lambda ctx, param, value: "human_readable" if value else "raw",
+        help="Show disk size in human readable format.",
+    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 def access_token_check(ctx, _, access_token):
     """Check if access token is present."""
     if not access_token:

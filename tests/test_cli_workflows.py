@@ -52,6 +52,7 @@ def test_workflows_server_ok():
                 "user": "00000000-0000-0000-0000-000000000000",
                 "name": "mytest.1",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
             }
         ]
     }
@@ -87,6 +88,7 @@ def test_workflows_sorting():
                     "run_started_at": "2018-06-13T09:47:40.28223",
                     "run_finished_at": "2018-06-13T10:30:03.70303",
                 },
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
             },
             {
                 "status": "running",
@@ -94,6 +96,7 @@ def test_workflows_sorting():
                 "user": "00000000-0000-0000-0000-000000000000",
                 "name": "mytest.2",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a2",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
             },
         ]
     }
@@ -134,7 +137,7 @@ def test_workflows_sessions():
                 "name": "workflow.1",
                 "session_type": "jupyter",
                 "session_uri": "/29136cd0-b259-4d48-8c1e-afe3572df408",
-                "size": "0",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
                 "status": "created",
                 "user": "00000000-0000-0000-0000-000000000000",
             }
@@ -168,7 +171,7 @@ def test_workflows_valid_json():
                 "user": "00000000-0000-0000-0000-000000000000",
                 "name": "mytest.1",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
-                "size": "0K",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
             }
         ]
     }
@@ -207,6 +210,7 @@ def test_workflows_format():
                 "user": "00000000-0000-0000-0000-000000000000",
                 "name": "mytest.1",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
             },
             {
                 "status": "failed",
@@ -214,6 +218,7 @@ def test_workflows_format():
                 "user": "00000000-0000-0000-0000-000000000000",
                 "name": "mytest.2",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a2",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
             },
         ]
     }
@@ -252,6 +257,7 @@ def test_workflows_filter():
                 "user": "00000000-0000-0000-0000-000000000000",
                 "name": "mytest.1",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"raw": 340, "human_readable": "340 Bytes"},
             }
         ]
     }
@@ -408,6 +414,7 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
         "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
         "workflow_name": workflow_name,
         "user": "00000000-0000-0000-0000-000000000000",
+        "size": {"raw": 0, "human_readable": "0 Bytes"},
     }
     final_reponse = {
         "status": final_status,
@@ -415,6 +422,7 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
         "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
         "workflow_name": workflow_name,
         "user": "00000000-0000-0000-0000-000000000000",
+        "size": {"raw": 340, "human_readable": "340 Bytes"},
     }
     initial_expected_message = get_workflow_status_change_msg(
         workflow_name, initial_status

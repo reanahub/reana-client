@@ -42,7 +42,15 @@ def test_list_files_server_no_token():
 def test_list_files_ok():
     """Test list workflow workspace files successfull."""
     status_code = 200
-    response = {"items": [{"last-modified": "string", "name": "string", "size": 0}]}
+    response = {
+        "items": [
+            {
+                "last-modified": "string",
+                "name": "string",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
+            }
+        ]
+    }
     env = {"REANA_SERVER_URL": "localhost"}
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
@@ -67,7 +75,15 @@ def test_list_files_ok():
 def test_list_files_url():
     """Test list workflow workspace files' urls."""
     status_code = 200
-    response = {"items": [{"last-modified": "string", "name": "string", "size": 0}]}
+    response = {
+        "items": [
+            {
+                "last-modified": "string",
+                "name": "string",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
+            }
+        ]
+    }
     env = {"REANA_SERVER_URL": "localhost"}
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code

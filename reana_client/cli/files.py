@@ -14,6 +14,7 @@ import sys
 import traceback
 
 import click
+from reana_commons.utils import click_table_printer
 
 from reana_client.api.utils import get_path_from_operation_id
 from reana_client.cli.utils import (
@@ -22,13 +23,12 @@ from reana_client.cli.utils import (
     add_workflow_option,
     check_connection,
     format_data,
+    human_readable_or_raw_option,
     parse_format_parameters,
 )
 from reana_client.config import ERROR_MESSAGES, JSON, URL
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import get_reana_yaml_file_path, workflow_uuid_or_name
-from reana_commons.utils import click_table_printer
-
 
 FILES_BLACKLIST = (".git/", "/.git/")
 
@@ -66,11 +66,19 @@ def files_group(ctx):
     default=None,
     help="Get URLs of output files.",
 )
+@human_readable_or_raw_option
 @add_access_token_options
 @add_pagination_options
 @click.pass_context
 def get_files(
-    ctx, workflow, _format, output_format, access_token, page, size
+    ctx,
+    workflow,
+    _format,
+    output_format,
+    access_token,
+    page,
+    size,
+    human_readable_or_raw,
 ):  # noqa: D301
     """List workspace files.
 
@@ -79,7 +87,8 @@ def get_files(
     `--workflow` or `-w`.
 
     Examples: \n
-    \t $ reana-client ls --workflow myanalysis.42
+    \t $ reana-client ls --workflow myanalysis.42 \n
+    \t $ reana-client ls --workflow myanalysis.42 --human-readable
     """
     import tablib
     from reana_client.api.client import current_rs_api_client, list_files
@@ -106,7 +115,11 @@ def get_files(
                         list(
                             map(
                                 str,
-                                [file_["name"], file_["size"], file_["last-modified"]],
+                                [
+                                    file_["name"],
+                                    file_["size"][human_readable_or_raw],
+                                    file_["last-modified"],
+                                ],
                             )
                         )
                     )
@@ -468,15 +481,10 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
 @check_connection
 @add_access_token_options
 @click.option("-s", "--summarize", is_flag=True, help="Display total.")
-@click.option(
-    "-b", "--bytes", "block_size", flag_value="b", help="Print size in bytes."
-)
-@click.option(
-    "-k", "--kilobytes", "block_size", flag_value="k", help="Print size in kilobytes."
-)
+@human_readable_or_raw_option
 @click.pass_context
 def workflow_disk_usage(
-    ctx, workflow, access_token, summarize, block_size
+    ctx, workflow, access_token, summarize, human_readable_or_raw
 ):  # noqa: D301
     """Get workspace disk usage.
 
@@ -484,7 +492,7 @@ def workflow_disk_usage(
 
     Examples: \n
     \t $ reana-client du -w myanalysis.42 -s \n
-    \t $ reana-client du -w myanalysis.42 --bytes
+    \t $ reana-client du -w myanalysis.42 -s --human-readable
     """
     from reana_client.api.client import get_workflow_disk_usage
 
@@ -494,14 +502,17 @@ def workflow_disk_usage(
 
     if workflow:
         try:
-            parameters = {"summarize": summarize, "block_size": block_size}
+            parameters = {"summarize": summarize}
             response = get_workflow_disk_usage(workflow, parameters, access_token)
             headers = ["size", "name"]
             data = []
             for disk_usage_info in response["disk_usage_info"]:
                 if not disk_usage_info["name"].startswith(FILES_BLACKLIST):
                     data.append(
-                        [disk_usage_info["size"], ".{}".format(disk_usage_info["name"])]
+                        [
+                            disk_usage_info["size"][human_readable_or_raw],
+                            ".{}".format(disk_usage_info["name"]),
+                        ]
                     )
             click_table_printer(headers, [], data)
         except Exception as e:

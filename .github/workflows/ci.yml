@@ -1,0 +1,185 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+    lint-shellcheck:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v2
+
+          - name: Runs shell script static analysis
+            run: |
+              sudo apt-get install shellcheck
+              ./run-tests.sh --check-shellscript
+
+    lint-black:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v2
+
+          - name: Setup Python
+            uses: actions/setup-python@v2
+            with:
+              python-version: 3.8
+
+          - name: Install Python dependencies
+            run: pip install black==19.10b0
+
+          - name: Check Python code formatting
+            run: ./run-tests.sh --check-black
+
+    lint-pydocstyle:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+
+        - name: Setup Python
+          uses: actions/setup-python@v2
+          with:
+            python-version: 3.8
+
+        - name: Install Python dependencies
+          run: pip install pydocstyle
+
+        - name: Check compliance with Python docstring conventions
+          run: ./run-tests.sh --check-pydocstyle
+
+    lint-check-manifest:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+
+        - name: Setup Python
+          uses: actions/setup-python@v2
+          with:
+            python-version: 3.8
+
+        - name: Install Python dependencies
+          run: pip install check-manifest
+
+        - name: Check Python manifest completeness
+          run: ./run-tests.sh --check-manifest
+
+    docs-cli-commands:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v2
+
+          - name: Setup Python
+            uses: actions/setup-python@v2
+            with:
+                python-version: 3.8
+
+          - name: Install Python dependencies
+            run: |
+                pip install --upgrade pip setuptools py
+                pip install -e .[all]
+    
+          - name: Verify reana client commands list
+            run: ./run-tests.sh --check-cli-cmds
+
+    docs-cli-api:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v2
+
+          - name: Setup Python
+            uses: actions/setup-python@v2
+            with:
+                python-version: 3.8
+
+          - name: Install Python dependencies
+            run: |
+                pip install --upgrade pip setuptools py
+                pip install -e .[all]
+
+          - name: Verify reana client api docs
+            run: ./run-tests.sh --check-cli-api
+
+    docs-sphinx:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+
+        - name: Setup Python
+          uses: actions/setup-python@v2
+          with:
+            python-version: 3.8
+
+        - name: Install Python dependencies
+          run: |
+            pip install --upgrade pip setuptools py
+            pip install -e .[all]
+
+        - name: Run Sphinx documentation with doctests
+          run: ./run-tests.sh --check-sphinx
+
+    python-tests:
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+              include:
+                - testenv: lowest
+                  python: 2.7
+
+                - testenv: release
+                  python: 2.7
+                
+                - testenv: lowest
+                  python: 3.6
+
+                - testenv: release
+                  python: 3.6
+                
+                - testenv: lowest
+                  python: 3.7
+
+                - testenv: release
+                  python: 3.7
+
+                - testenv: lowest
+                  python: 3.8
+
+                - testenv: release
+                  python: 3.8
+
+        steps:
+          - uses: actions/checkout@v2
+
+          - name: Set up Python ${{ matrix.python }}
+            uses: actions/setup-python@v2
+            with:
+              python-version: ${{ matrix.python }}
+
+          - name: Setup requirements builder
+            run: |
+              pip install --upgrade pip setuptools py
+              pip install wheel
+              if [[ ${{ matrix.python }} == 2.7 ]]; then
+                  pip install requirements-builder==0.3.0 click==7.0
+              fi
+              if [[ ${{ matrix.python }} != 2.7 ]]; then
+                  pip install requirements-builder
+              fi
+              if [[ ${{ matrix.testenv }} == lowest ]]; then
+                  requirements-builder -e all --level=min --req requirements-dev.txt setup.py > .lowest-requirements.txt
+              fi
+              if [[ ${{ matrix.testenv }} == release ]]; then
+                  requirements-builder -e all --level=pypi --req requirements-dev.txt setup.py > .release-requirements.txt
+              fi
+
+          - name: Install Python dependencies
+            run: |
+              pip uninstall six -y
+              pip install -I -r .${{ matrix.testenv }}-requirements.txt
+
+          - name: Run pytest
+            run: ./run-tests.sh --check-pytest
+          
+          - name: Codecov Coverage
+            if: matrix.python == 3.8
+            uses: codecov/codecov-action@v1
+            with:
+              token: ${{ secrets.CODECOV_TOKEN }}
+              files: coverage.xml

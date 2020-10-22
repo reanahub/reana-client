@@ -13,22 +13,72 @@ set -o errexit
 set -o nounset
 
 
-cli_docs_url=https://raw.githubusercontent.com/reanahub/docs.reana.io/master/docs/reference/reana-client-cli-api/index.md
-docs_differ_error_msg='Current reana-client differs with the documentation. Please update http://docs.reana.io/reference/reana-client-cli-api/.'
-python_version=$(python -c 'import sys;  print(sys.version_info.major)')
+check_script () {
+    shellcheck run-tests.sh
+}
 
-pydocstyle reana_client
-reana-client --help > cmd_list.txt
-diff -q -w docs/cmd_list.txt cmd_list.txt
-rm cmd_list.txt
-if [ "$python_version" -eq 3 ]
-then
+check_black () {
     black --check .
+}
+
+check_pydocstyle () {
+    pydocstyle reana_client
+}
+
+check_manifest () {
+    check-manifest
+}
+
+check_cli_cmds () {
+    reana-client --help > cmd_list.txt
+    diff -q -w docs/cmd_list.txt cmd_list.txt
+    rm cmd_list.txt
+}
+
+check_cli_api () {
+    #cli_docs_url=https://raw.githubusercontent.com/reanahub/docs.reana.io/master/docs/reference/reana-client-cli-api/index.md
+    #docs_differ_error_msg='Current reana-client differs with the documentation. Please update http://docs.reana.io/reference/reana-client-cli-api/.'
     python scripts/generate_cli_api.py > cli_api.md
-    #(diff -q -w  cli_api.md <(curl -s $cli_docs_url) || (echo $docs_differ_error_msg && exit 1))
+    #(diff -q -w  cli_api.md <(curl -s $cli_docs_url) || (echo "$docs_differ_error_msg" && exit 1))
     rm cli_api.md
+}
+
+check_sphinx () {
+    sphinx-build -qnNW docs docs/_build/html
+    sphinx-build -qnNW -b doctest docs docs/_build/doctest
+}
+
+check_pytest () {
+    python setup.py test
+}
+
+check_all() {
+    check_script
+    check_black
+    check_pydocstyle
+    check_manifest
+    check_cli_cmds
+    check_cli_api
+    check_sphinx
+    check_pytest
+}
+
+if [ $# -eq 0 ]; then
+    check_all
+    exit 0
 fi
-check-manifest --ignore ".travis-*"
-sphinx-build -qnNW docs docs/_build/html
-python setup.py test
-sphinx-build -qnNW -b doctest docs docs/_build/doctest
+
+for arg in "$@"
+do
+    case $arg in
+        --check-shellscript) check_script;;
+        --check-black) check_black;;
+        --check-pydocstyle) check_pydocstyle;;
+        --check-manifest) check_manifest;;
+        --check-cli-cmds) check_cli_cmds;;
+        --check-cli-api) check_cli_api;;
+        --check-sphinx) check_sphinx;;
+        --check-pytest) check_pytest;;
+        *)
+    esac
+done

@@ -628,13 +628,12 @@ def get_workflow_specification(workflow, access_token):
         raise e
 
 
-def delete_workflow(workflow, all_runs, hard_delete, workspace, access_token):
+def delete_workflow(workflow, all_runs, workspace, access_token):
     """Delete a workflow."""
     try:
         parameters = {
-            "all_runs": True if all_runs == 1 else False,
-            "hard_delete": True if hard_delete == 1 else False,
-            "workspace": True if hard_delete == 1 or workspace == 1 else False,
+            "all_runs": all_runs,
+            "workspace": workspace,
         }
         (response, http_response) = current_rs_api_client.api.set_workflow_status(
             workflow_id_or_name=workflow,

@@ -1081,25 +1081,20 @@ def workflow_run(
 @click.option(
     "--include-all-runs",
     "all_runs",
-    count=True,
+    is_flag=True,
     help="Delete all runs of a given workflow.",
 )
 @click.option(
-    "--include-workspace", "workspace", count=True, help="Delete workspace from REANA."
-)
-@click.option(
-    "--include-records",
-    "hard_delete",
-    count=True,
-    help="Delete all records of workflow, including database entries and" " workspace.",
+    "--include-workspace",
+    "workspace",
+    is_flag=True,
+    help="Delete workspace from REANA.",
 )
 @add_workflow_option
 @add_access_token_options
 @check_connection
 @click.pass_context
-def workflow_delete(
-    ctx, workflow, all_runs, workspace, hard_delete, access_token
-):  # noqa: D301
+def workflow_delete(ctx, workflow, all_runs, workspace, access_token):  # noqa: D301
     """Delete a workflow.
 
     The `delete` command allows to remove workflow runs from the database and
@@ -1111,7 +1106,8 @@ def workflow_delete(
 
     Example: \n
     \t $ reana-client delete -w myanalysis.42 \n
-    \t $ reana-client delete -w myanalysis.42 --include-records
+    \t $ reana-client delete -w myanalysis.42 --include-all-runs \n
+    \t $ reana-client delete -w myanalysis.42 --include-workspace
     """
     from reana_client.api.client import delete_workflow, get_workflow_status
     from reana_client.utils import get_api_url
@@ -1123,9 +1119,7 @@ def workflow_delete(
     if workflow:
         try:
             logging.info("Connecting to {0}".format(get_api_url()))
-            response = delete_workflow(
-                workflow, all_runs, hard_delete, workspace, access_token
-            )
+            response = delete_workflow(workflow, all_runs, workspace, access_token)
             if all_runs:
                 message = "All workflows named '{}' have been deleted.".format(
                     workflow.split(".")[0]

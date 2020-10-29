@@ -316,7 +316,9 @@ def upload_file(workflow_id, file_, file_name, access_token):
             headers={"Content-Type": "application/octet-stream"},
             verify=False,
         )
-        return http_response.json()
+        if http_response.ok:
+            return http_response.json()
+        raise Exception(http_response.json().get("message"))
     except requests.exceptions.ConnectionError:
         logging.debug("File could not be uploaded.", exc_info=True)
         raise Exception("Could not connect to the server {}".format(get_api_url()))
@@ -330,9 +332,7 @@ def upload_file(workflow_id, file_, file_name, access_token):
         logging.debug(
             "Something went wrong while connecting to the server.", exc_info=True
         )
-        raise Exception(
-            "The request to the server has failed for an " "unknown reason."
-        )
+        raise Exception("The request to the server has failed for an unknown reason.")
     except Exception as e:
         raise e
 
@@ -552,9 +552,7 @@ def upload_to_server(workflow, paths, access_token):
                 logging.info("Uploading '{}' ...".format(fname))
                 try:
                     upload_file(workflow, f, save_path, access_token)
-                    logging.info(
-                        "File '{}' was successfully " "uploaded.".format(fname)
-                    )
+                    logging.info("File '{}' was successfully uploaded.".format(fname))
                     if symlink:
                         save_path = "symlink:{}".format(save_path)
                     return [save_path]
@@ -564,6 +562,7 @@ def upload_to_server(workflow, paths, access_token):
                     logging.info(
                         "Something went wrong while uploading {}".format(fname)
                     )
+                    raise e
 
 
 def get_workflow_parameters(workflow, access_token):

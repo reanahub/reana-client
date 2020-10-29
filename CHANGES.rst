@@ -5,6 +5,7 @@ Version 0.7.1 (2020-11-10)
 --------------------------
 
 - Changes ``ping`` command output to include REANA client and server version information.
+- Fixes ``upload`` command to properly display errors.
 
 Version 0.7.0 (2020-10-20)
 --------------------------

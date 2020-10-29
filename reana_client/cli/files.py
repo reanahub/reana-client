@@ -326,7 +326,9 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
                     logging.debug(str(e))
                     click.echo(
                         click.style(
-                            "Something went wrong while uploading {}".format(filename),
+                            "Something went wrong while uploading {}: \n{}".format(
+                                filename, str(e)
+                            ),
                             fg="red",
                         ),
                         err=True,

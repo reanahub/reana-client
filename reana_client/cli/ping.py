@@ -43,10 +43,14 @@ def ping(ctx, access_token):  # noqa: D301
         click.echo(
             click.style(
                 "REANA server: {0}\n"
-                "Authenticated as: {1} <{2}>\n"
-                "Status: {3}".format(
+                "REANA server version: {1}\n"
+                "REANA client version: {2}\n"
+                "Authenticated as: {3} <{4}>\n"
+                "Status: {5}".format(
                     get_api_url(),
-                    response.get("full_name") or "",
+                    response.get("reana_server_version", ""),
+                    __version__,
+                    response.get("full_name", ""),
                     response.get("email"),
                     response.get("status"),
                 ),

@@ -18,6 +18,7 @@ import click
 from reana_client.utils import workflow_uuid_or_name
 from reana_client.config import ERROR_MESSAGES, RUN_STATUSES
 from reana_commons.errors import MissingAPIClientConfiguration
+from reana_commons.config import HTCONDOR_JOB_FLAVOURS
 
 
 def add_access_token_options(func):
@@ -366,3 +367,40 @@ def output_user_friendly_logs(workflow_logs, steps):
                     ),
                     bold=True,
                 )
+
+
+def check_htcondor_max_runtime(reana_specification):
+    """Check if the field htcondor_max_runtime has a valid input.
+
+    :param reana_specification: reana specification of workflow.
+    """
+    check_pass = True
+    steps_with_max_runtime = (
+        step
+        for step in reana_specification["workflow"]["specification"]["steps"]
+        if step.get("htcondor_max_runtime", False)
+    )
+    for i, step in enumerate(steps_with_max_runtime):
+        htcondor_max_runtime = step["htcondor_max_runtime"]
+        if (
+            not str.isdigit(htcondor_max_runtime)
+            and not htcondor_max_runtime in HTCONDOR_JOB_FLAVOURS
+        ):
+            check_pass = False
+            click.secho(
+                "In step {0}:\n'{1}' is not a valid input for htcondor_max_runtime. Inputs must be a digit in the form of a string, or one of the following job flavours: '{2}'.".format(
+                    step.get("name", i),
+                    htcondor_max_runtime,
+                    "' '".join(
+                        [
+                            k
+                            for k, v in sorted(
+                                HTCONDOR_JOB_FLAVOURS.items(), key=lambda key: key[1]
+                            )
+                        ]
+                    ),
+                ),
+                fg="red",
+            )
+    return check_pass
+

@@ -34,6 +34,7 @@ from reana_client.cli.utils import (
     parse_filter_parameters,
     parse_format_parameters,
     validate_workflow_name,
+    check_htcondor_max_runtime,
 )
 from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
 from reana_client.utils import (
@@ -298,6 +299,9 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         reana_specification = load_reana_spec(
             click.format_filename(file), skip_validation
         )
+        click.echo(reana_specification)
+        if not check_htcondor_max_runtime(reana_specification):
+            return Exception("Invalid input in htcondor_max_runtime.")
         logging.info("Connecting to {0}".format(get_api_url()))
         response = create_workflow(reana_specification, name, access_token)
         click.echo(click.style(response["workflow_name"], fg="green"))

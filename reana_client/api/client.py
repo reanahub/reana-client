@@ -12,6 +12,8 @@ import logging
 import os
 import traceback
 from functools import partial
+import time
+import click
 
 import requests
 from bravado.exception import HTTPError
@@ -19,6 +21,7 @@ from reana_client.config import ERROR_MESSAGES, WORKFLOW_ENGINES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import _validate_reana_yaml, is_uuid_v4
 from reana_commons.api_client import get_current_api_client
+from reana_commons.config import REANA_API_RETRY_NUMBER
 from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
 from werkzeug.local import LocalProxy
 
@@ -550,19 +553,34 @@ def upload_to_server(workflow, paths, access_token):
                     "'{}' is an absolute filepath.".format(os.path.basename(fname))
                 )
                 logging.info("Uploading '{}' ...".format(fname))
-                try:
-                    upload_file(workflow, f, save_path, access_token)
-                    logging.info("File '{}' was successfully uploaded.".format(fname))
-                    if symlink:
-                        save_path = "symlink:{}".format(save_path)
-                    return [save_path]
-                except Exception as e:
-                    logging.debug(traceback.format_exc())
-                    logging.debug(str(e))
-                    logging.info(
-                        "Something went wrong while uploading {}".format(fname)
-                    )
-                    raise e
+                for retry in range(REANA_API_RETRY_NUMBER + 1):
+                    if retry == REANA_API_RETRY_NUMBER:
+                        raise Exception(
+                            "Failed to upload {}. Number of retries exceeded {}".format(
+                                fname, REANA_API_RETRY_NUMBER
+                            )
+                        )
+                    try:
+                        upload_file(workflow, f, save_path, access_token)
+                        logging.info(
+                            "File '{}' was successfully uploaded.".format(fname)
+                        )
+                        if symlink:
+                            save_path = "symlink:{}".format(save_path)
+                        return [save_path]
+                    except Exception as e:
+                        logging.debug(traceback.format_exc())
+                        logging.debug(str(e))
+                        logging.info(
+                            "Something went wrong while uploading {}".format(fname)
+                        )
+                        if str(e) == "60 per 1 minute":
+                            time.sleep(61)
+                            continue
+                        if str(e) == "1000 per 1 hour":
+                            time.sleep(3601)
+                            continue
+                        raise e
 
 
 def get_workflow_parameters(workflow, access_token):

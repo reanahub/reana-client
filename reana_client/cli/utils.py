@@ -177,7 +177,7 @@ def key_value_to_dict(ctx, param, value):
     """
     try:
         return dict(op.split("=") for op in value)
-    except ValueError as err:
+    except ValueError:
         click.secho(
             '==> ERROR: Input parameter "{0}" is not valid. '
             'It must follow format "param=value".'.format(" ".join(value)),

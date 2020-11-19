@@ -111,7 +111,7 @@ def workflow_execution_group(ctx):
 @add_pagination_options
 @check_connection
 @click.pass_context
-def workflow_workflows(
+def workflow_workflows(  # noqa: C901
     ctx,
     sessions,
     _filter,
@@ -587,7 +587,7 @@ def workflow_restart(
 @check_connection
 @click.option("-v", "--verbose", count=True, help="Set status information verbosity.")
 @click.pass_context
-def workflow_status(
+def workflow_status(  # noqa: C901
     ctx, workflow, _filter, output_format, access_token, verbose
 ):  # noqa: D301
     """Get status of a workflow.
@@ -945,7 +945,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     if workflow:
         try:
             logging.info("Sending a request to stop workflow {}".format(workflow))
-            response = stop_workflow(workflow, force_stop, access_token)
+            stop_workflow(workflow, force_stop, access_token)
             click.secho(get_workflow_status_change_msg(workflow, "stopped"), fg="green")
         except Exception as e:
             logging.debug(traceback.format_exc())
@@ -1097,9 +1097,7 @@ def workflow_delete(
     if workflow:
         try:
             logging.info("Connecting to {0}".format(get_api_url()))
-            response = delete_workflow(
-                workflow, all_runs, hard_delete, workspace, access_token
-            )
+            delete_workflow(workflow, all_runs, hard_delete, workspace, access_token)
             if all_runs:
                 message = "All workflows named '{}' have been deleted.".format(
                     workflow.split(".")[0]

@@ -58,7 +58,7 @@ def ping(access_token):
         if e.response.status_code == 403:
             return {"status": "ERROR: INVALID ACCESS TOKEN", "error": True}
         raise Exception(e.response)
-    except Exception as e:
+    except Exception:
         return {"status": "ERROR: INVALID SERVER", "error": True}
 
 

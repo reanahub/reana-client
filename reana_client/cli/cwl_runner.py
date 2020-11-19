@@ -157,7 +157,7 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
                 # click.echo(response['status'])
                 break
         try:
-            out = re.search("success{[\S\s]*", logs).group().replace("success", "")
+            out = re.search(r"success{[\S\s]*", logs).group().replace("success", "")
             import ast
             import json
 
@@ -165,7 +165,7 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
         except AttributeError:
             logging.error("Workflow execution failed")
             sys.exit(1)
-        except Exception as e:
+        except Exception:
             logging.error(traceback.format_exc())
             sys.exit(1)
         sys.stdout.write(json_output)
@@ -175,7 +175,7 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
     except HTTPServerError as e:
         logging.error(traceback.print_exc())
         logging.error(e)
-    except Exception as e:
+    except Exception:
         logging.error(traceback.print_exc())
 
 

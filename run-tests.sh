@@ -21,6 +21,10 @@ check_black () {
     black --check .
 }
 
+check_flake8 () {
+    flake8 .
+}
+
 check_pydocstyle () {
     pydocstyle reana_client
 }
@@ -55,6 +59,7 @@ check_pytest () {
 check_all() {
     check_script
     check_black
+    check_flake8
     check_pydocstyle
     check_manifest
     check_cli_cmds
@@ -73,6 +78,7 @@ do
     case $arg in
         --check-shellscript) check_script;;
         --check-black) check_black;;
+        --check-flake8) check_flake8;;
         --check-pydocstyle) check_pydocstyle;;
         --check-manifest) check_manifest;;
         --check-cli-cmds) check_cli_cmds;;

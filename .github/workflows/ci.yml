@@ -92,7 +92,7 @@ jobs:
             run: |
                 pip install --upgrade pip setuptools py
                 pip install -e .[all]
-    
+
           - name: Verify reana client commands list
             run: ./run-tests.sh --check-cli-cmds
 
@@ -142,13 +142,13 @@ jobs:
 
                 - testenv: release
                   python: 2.7
-                
+
                 - testenv: lowest
                   python: 3.6
 
                 - testenv: release
                   python: 3.6
-                
+
                 - testenv: lowest
                   python: 3.7
 
@@ -160,6 +160,12 @@ jobs:
 
                 - testenv: release
                   python: 3.8
+
+                - testenv: lowest
+                  python: 3.9
+
+                - testenv: release
+                  python: 3.9
 
         steps:
           - uses: actions/checkout@v2
@@ -193,7 +199,7 @@ jobs:
 
           - name: Run pytest
             run: ./run-tests.sh --check-pytest
-          
+
           - name: Codecov Coverage
             if: matrix.python == 3.8
             uses: codecov/codecov-action@v1

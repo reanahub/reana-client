@@ -1,6 +1,13 @@
 Changes
 =======
 
+Version 0.7.2 (UNRELEASED)
+--------------------------
+
+- Adds support for Python 3.9.
+- Fixes exception handling when uploading files.
+- Fixes minor code warnings.
+
 Version 0.7.1 (2020-11-10)
 --------------------------
 

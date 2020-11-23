@@ -1,10 +1,18 @@
 Changes
 =======
 
+Version 0.7.2 (UNRELEASED)
+--------------------------
+
+- Adds support for Python 3.9.
+- Fixes exception handling when uploading files.
+- Fixes minor code warnings.
+
 Version 0.7.1 (2020-11-10)
 --------------------------
 
 - Changes ``ping`` command output to include REANA client and server version information.
+- Fixes ``upload`` command to properly display errors.
 
 Version 0.7.0 (2020-10-20)
 --------------------------

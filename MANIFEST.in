@@ -12,6 +12,7 @@ include *.sh
 include *.txt
 include *.yaml
 include *.yml
+include .flake8
 include pytest.ini
 include docs/requirements.txt
 include docs/cmd_list.txt

@@ -532,7 +532,7 @@ def test_run(
     with runner.isolated_filesystem():
         with open(reana_workflow_schema, "w") as f:
             f.write(create_yaml_workflow_schema)
-        result = runner.invoke(
+        runner.invoke(
             cli, ["run", "-t", reana_token, "-f", reana_workflow_schema],
         )
     assert workflow_create_mock.called is True

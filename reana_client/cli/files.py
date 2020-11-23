@@ -365,7 +365,7 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
     Examples:\n
     \t $ reana-client rm -w myanalysis.42 data/mydata.csv \n
     \t $ reana-client rm -w myanalysis.42 'code/\*'
-    """
+    """  # noqa: W605
     from reana_client.api.client import delete_file
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
@@ -463,7 +463,7 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
                     err=True,
                 )
                 sys.exit(1)
-            response = mv_files(source, target, workflow, access_token)
+            mv_files(source, target, workflow, access_token)
             click.echo(
                 click.style(
                     "{} was successfully moved to {}.".format(source, target),

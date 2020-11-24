@@ -1,6 +1,14 @@
 Changes
 =======
 
+Version 0.8.0 (UNRELEASED)
+--------------------------
+
+- Adds new command ``quota-show``.
+- Adds possibility to filter by workflow status and search by workflow name to ``list``.
+- Changes ``delete`` to prevent workflow hard deletion.
+- Changes ``list`` to display interactive session status.
+
 Version 0.7.2 (UNRELEASED)
 --------------------------
 

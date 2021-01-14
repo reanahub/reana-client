@@ -14,6 +14,7 @@ import click
 from urllib3 import disable_warnings
 
 from reana_client.cli import workflow, files, ping, secrets
+from reana_client.utils import get_api_url
 
 DEBUG_LOG_FORMAT = (
     "[%(asctime)s] p%(process)s "
@@ -29,7 +30,7 @@ class Config(object):
 
     def __init__(self):
         """Initialize config variables."""
-        self.reana_server_url = os.getenv("REANA_SERVER_URL", None)
+        self.reana_server_url = get_api_url()
 
 
 class ReanaCLI(click.Group):

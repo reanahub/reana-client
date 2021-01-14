@@ -357,7 +357,8 @@ def parse_secret_from_path(path):
 
 def get_api_url():
     """Obtain REANA server API URL."""
-    return os.environ.get("REANA_SERVER_URL")
+    server_url = os.getenv("REANA_SERVER_URL", None)
+    return server_url.strip(" \t\n\r/") if server_url else None
 
 
 def get_reana_yaml_file_path():

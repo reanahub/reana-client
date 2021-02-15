@@ -9,12 +9,13 @@ Version 0.8.0 (UNRELEASED)
 - Changes ``delete`` to prevent workflow hard deletion.
 - Changes ``list`` to display interactive session status.
 
-Version 0.7.2 (UNRELEASED)
+Version 0.7.2 (2021-01-15)
 --------------------------
 
 - Adds support for Python 3.9.
 - Fixes exception handling when uploading files.
 - Fixes minor code warnings.
+- Fixes traling slash issue from user exported REANA_SERVER_URL.
 
 Version 0.7.1 (2020-11-10)
 --------------------------

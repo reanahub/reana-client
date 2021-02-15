@@ -20,6 +20,7 @@ history = open("CHANGES.rst").read()
 
 tests_require = [
     "pytest-reana>=0.8.0a3,<0.9.0",
+    'google-auth==1.24.0 ; python_version=="2.7"',
 ]
 
 extras_require = {

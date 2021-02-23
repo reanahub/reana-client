@@ -207,31 +207,46 @@ def _validate_serial_workflow_environment(workflow_steps):
     :raises Warning: Warns user if the workflow environment is invalid in serial workflow steps.
     """
     for step in workflow_steps:
-        if ":" in step["environment"]:
-            environment = step["environment"].split(":", 1)
-            environment_image, environment_image_tag = environment[0], environment[-1]
-            if ":" in environment_image_tag:
-                logging.warning(
-                    "Image {} has invalid tag {}".format(
-                        environment_image, environment_image_tag
-                    )
-                )
-                sys.exit(1)
-            elif environment_image_tag in ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR:
-                logging.warning(
-                    "Using '{}' tag is not recommended in {} image.".format(
-                        environment_image_tag, environment_image
-                    )
-                )
-                sys.exit(1)
-        else:
-            logging.warning(
-                "Image {} does not have an explicit tag.".format(step["environment"])
+        _validate_image_tag(step["environment"])
+
+
+def _validate_image_tag(image):
+    """Validate if image tag is valid."""
+
+    has_warnings = False
+    if ":" in image:
+        environment = image.split(":", 1)
+        image_name, image_tag = environment[0], environment[-1]
+        if ":" in image_tag:
+            click.secho(
+                "==> ERROR: Environment image {} has invalid tag '{}'".format(
+                    image_name, image_tag
+                ),
+                err=True,
+                fg="red",
             )
             sys.exit(1)
+        elif image_tag in ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR:
+            click.secho(
+                "==> WARNING: Using '{}' tag is not recommended in {} environment image.".format(
+                    image_tag, image_name
+                ),
+                fg="yellow",
+            )
+            has_warnings = True
+    else:
+        click.secho(
+            "==> WARNING: Environment image {} does not have an explicit tag.".format(
+                image
+            ),
+            fg="yellow",
+        )
+        has_warnings = True
+    if not has_warnings:
         click.echo(
             click.style(
-                "Image {} has correct format.".format(step["environment"]), fg="green",
+                "==> Environment image {} has correct format.".format(image),
+                fg="green",
             )
         )
 

@@ -207,38 +207,33 @@ def _validate_serial_workflow_environment(workflow_steps):
     :raises Warning: Warns user if the workflow environment is invalid in serial workflow steps.
     """
     for step in workflow_steps:
-        if step.get("environment", None):
-            if ":" in step["environment"]:
-                environment = step["environment"].split(":", 1)
-                environment_image, environment_image_tag = (
-                    environment[0],
-                    environment[-1],
-                )
-                if ":" in environment_image_tag:
-                    logging.warning(
-                        "Image {} has invalid tag {}".format(
-                            environment_image, environment_image_tag
-                        )
+        if ":" in step["environment"]:
+            environment = step["environment"].split(":", 1)
+            environment_image, environment_image_tag = environment[0], environment[-1]
+            if ":" in environment_image_tag:
+                logging.warning(
+                    "Image {} has invalid tag {}".format(
+                        environment_image, environment_image_tag
                     )
-                    sys.exit(1)
-                elif (
-                    environment_image_tag in ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR
-                ):
-                    logging.warning(
-                        "Using {} is not recommended in {} image.".format(
-                            environment_image_tag, environment_image
-                        )
-                    )
-                    sys.exit(1)
-            click.echo(
-                click.style(
-                    "Image {} has correct format.".format(step["environment"]),
-                    fg="green",
                 )
-            )
+                sys.exit(1)
+            elif environment_image_tag in ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR:
+                logging.warning(
+                    "Using '{}' tag is not recommended in {} image.".format(
+                        environment_image_tag, environment_image
+                    )
+                )
+                sys.exit(1)
         else:
-            logging.warning("Workflow step does not have explicit enviornment.")
+            logging.warning(
+                "Image {} does not have an explicit tag.".format(step["environment"])
+            )
             sys.exit(1)
+        click.echo(
+            click.style(
+                "Image {} has correct format.".format(step["environment"]), fg="green",
+            )
+        )
 
 
 def _validate_reana_yaml(reana_yaml):

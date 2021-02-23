@@ -19,6 +19,7 @@ import click
 import yadageschemas
 import yaml
 from jsonschema import ValidationError, validate
+from reana_client.config import ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR
 from reana_commons.errors import REANAValidationError
 from reana_commons.operational_options import validate_operational_options
 from reana_commons.serial import serial_load
@@ -109,7 +110,7 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
     return workflow_load[workflow_type](workflow_file, **kwargs)
 
 
-def load_reana_spec(filepath, skip_validation=False):
+def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=True):
     """Load and validate reana specification file.
 
     :raises IOError: Error while reading REANA spec file from given `filepath`.
@@ -147,6 +148,12 @@ def load_reana_spec(filepath, skip_validation=False):
                 )
             )
             _validate_reana_yaml(reana_yaml)
+        if not skip_validate_environments:
+            logging.info(
+                "Validating environments in REANA specification file: "
+                "{filepath}".format(filepath=filepath)
+            )
+            _validate_environment(reana_yaml)
 
         workflow_type = reana_yaml["workflow"]["type"]
         reana_yaml["workflow"]["specification"] = load_workflow_spec(
@@ -171,6 +178,67 @@ def load_reana_spec(filepath, skip_validation=False):
         raise e
     except Exception as e:
         raise e
+
+
+def _validate_environment(reana_yaml):
+    """Validate environments in REANA specification file according to workflow type.
+
+    :param reana_yaml: Dictionary which represents REANA specifications file.
+    """
+    workflow_type = reana_yaml["workflow"]["type"]
+
+    if workflow_type == "serial":
+        workflow_steps = reana_yaml["workflow"]["specification"]["steps"]
+        _validate_serial_workflow_environment(workflow_steps)
+    elif workflow_type == "yadage":
+        logging.warning(
+            "The environment validation is not implemented for Yadage workflows yet."
+        )
+    elif workflow_type == "cwl":
+        logging.warning(
+            "The environment validation is not implemented for CWL workflows yet."
+        )
+
+
+def _validate_serial_workflow_environment(workflow_steps):
+    """Validate environments in REANA serial workflow.
+
+    :param workflow_steps: List of dictionaries which represents different steps involved in workflow.
+    :raises Warning: Warns user if the workflow environment is invalid in serial workflow steps.
+    """
+    for step in workflow_steps:
+        if step.get("environment", None):
+            if ":" in step["environment"]:
+                environment = step["environment"].split(":", 1)
+                environment_image, environment_image_tag = (
+                    environment[0],
+                    environment[-1],
+                )
+                if ":" in environment_image_tag:
+                    logging.warning(
+                        "Image {} has invalid tag {}".format(
+                            environment_image, environment_image_tag
+                        )
+                    )
+                    sys.exit(1)
+                elif (
+                    environment_image_tag in ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR
+                ):
+                    logging.warning(
+                        "Using {} is not recommended in {} image.".format(
+                            environment_image_tag, environment_image
+                        )
+                    )
+                    sys.exit(1)
+            click.echo(
+                click.style(
+                    "Image {} has correct format.".format(step["environment"]),
+                    fg="green",
+                )
+            )
+        else:
+            logging.warning("Workflow step does not have explicit enviornment.")
+            sys.exit(1)
 
 
 def _validate_reana_yaml(reana_yaml):

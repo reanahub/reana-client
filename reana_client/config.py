@@ -39,3 +39,6 @@ URL = "url"
 
 WORKFLOW_ENGINES = ["serial", "cwl", "yadage"]
 """Supported workflow engines."""
+
+ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR = ["latest", "master"]
+"""Warns user if above environment image tags are used."""

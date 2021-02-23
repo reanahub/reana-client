@@ -861,8 +861,15 @@ def workflow_logs(
     help="REANA specification file describing the workflow to "
     "execute. [default=reana.yaml]",
 )
+@click.option(
+    "--environments",
+    is_flag=True,
+    default=False,
+    help="If set, check all runtime environments specified in REANA "
+    "specification file. [default=False]",
+)
 @click.pass_context
-def workflow_validate(ctx, file):  # noqa: D301
+def workflow_validate(ctx, file, environments):  # noqa: D301
     """Validate workflow specification file.
 
     The `validate` command allows to check syntax and validate the reana.yaml
@@ -875,7 +882,9 @@ def workflow_validate(ctx, file):  # noqa: D301
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     try:
-        load_reana_spec(click.format_filename(file))
+        load_reana_spec(
+            click.format_filename(file), skip_validate_environments=not environments
+        )
         click.echo(
             click.style(
                 "File {filename} is a valid REANA specification file.".format(

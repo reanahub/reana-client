@@ -79,10 +79,9 @@ def yadage_load(workflow_file, toplevel=".", **kwargs):
     }
 
     try:
-        yadageschemas.load(
+        return yadageschemas.load(
             spec=workflow_file, specopts=specopts, validopts=validopts, validate=True
         )
-
     except ValidationError as e:
         e.message = str(e)
         raise e
@@ -157,13 +156,6 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
                 )
             )
             _validate_reana_yaml(reana_yaml)
-            validate_parameters(workflow_type, reana_yaml)
-        if not skip_validate_environments:
-            logging.info(
-                "Validating environments in REANA specification file: "
-                "{filepath}".format(filepath=filepath)
-            )
-            _validate_environment(reana_yaml)
 
         reana_yaml["workflow"]["specification"] = load_workflow_spec(
             workflow_type,
@@ -176,6 +168,21 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
                 reana_yaml["inputs"]["parameters"] = yaml.load(
                     f, Loader=yaml.FullLoader
                 )
+
+        if not skip_validate_environments:
+            logging.info(
+                "Validating environments in REANA specification file: "
+                "{filepath}".format(filepath=filepath)
+            )
+            _validate_environment(reana_yaml)
+
+        if workflow_type == "yadage":
+            """
+            We don't want to expose the yadage workflow spec in the UI to
+            avoid the inconsistency between reana-server and reana-ui.
+            More Info: https://github.com/reanahub/reana-client/pull/462#discussion_r585794297
+            """
+            reana_yaml["workflow"]["specification"] = None
 
         return reana_yaml
     except IOError as e:
@@ -200,13 +207,35 @@ def _validate_environment(reana_yaml):
         workflow_steps = reana_yaml["workflow"]["specification"]["steps"]
         _validate_serial_workflow_environment(workflow_steps)
     elif workflow_type == "yadage":
-        logging.warning(
-            "The environment validation is not implemented for Yadage workflows yet."
-        )
+        workflow_steps = reana_yaml["workflow"]["specification"]["stages"]
+        _validate_yadage_workflow_environment(workflow_steps)
     elif workflow_type == "cwl":
         logging.warning(
             "The environment validation is not implemented for CWL workflows yet."
         )
+
+
+def _validate_yadage_workflow_environment(workflow_steps):
+    """Validate environments in REANA yadage workflow.
+
+    :param workflow_steps: List of dictionaries which represents different steps involved in workflow.
+    :raises Warning: Warns user if the workflow environment is invalid in yadage workflow steps.
+    """
+    for stage in workflow_steps:
+        environment = stage["scheduler"]["step"]["environment"]
+        image = "{}:{}".format(environment["image"], environment["imagetag"])
+        image_name, image_tag = _validate_image_tag(image)
+        _image_exists(image_name, image_tag)
+        uid, gids = _get_image_uid_gids(image_name, image_tag)
+        k8s_uid = next(
+            (
+                resource["kubernetes_uid"]
+                for resource in environment.get("resources", [])
+                if "kubernetes_uid" in resource
+            ),
+            None,
+        )
+        _validate_uid_gids(uid, gids, kubernetes_uid=k8s_uid)
 
 
 def _validate_serial_workflow_environment(workflow_steps):

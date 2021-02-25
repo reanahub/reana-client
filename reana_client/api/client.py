@@ -313,7 +313,14 @@ def upload_file(workflow, file_, file_name, access_token):
 
 
 def get_workflow_logs(workflow, access_token, steps=None, page=None, size=None):
-    """Get logs from a workflow engine."""
+    """Get logs from a workflow engine.
+
+    :param workflow: name or id which identifies the workflow.
+    :param access_token: access token of the current user.
+    :param steps: list of step names to get logs for.
+    :param page: page number of returned log list.
+    :param size: page size of returned log list.
+    """
     try:
         (response, http_response) = current_rs_api_client.api.get_workflow_logs(
             workflow_id_or_name=workflow,

@@ -42,9 +42,8 @@ def validate_environment(reana_yaml):
         workflow_steps = reana_yaml["workflow"]["specification"]["stages"]
         _validate_yadage_workflow_environment(workflow_steps)
     elif workflow_type == "cwl":
-        logging.warning(
-            "The environment validation is not implemented for CWL workflows yet."
-        )
+        workflow_file = reana_yaml["workflow"].get("file")
+        _validate_cwl_workflow_environment(workflow_file)
 
 
 def _validate_yadage_workflow_environment(workflow_steps):
@@ -68,6 +67,32 @@ def _validate_yadage_workflow_environment(workflow_steps):
             None,
         )
         _validate_uid_gids(uid, gids, kubernetes_uid=k8s_uid)
+
+
+def _validate_cwl_workflow_environment(workflow_file):
+    """Validate environments in REANA CWL workflow.
+
+    :param workflow_file: Path to CWL workflow specification.
+    :raises Warning: Warns user if the workflow environment is invalid in CWL workflow steps.
+    """
+    try:
+        import cwl_utils.parser_v1_0 as cwl_parser
+        from cwl_utils.docker_extract import traverse
+    except ImportError as e:
+        click.secho(
+            "==> ERROR: Cannot validate environment. Please install reana-client on Python 3+ to enable environment validation for CWL workflows.",
+            err=True,
+            fg="red",
+        )
+        raise e
+
+    top = cwl_parser.load_document(workflow_file)
+
+    for image in traverse(top):
+        image_name, image_tag = _validate_image_tag(image)
+        _image_exists(image_name, image_tag)
+        uid, gids = _get_image_uid_gids(image_name, image_tag)
+        _validate_uid_gids(uid, gids)
 
 
 def _validate_serial_workflow_environment(workflow_steps):

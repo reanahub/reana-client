@@ -28,11 +28,12 @@ from reana_commons.serial import serial_load
 from reana_commons.utils import get_workflow_status_change_verb
 
 from reana_client.config import (
-    reana_yaml_schema_file_path,
-    reana_yaml_valid_file_names,
     DOCKER_REGISTRY_INDEX_URL,
     ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR,
+    reana_yaml_schema_file_path,
+    reana_yaml_valid_file_names,
 )
+from reana_client.validation import validate_parameters
 
 
 def workflow_uuid_or_name(ctx, param, value):
@@ -148,6 +149,7 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
         with open(filepath) as f:
             reana_yaml = yaml.load(f.read(), Loader=yaml.FullLoader)
 
+        workflow_type = reana_yaml["workflow"]["type"]
         if not skip_validation:
             logging.info(
                 "Validating REANA specification file: {filepath}".format(
@@ -155,6 +157,7 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
                 )
             )
             _validate_reana_yaml(reana_yaml)
+            validate_parameters(workflow_type, reana_yaml)
         if not skip_validate_environments:
             logging.info(
                 "Validating environments in REANA specification file: "
@@ -162,7 +165,6 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
             )
             _validate_environment(reana_yaml)
 
-        workflow_type = reana_yaml["workflow"]["type"]
         reana_yaml["workflow"]["specification"] = load_workflow_spec(
             workflow_type,
             reana_yaml["workflow"].get("file"),
@@ -470,7 +472,7 @@ def validate_input_parameters(live_parameters, original_parameters):
         if parameter not in original_parameters:
             click.echo(
                 click.style(
-                    "Given parameter - {0}, is not in " "reana.yaml".format(parameter),
+                    "Given parameter - {0}, is not in reana.yaml".format(parameter),
                     fg="red",
                 ),
                 err=True,

@@ -146,6 +146,12 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
             reana_yaml = yaml.load(f.read(), Loader=yaml.FullLoader)
 
         workflow_type = reana_yaml["workflow"]["type"]
+        reana_yaml["workflow"]["specification"] = load_workflow_spec(
+            workflow_type,
+            reana_yaml["workflow"].get("file"),
+            **_prepare_kwargs(reana_yaml)
+        )
+
         if not skip_validation:
             logging.info(
                 "Validating REANA specification file: {filepath}".format(
@@ -153,19 +159,11 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
                 )
             )
             _validate_reana_yaml(reana_yaml)
+            logging.info(
+                "Validating parameters in REANA specification file: "
+                "{filepath}".format(filepath=filepath)
+            )
             validate_parameters(workflow_type, reana_yaml)
-
-        reana_yaml["workflow"]["specification"] = load_workflow_spec(
-            workflow_type,
-            reana_yaml["workflow"].get("file"),
-            **_prepare_kwargs(reana_yaml)
-        )
-
-        if workflow_type == "cwl" and "inputs" in reana_yaml:
-            with open(reana_yaml["inputs"]["parameters"]["input"]) as f:
-                reana_yaml["inputs"]["parameters"] = yaml.load(
-                    f, Loader=yaml.FullLoader
-                )
 
         if not skip_validate_environments:
             logging.info(
@@ -173,6 +171,12 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
                 "{filepath}".format(filepath=filepath)
             )
             validate_environment(reana_yaml)
+
+        if workflow_type == "cwl" and "inputs" in reana_yaml:
+            with open(reana_yaml["inputs"]["parameters"]["input"]) as f:
+                reana_yaml["inputs"]["parameters"] = yaml.load(
+                    f, Loader=yaml.FullLoader
+                )
 
         if workflow_type == "yadage":
             # We don't send the loaded Yadage workflow spec to the cluster as

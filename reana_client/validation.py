@@ -262,7 +262,7 @@ def validate_parameters(workflow_type, reana_yaml):
     :param reana_yaml: REANA YAML specification.
     """
     validate = {
-        "yadage": lambda *args: None,
+        "yadage": _validate_yadage_parameters,
         "cwl": lambda *args: None,
         "serial": _validate_serial_parameters,
     }
@@ -309,6 +309,77 @@ def _validate_serial_parameters(reana_yaml):
                 param=param,
                 steps=", ".join(steps_used),
                 s="s" if len(steps_used) > 1 else "",
+            ),
+            fg="yellow",
+        )
+
+
+def _validate_yadage_parameters(reana_yaml):
+    """Validate parameters for Yadage workflows.
+
+    :param reana_yaml: REANA YAML specification.
+    """
+
+    def parse_command(command):
+        return re.findall(r".*?\{+(.*?)\}+.*?", command)
+
+    def parse_command_params(step_value):
+        if isinstance(step_value, dict):
+            step_value = list(step_value.values())
+
+        if isinstance(step_value, list):
+            step_value = [
+                value.values() if isinstance(value, dict) else value
+                for value in step_value
+            ]
+        return parse_command(str(step_value))
+
+    def parse_params(stages):
+        params = []
+        command_params = []
+        for stage in stages:
+            if "workflow" in stage["scheduler"]:
+                nested_stages = stage["scheduler"]["workflow"].get("stages", {})
+                nested_params, nested_command_params = parse_params(nested_stages)
+                params += nested_params
+                command_params += nested_command_params
+
+            for param in stage["scheduler"]["parameters"]:
+                params.append(param["key"])
+
+            for step in stage["scheduler"].get("step", {}).keys():
+                for step_val in stage["scheduler"]["step"][step].values():
+                    command_params += parse_command_params(step_val)
+
+        return params, command_params
+
+    # REANA input parameters
+    input_parameters = set(reana_yaml["inputs"].get("parameters", {}).keys())
+
+    # Yadage parameters
+    workflow_spec = reana_yaml["workflow"]["specification"]
+    workflow_params, command_params = parse_params(workflow_spec["stages"])
+    workflow_params = set(workflow_params)
+    command_params = set(command_params)
+
+    # REANA input parameters validation
+    for param in input_parameters.difference(workflow_params):
+        click.secho(
+            "==> WARNING: REANA input parameter '{}' is not being used.".format(param),
+            fg="yellow",
+        )
+
+    # Yadage parameters validation
+    for param in workflow_params.difference(command_params):
+        click.secho(
+            '==> WARNING: Yadage input parameter "{}" is not being used.'.format(param),
+            fg="yellow",
+        )
+
+    for param in command_params.difference(workflow_params):
+        click.secho(
+            '==> WARNING: Yadage parameter "{}" is not defined in input parameters.'.format(
+                param
             ),
             fg="yellow",
         )

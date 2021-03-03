@@ -258,11 +258,13 @@ def _validate_serial_parameters(reana_yaml):
     input_parameters = set(reana_yaml.get("inputs", {}).get("parameters", {}).keys())
 
     param_steps_mapping = defaultdict(list)
-    for step in reana_yaml["workflow"]["specification"].get("steps", []):
+    for idx, step in enumerate(
+        reana_yaml["workflow"]["specification"].get("steps", [])
+    ):
         for command in step["commands"]:
             cmd_params = re.findall(r".*?\${(.*?)}.*?", command)
             for cmd_param in cmd_params:
-                param_steps_mapping[cmd_param].append(step.get("name", "Unnamed"))
+                param_steps_mapping[cmd_param].append(step.get("name", str(idx)))
 
     command_parameters = set(param_steps_mapping.keys())
 

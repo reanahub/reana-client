@@ -130,7 +130,7 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
             kwargs["parameters"] = reana_yaml.get("inputs", {}).get("parameters", {})
             kwargs["original"] = True
 
-        if "options" in reana_yaml["inputs"]:
+        if "options" in reana_yaml.get("inputs", {}):
             try:
                 reana_yaml["inputs"]["options"] = validate_operational_options(
                     workflow_type, reana_yaml["inputs"]["options"]

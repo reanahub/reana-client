@@ -241,6 +241,11 @@ def validate_parameters(workflow_type, reana_yaml):
         "serial": _validate_serial_parameters,
     }
     """Dictionary to extend with new workflow specification loaders."""
+    if "inputs" not in reana_yaml:
+        click.secho(
+            '==> WARNING: Workflow "inputs" are missing in the REANA specification.',
+            fg="yellow",
+        )
 
     return validate[workflow_type](reana_yaml)
 
@@ -250,7 +255,7 @@ def _validate_serial_parameters(reana_yaml):
 
     :param reana_yaml: REANA YAML specification.
     """
-    input_parameters = set(reana_yaml["inputs"].get("parameters", {}).keys())
+    input_parameters = set(reana_yaml.get("inputs", {}).get("parameters", {}).keys())
 
     param_steps_mapping = defaultdict(list)
     for step in reana_yaml["workflow"]["specification"].get("steps", []):

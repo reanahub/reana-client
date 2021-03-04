@@ -8,21 +8,25 @@
 
 """REANA client validate parameters tests."""
 
+import pytest
 import yaml
 
-from reana_client.validation import validate_serial_parameters
+from reana_client.validation import (
+    _validate_dangerous_operations,
+    _validate_serial_parameters,
+)
 
 
 def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     """Validate parameters for Serial workflows."""
     reana_yaml = yaml.load(create_yaml_workflow_schema, Loader=yaml.FullLoader)
-    validate_serial_parameters(reana_yaml)
+    _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert not captured.out
 
     # Input parameter not being used
     reana_yaml["inputs"]["parameters"]["foo"] = "foo"
-    validate_serial_parameters(reana_yaml)
+    _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert 'WARNING: Input parameter "foo" is not being used' in captured.out
     del reana_yaml["inputs"]["parameters"]["foo"]
@@ -31,7 +35,7 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     reana_yaml["workflow"]["specification"]["steps"].append(
         {"commands": [r"$\{SHELL\} -c echo foo"]}
     )
-    validate_serial_parameters(reana_yaml)
+    _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert not captured.out
 
@@ -39,7 +43,7 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     reana_yaml["workflow"]["specification"]["steps"].append(
         {"commands": ["python ${foo} --bar"]}
     )
-    validate_serial_parameters(reana_yaml)
+    _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert (
         'WARNING: Parameter "foo" found on step "2" is not defined in inputs parameters'
@@ -50,7 +54,7 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     reana_yaml["workflow"]["specification"]["steps"].append(
         {"commands": ["python ${bar} --foo"], "name": "baz"}
     )
-    validate_serial_parameters(reana_yaml)
+    _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert (
         'WARNING: Parameter "bar" found on step "baz" is not defined in inputs parameters'
@@ -61,9 +65,37 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     reana_yaml["workflow"]["specification"]["steps"].append(
         {"commands": ["python ${bar} --foo"], "name": "qux"}
     )
-    validate_serial_parameters(reana_yaml)
+    _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert (
         'WARNING: Parameter "bar" found on steps "baz, qux" is not defined in inputs parameters'
         in captured.out
     )
+
+
+@pytest.mark.parametrize(
+    "command, step, warning",
+    [
+        ("python foo.py", "gendata", ""),
+        (
+            "sudo python foo.py",
+            "fitdata",
+            '"sudo" found in step "fitdata" might be dangerous.',
+        ),
+        (
+            'echo "hello world!" && sudo python foo.py',
+            "fitdata",
+            '"sudo" found in step "fitdata" might be dangerous.',
+        ),
+        (
+            "cd /foo && npm install",
+            "installation",
+            '"cd /" found in step "installation" might be dangerous.',
+        ),
+    ],
+)
+def test_validate_dangerous_operations(command, step, warning, capsys):
+    """Validate if dangerous operations in a command trigger a warning."""
+    _validate_dangerous_operations(command, step)
+    captured = capsys.readouterr()
+    assert warning in captured.out

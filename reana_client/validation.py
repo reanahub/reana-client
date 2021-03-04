@@ -22,6 +22,7 @@ import requests
 from reana_commons.config import WORKFLOW_RUNTIME_USER_GID, WORKFLOW_RUNTIME_USER_UID
 
 from reana_client.config import (
+    COMMAND_DANGEROUS_OPERATIONS,
     DOCKER_REGISTRY_INDEX_URL,
     ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR,
 )
@@ -261,10 +262,12 @@ def _validate_serial_parameters(reana_yaml):
     for idx, step in enumerate(
         reana_yaml["workflow"]["specification"].get("steps", [])
     ):
+        step_name = step.get("name", str(idx))
         for command in step["commands"]:
+            _validate_dangerous_operations(command, step_name)
             cmd_params = re.findall(r".*?\${(.*?)}.*?", command)
             for cmd_param in cmd_params:
-                param_steps_mapping[cmd_param].append(step.get("name", str(idx)))
+                param_steps_mapping[cmd_param].append(step_name)
 
     command_parameters = set(param_steps_mapping.keys())
 
@@ -284,6 +287,22 @@ def _validate_serial_parameters(reana_yaml):
             ),
             fg="yellow",
         )
+
+
+def _validate_dangerous_operations(command, step):
+    """Warn the user if a command has dangerous operations.
+
+    :param command: A workflow step command to validate.
+    :param step: The workflow step that contains the given command.
+    """
+    for operation in COMMAND_DANGEROUS_OPERATIONS:
+        if operation in command:
+            click.secho(
+                '==> WARNING: Operation "{}" found in step "{}" might be dangerous.'.format(
+                    operation.strip(), step
+                ),
+                fg="yellow",
+            )
 
 
 def run_command(cmd, display=True, return_output=False):

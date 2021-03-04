@@ -43,6 +43,8 @@ WORKFLOW_ENGINES = ["serial", "cwl", "yadage"]
 ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR = ["latest", "master", ""]
 """Warns user if above environment image tags are used."""
 
-
 DOCKER_REGISTRY_INDEX_URL = "https://index.docker.io/v1/repositories/{image}/tags/{tag}"
 """Docker Hub registry index URL."""
+
+COMMAND_DANGEROUS_OPERATIONS = ["sudo ", "cd /"]
+"""Operations in workflow commands considered dangerous."""

@@ -10,7 +10,7 @@
 
 import pytest
 
-from reana_client.utils import _validate_image_tag
+from reana_client.validation import _validate_image_tag
 
 
 @pytest.mark.parametrize(

@@ -220,8 +220,8 @@ def _get_image_uid_gids(image, tag):
     )
     ids = uid_gid_output.splitlines()
     uid, gids = (
-        int(ids[0]),
-        [int(gid) for gid in ids[1].split()],
+        int(ids[-2]),
+        [int(gid) for gid in ids[-1].split()],
     )
     return uid, gids
 

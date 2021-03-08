@@ -28,7 +28,7 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     reana_yaml["inputs"]["parameters"]["foo"] = "foo"
     _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
-    assert 'WARNING: Input parameter "foo" is not being used' in captured.out
+    assert 'WARNING: REANA input parameter "foo" is not being used' in captured.out
     del reana_yaml["inputs"]["parameters"]["foo"]
 
     # Escaped env vars don't trigger validation warning
@@ -46,7 +46,7 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert (
-        'WARNING: Parameter "foo" found on step "2" is not defined in inputs parameters'
+        'WARNING: Serial parameter "foo" found on step "2" is not defined in input parameters'
         in captured.out
     )
 
@@ -57,7 +57,7 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert (
-        'WARNING: Parameter "bar" found on step "baz" is not defined in inputs parameters'
+        'WARNING: Serial parameter "bar" found on step "baz" is not defined in input parameters'
         in captured.out
     )
 
@@ -67,10 +67,9 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     )
     _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
-    assert (
-        'WARNING: Parameter "bar" found on steps "baz, qux" is not defined in inputs parameters'
-        in captured.out
-    )
+    assert 'WARNING: Serial parameter "bar" found on steps' in captured.out
+    assert "baz, qux" in captured.out or "qux, baz" in captured.out
+    assert "is not defined in input parameters" in captured.out
 
 
 @pytest.mark.parametrize(

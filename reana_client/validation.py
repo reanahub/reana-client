@@ -287,42 +287,74 @@ def validate_parameters(workflow_type, reana_yaml):
     return validate[workflow_type](reana_yaml)
 
 
-def _validate_serial_parameters(reana_yaml):
-    """Validate input parameters for Serial workflows.
+def _warn_not_used_params(workflow_parameters, command_parameters, type_="REANA"):
+    """Warn user about defined workflow parameter not being used.
 
-    :param reana_yaml: REANA YAML specification.
+    :param workflow_params: Set of parameters in workflow definition.
+    :param command_parameters: Set of parameters used inside workflow.
+    :param type: Type of workflow parameters, e.g. REANA for input parameters, Yadage
+                 for parameters defined in Yadage spec.
     """
-    input_parameters = set(reana_yaml.get("inputs", {}).get("parameters", {}).keys())
 
-    param_steps_mapping = defaultdict(list)
-    for idx, step in enumerate(
-        reana_yaml["workflow"]["specification"].get("steps", [])
-    ):
-        step_name = step.get("name", str(idx))
-        for command in step["commands"]:
-            _validate_dangerous_operations(command, step_name)
-            cmd_params = re.findall(r".*?\${(.*?)}.*?", command)
-            for cmd_param in cmd_params:
-                param_steps_mapping[cmd_param].append(step_name)
-
-    command_parameters = set(param_steps_mapping.keys())
-
-    for param in input_parameters.difference(command_parameters):
+    for param in workflow_parameters.difference(command_parameters):
         click.secho(
-            '==> WARNING: Input parameter "{}" is not being used.'.format(param),
+            '==> WARNING: {} input parameter "{}" is not being used.'.format(
+                type_, param
+            ),
             fg="yellow",
         )
 
-    for param in command_parameters.difference(input_parameters):
-        steps_used = param_steps_mapping[param]
+
+def _warn_not_defined_params(cmd_param_steps_mapping, workflow_params, workflow_type):
+    """Warn user about command parameters missing in workflow definition.
+
+    :param cmd_param_steps_mapping: Mapping between command parameters and its step.
+    :param workflow_params: Set of parameters in workflow definition.
+    :param workflow_type: Workflow type being checked.
+    """
+    command_params = set(cmd_param_steps_mapping.keys())
+
+    for param in command_params.difference(workflow_params):
+        steps_used = cmd_param_steps_mapping[param]
+
         click.secho(
-            '==> WARNING: Parameter "{param}" found on step{s} "{steps}" is not defined in inputs parameters.'.format(
+            '==> WARNING: {type} parameter "{param}" found on step{s} "{steps}" is not defined in input parameters.'.format(
+                type=workflow_type.capitalize(),
                 param=param,
                 steps=", ".join(steps_used),
                 s="s" if len(steps_used) > 1 else "",
             ),
             fg="yellow",
         )
+
+
+def _validate_serial_parameters(reana_yaml):
+    """Validate input parameters for Serial workflows.
+
+    :param reana_yaml: REANA YAML specification.
+    """
+
+    def parse_command(command):
+        return re.findall(r".*?\${(.*?)}.*?", command)
+
+    # REANA input parameters
+    input_parameters = set(reana_yaml.get("inputs", {}).get("parameters", {}).keys())
+
+    cmd_param_steps_mapping = defaultdict(set)
+    for idx, step in enumerate(
+        reana_yaml["workflow"]["specification"].get("steps", [])
+    ):
+        step_name = step.get("name", str(idx))
+        for command in step["commands"]:
+            _validate_dangerous_operations(command, step_name)
+            cmd_params = parse_command(command)
+            for cmd_param in cmd_params:
+                cmd_param_steps_mapping[cmd_param].add(step_name)
+
+    command_parameters = set(cmd_param_steps_mapping.keys())
+
+    _warn_not_used_params(input_parameters, command_parameters)
+    _warn_not_defined_params(cmd_param_steps_mapping, input_parameters, "serial")
 
 
 def _validate_yadage_parameters(reana_yaml):
@@ -347,53 +379,45 @@ def _validate_yadage_parameters(reana_yaml):
 
     def parse_params(stages):
         params = []
-        command_params = []
+        cmd_param_steps_mapping = defaultdict(set)
         for stage in stages:
+            step_name = stage["name"]
             if "workflow" in stage["scheduler"]:
                 nested_stages = stage["scheduler"]["workflow"].get("stages", {})
-                nested_params, nested_command_params = parse_params(nested_stages)
+                nested_params, nested_cmd_param_steps_mapping = parse_params(
+                    nested_stages
+                )
                 params += nested_params
-                command_params += nested_command_params
+                for param, steps in nested_cmd_param_steps_mapping.items():
+                    cmd_param_steps_mapping[param].update(steps)
 
             for param in stage["scheduler"]["parameters"]:
                 params.append(param["key"])
 
             for step in stage["scheduler"].get("step", {}).keys():
                 for step_val in stage["scheduler"]["step"][step].values():
-                    command_params += parse_command_params(step_val)
+                    step_commands_params = parse_command_params(step_val)
+                    for command_param in step_commands_params:
+                        cmd_param_steps_mapping[command_param].add(step_name)
 
-        return params, command_params
+        return params, cmd_param_steps_mapping
 
     # REANA input parameters
     input_parameters = set(reana_yaml["inputs"].get("parameters", {}).keys())
 
     # Yadage parameters
     workflow_spec = reana_yaml["workflow"]["specification"]
-    workflow_params, command_params = parse_params(workflow_spec["stages"])
+    workflow_params, cmd_param_steps_mapping = parse_params(workflow_spec["stages"])
+
     workflow_params = set(workflow_params)
-    command_params = set(command_params)
+    command_params = set(cmd_param_steps_mapping.keys())
 
     # REANA input parameters validation
-    for param in input_parameters.difference(workflow_params):
-        click.secho(
-            "==> WARNING: REANA input parameter '{}' is not being used.".format(param),
-            fg="yellow",
-        )
-
+    _warn_not_used_params(input_parameters, workflow_params)
     # Yadage parameters validation
-    for param in workflow_params.difference(command_params):
-        click.secho(
-            '==> WARNING: Yadage input parameter "{}" is not being used.'.format(param),
-            fg="yellow",
-        )
-
-    for param in command_params.difference(workflow_params):
-        click.secho(
-            '==> WARNING: Yadage parameter "{}" is not defined in input parameters.'.format(
-                param
-            ),
-            fg="yellow",
-        )
+    _warn_not_used_params(workflow_params, command_params, type_="Yadage")
+    # Yadage command parameters validation
+    _warn_not_defined_params(cmd_param_steps_mapping, workflow_params, "yadage")
 
 
 def _validate_dangerous_operations(command, step):

@@ -52,9 +52,18 @@ def _validate_yadage_workflow_environment(workflow_steps):
     :param workflow_steps: List of dictionaries which represents different steps involved in workflow.
     :raises Warning: Warns user if the workflow environment is invalid in yadage workflow steps.
     """
-    for stage in workflow_steps:
-        environment = stage["scheduler"]["step"]["environment"]
-        image = "{}:{}".format(environment["image"], environment["imagetag"])
+
+    def traverse_yadage_workflow(stages):
+        for stage in stages:
+            if "workflow" in stage["scheduler"]:
+                nested_stages = stage["scheduler"]["workflow"].get("stages", {})
+                traverse_yadage_workflow(nested_stages)
+            else:
+                environment = stage["scheduler"]["step"]["environment"]
+                _check_environment(environment)
+
+    def _check_environment(environment):
+        image = "{env[image]}:{env[imagetag]}".format(env=environment)
         image_name, image_tag = _validate_image_tag(image)
         _image_exists(image_name, image_tag)
         uid, gids = _get_image_uid_gids(image_name, image_tag)
@@ -67,6 +76,8 @@ def _validate_yadage_workflow_environment(workflow_steps):
             None,
         )
         _validate_uid_gids(uid, gids, kubernetes_uid=k8s_uid)
+
+    traverse_yadage_workflow(workflow_steps)
 
 
 def _validate_cwl_workflow_environment(workflow_file):

@@ -14,6 +14,7 @@ import yaml
 from reana_client.validation import (
     _validate_dangerous_operations,
     _validate_serial_parameters,
+    _validate_yadage_parameters,
 )
 
 
@@ -70,6 +71,92 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     assert 'WARNING: Serial parameter "bar" found on steps' in captured.out
     assert "baz, qux" in captured.out or "qux, baz" in captured.out
     assert "is not defined in input parameters" in captured.out
+
+
+def test_validate_parameters_yadage(yadage_workflow_spec_loaded, capsys):
+    """Validate parameters for Yadage workflows."""
+    reana_yaml = yadage_workflow_spec_loaded
+    _validate_yadage_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert not captured.out
+
+    # REANA input parameter not being used.
+    reana_yaml["inputs"]["parameters"]["qux"] = "qux_val"
+    _validate_yadage_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert 'WARNING: REANA input parameter "qux" is not being used' in captured.out
+    del reana_yaml["inputs"]["parameters"]["qux"]
+
+    # Yadage parameter not being used.
+    reana_yaml["workflow"]["specification"]["stages"][0]["scheduler"][
+        "parameters"
+    ].append(
+        {
+            "key": "qux",
+            "value": {
+                "step": "init",
+                "output": "qux",
+                "expression_type": "stage-output-selector",
+            },
+        }
+    )
+    _validate_yadage_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert 'WARNING: Yadage input parameter "qux" is not being used' in captured.out
+    reana_yaml["workflow"]["specification"]["stages"][0]["scheduler"][
+        "parameters"
+    ].pop()
+
+    # Parameter not defined in step
+    process = reana_yaml["workflow"]["specification"]["stages"][0]["scheduler"]["step"][
+        "process"
+    ]
+    process["script"] += " && ./run-job {my_job}"
+
+    _validate_yadage_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert (
+        'WARNING: Yadage parameter "my_job" found on step "gendata" is not defined in input parameters'
+        in captured.out
+    )
+
+    # Parameter not defined in two steps
+    process = reana_yaml["workflow"]["specification"]["stages"][1]["scheduler"]["step"][
+        "process"
+    ]
+    process["script"] += " && ./run-job {my_job}"
+
+    _validate_yadage_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert 'WARNING: Yadage parameter "my_job" found on steps' in captured.out
+    assert "gendata, fitdata" in captured.out or "fitdata, gendata" in captured.out
+    assert "is not defined in input parameters" in captured.out
+
+    # Yadage parameter defined in sub-step not being used.
+    subworkflow = reana_yaml["workflow"]["specification"]["stages"][2]["scheduler"]
+    subworkflow["workflow"]["stages"][0]["scheduler"]["parameters"].append(
+        {"key": "subfoo", "value": "subfoo_val"}
+    )
+    _validate_yadage_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert 'WARNING: Yadage input parameter "subfoo" is not being used' in captured.out
+
+    # Use previous parameter in command
+    process = subworkflow["workflow"]["stages"][0]["scheduler"]["step"]["process"]
+    process["script"] += " && go run {subfoo}"
+    _validate_yadage_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert "subfoo" not in captured.out
+
+    # Parameter not defined in sub-step
+    process = subworkflow["workflow"]["stages"][0]["scheduler"]["step"]["process"]
+    process["script"] += " && go run {subbar}"
+    _validate_yadage_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert (
+        'WARNING: Yadage parameter "subbar" found on step "nested_step" is not defined in input parameters'
+        in captured.out
+    )
 
 
 @pytest.mark.parametrize(

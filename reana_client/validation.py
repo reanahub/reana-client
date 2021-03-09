@@ -63,7 +63,10 @@ def _validate_yadage_workflow_environment(workflow_steps):
                 _check_environment(environment)
 
     def _check_environment(environment):
-        image = "{env[image]}:{env[imagetag]}".format(env=environment)
+        image = "{}{}".format(
+            environment["image"],
+            ":{}".format(environment["imagetag"]) if "imagetag" in environment else "",
+        )
         image_name, image_tag = _validate_image_tag(image)
         _image_exists(image_name, image_tag)
         uid, gids = _get_image_uid_gids(image_name, image_tag)
@@ -287,40 +290,42 @@ def validate_parameters(workflow_type, reana_yaml):
     return validate[workflow_type](reana_yaml)
 
 
-def _warn_not_used_params(workflow_parameters, command_parameters, type_="REANA"):
+def _warn_not_used_parameters(workflow_parameters, command_parameters, type_="REANA"):
     """Warn user about defined workflow parameter not being used.
 
-    :param workflow_params: Set of parameters in workflow definition.
+    :param workflow_parameters: Set of parameters in workflow definition.
     :param command_parameters: Set of parameters used inside workflow.
     :param type: Type of workflow parameters, e.g. REANA for input parameters, Yadage
                  for parameters defined in Yadage spec.
     """
 
-    for param in workflow_parameters.difference(command_parameters):
+    for parameter in workflow_parameters.difference(command_parameters):
         click.secho(
             '==> WARNING: {} input parameter "{}" is not being used.'.format(
-                type_, param
+                type_, parameter
             ),
             fg="yellow",
         )
 
 
-def _warn_not_defined_params(cmd_param_steps_mapping, workflow_params, workflow_type):
+def _warn_not_defined_parameters(
+    cmd_param_steps_mapping, workflow_parameters, workflow_type
+):
     """Warn user about command parameters missing in workflow definition.
 
     :param cmd_param_steps_mapping: Mapping between command parameters and its step.
-    :param workflow_params: Set of parameters in workflow definition.
+    :param workflow_parameters: Set of parameters in workflow definition.
     :param workflow_type: Workflow type being checked.
     """
-    command_params = set(cmd_param_steps_mapping.keys())
+    command_parameters = set(cmd_param_steps_mapping.keys())
 
-    for param in command_params.difference(workflow_params):
-        steps_used = cmd_param_steps_mapping[param]
+    for parameter in command_parameters.difference(workflow_parameters):
+        steps_used = cmd_param_steps_mapping[parameter]
 
         click.secho(
-            '==> WARNING: {type} parameter "{param}" found on step{s} "{steps}" is not defined in input parameters.'.format(
+            '==> WARNING: {type} parameter "{parameter}" found on step{s} "{steps}" is not defined in input parameters.'.format(
                 type=workflow_type.capitalize(),
-                param=param,
+                parameter=parameter,
                 steps=", ".join(steps_used),
                 s="s" if len(steps_used) > 1 else "",
             ),
@@ -353,8 +358,8 @@ def _validate_serial_parameters(reana_yaml):
 
     command_parameters = set(cmd_param_steps_mapping.keys())
 
-    _warn_not_used_params(input_parameters, command_parameters)
-    _warn_not_defined_params(cmd_param_steps_mapping, input_parameters, "serial")
+    _warn_not_used_parameters(input_parameters, command_parameters)
+    _warn_not_defined_parameters(cmd_param_steps_mapping, input_parameters, "serial")
 
 
 def _validate_yadage_parameters(reana_yaml):
@@ -416,11 +421,11 @@ def _validate_yadage_parameters(reana_yaml):
     command_params = set(cmd_param_steps_mapping.keys())
 
     # REANA input parameters validation
-    _warn_not_used_params(input_parameters, workflow_params)
+    _warn_not_used_parameters(input_parameters, workflow_params)
     # Yadage parameters validation
-    _warn_not_used_params(workflow_params, command_params, type_="Yadage")
+    _warn_not_used_parameters(workflow_params, command_params, type_="Yadage")
     # Yadage command parameters validation
-    _warn_not_defined_params(cmd_param_steps_mapping, workflow_params, "yadage")
+    _warn_not_defined_parameters(cmd_param_steps_mapping, workflow_params, "yadage")
 
 
 def _validate_dangerous_operations(command, step):

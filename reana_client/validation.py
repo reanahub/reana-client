@@ -395,7 +395,10 @@ def _validate_yadage_parameters(reana_yaml):
                 params.append(param["key"])
 
             for step in stage["scheduler"].get("step", {}).keys():
-                for step_val in stage["scheduler"]["step"][step].values():
+                for step_key, step_val in stage["scheduler"]["step"][step].items():
+                    if step_key == "script":
+                        command = step_val
+                        _validate_dangerous_operations(command, step_name)
                     step_commands_params = parse_command_params(step_val)
                     for command_param in step_commands_params:
                         cmd_param_steps_mapping[command_param].add(step_name)

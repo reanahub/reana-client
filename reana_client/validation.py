@@ -60,7 +60,17 @@ def _validate_yadage_workflow_environment(workflow_steps):
                 traverse_yadage_workflow(nested_stages)
             else:
                 environment = stage["scheduler"]["step"]["environment"]
-                _check_environment(environment)
+                if environment["environment_type"] != "docker-encapsulated":
+                    click.secho(
+                        '==> ERROR: The only Yadage environment type supported is "docker-encapsulated". Found "{}".'.format(
+                            environment["environment_type"]
+                        ),
+                        err=True,
+                        fg="red",
+                    )
+                    sys.exit(1)
+                else:
+                    _check_environment(environment)
 
     def _check_environment(environment):
         image = "{}{}".format(

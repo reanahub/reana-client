@@ -15,6 +15,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from itertools import chain
+import os
 
 import click
 import requests
@@ -431,7 +432,7 @@ def validate_parameters(workflow_type, reana_yaml):
     """
     validate = {
         "yadage": _validate_yadage_parameters,
-        "cwl": lambda *args: None,
+        "cwl": _validate_cwl_parameters,
         "serial": _validate_serial_parameters,
     }
     """Dictionary to extend with new workflow specification loaders."""
@@ -487,6 +488,28 @@ def _warn_not_defined_parameters(
             ),
             fg="yellow",
         )
+
+
+def _validate_cwl_parameters(reana_yaml):
+    """Validate input parameters for CWL workflows.
+
+    :param reana_yaml: REANA YAML specification.
+    """
+    cwl_main_spec_path = reana_yaml["workflow"].get("file")
+    if os.path.exists(cwl_main_spec_path):
+        run_command(
+            "cwltool --validate --strict {}".format(cwl_main_spec_path),
+            display=False,
+            return_output=True,
+            stderr_output=True,
+        )
+    else:
+        click.secho(
+            "==> ERROR: Workflow path {} is not valid.".format(cwl_main_spec_path),
+            err=True,
+            fg="red",
+        )
+        sys.exit(1)
 
 
 def _validate_serial_parameters(reana_yaml):
@@ -620,7 +643,7 @@ def _validate_dangerous_operations(command, step):
             )
 
 
-def run_command(cmd, display=True, return_output=False):
+def run_command(cmd, display=True, return_output=False, stderr_output=False):
     """Run given command on shell in the current directory.
 
     Exit in case of troubles.
@@ -638,7 +661,8 @@ def run_command(cmd, display=True, return_output=False):
         click.secho("{0}".format(cmd), bold=True)
     try:
         if return_output:
-            result = subprocess.check_output(cmd, shell=True)
+            stderr_flag_val = subprocess.STDOUT if stderr_output else None
+            result = subprocess.check_output(cmd, stderr=stderr_flag_val, shell=True)
             return result.decode().rstrip("\r\n")
         else:
             subprocess.check_call(cmd, shell=True)
@@ -646,4 +670,6 @@ def run_command(cmd, display=True, return_output=False):
         if display:
             click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
             click.secho("{0}".format(err), bold=True, fg="red")
+        if stderr_output:
+            sys.exit(err.output.decode())
         sys.exit(err.returncode)

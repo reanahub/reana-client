@@ -43,6 +43,103 @@ def create_yaml_workflow_schema():
 
 
 @pytest.fixture()
+def create_cwl_yaml_workflow_schema():
+    """Return dummy cwl workflow schema."""
+    reana_cwl_yaml_schema = """
+        version: 0.7.2
+        workflow:
+          type: cwl
+          file: main.cwl
+        outputs:
+          files:
+            - foo/bar
+        """
+    return reana_cwl_yaml_schema
+
+
+@pytest.fixture()
+def cwl_workflow_spec_step():
+    """Return dummy CWL workflow loaded spec step."""
+    cwl_workflow_spec_step = """
+        #!/usr/bin/env cwl-runner
+
+        cwlVersion: v1.0
+        class: Workflow
+
+        inputs:
+          outputfile:
+            type: string
+            inputBinding:
+              prefix: --outputfile
+
+        outputs:
+          result:
+            type: File
+            outputSource: first/result
+
+        steps:
+          first:
+            run: test.tool
+            in:
+              outputfile: outputfile
+            out: [result]
+        """
+    return cwl_workflow_spec_step
+
+
+@pytest.fixture()
+def cwl_workflow_spec_correct_input_param():
+    """Return correct dummy CWL workflow loaded spec."""
+    cwl_workflow_spec = """
+        #!/usr/bin/env cwl-runner
+
+        cwlVersion: v1.0
+        class: CommandLineTool
+
+        baseCommand: python
+
+        inputs:
+          outputfile:
+            type: string
+            inputBinding:
+              prefix: --outputfile
+
+        outputs:
+          result:
+            type: File
+            outputBinding:
+              glob: $(inputs.outputfile)
+        """
+    return cwl_workflow_spec
+
+
+@pytest.fixture()
+def cwl_workflow_spec_wrong_input_param():
+    """Return wrong dummy CWL workflow loaded spec."""
+    cwl_workflow_spec = """
+        #!/usr/bin/env cwl-runner
+
+        cwlVersion: v1.0
+        class: CommandLineTool
+
+        baseCommand: python
+
+        inputs:
+          xoutputfile:  # wrong input param
+            type: string
+            inputBinding:
+              prefix: --outputfile
+
+        outputs:
+          result:
+            type: File
+            outputBinding:
+              glob: $(inputs.outputfile)
+        """
+    return cwl_workflow_spec
+
+
+@pytest.fixture()
 def yadage_workflow_spec_loaded():
     """Return dummy Yadage nested workflow spec loaded as dictionary."""
     return {

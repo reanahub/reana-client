@@ -10,12 +10,63 @@
 
 import pytest
 import yaml
+from click.testing import CliRunner
 
+from reana_client.utils import cwl_load
 from reana_client.validation import (
     _validate_dangerous_operations,
     _validate_serial_parameters,
     _validate_yadage_parameters,
+    _validate_cwl_parameters,
 )
+
+
+def test_validate_parameters_cwl(
+    create_cwl_yaml_workflow_schema,
+    cwl_workflow_spec_step,
+    cwl_workflow_spec_correct_input_param,
+    cwl_workflow_spec_wrong_input_param,
+    capsys,
+):
+    """Validate parameters for CWL workflows."""
+    runner = CliRunner()
+
+    def get_loaded_yaml(step_spec, input_spec):
+        with open("main.cwl", "w") as f:
+            f.write(step_spec)
+        with open("test.tool", "w") as g:
+            g.write(input_spec)
+        reana_yaml = yaml.load(create_cwl_yaml_workflow_schema, Loader=yaml.FullLoader)
+        reana_yaml["workflow"]["specification"] = cwl_load(
+            reana_yaml["workflow"].get("file")
+        )
+        return reana_yaml
+
+    with runner.isolated_filesystem():
+        reana_yaml = get_loaded_yaml(
+            cwl_workflow_spec_step, cwl_workflow_spec_correct_input_param
+        )
+        _validate_cwl_parameters(reana_yaml)
+        captured = capsys.readouterr()
+        assert not captured.out
+
+    # Wrong Input parameter used
+    with runner.isolated_filesystem():
+        reana_yaml = get_loaded_yaml(
+            cwl_workflow_spec_step, cwl_workflow_spec_wrong_input_param
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            _validate_cwl_parameters(reana_yaml)
+        assert (
+            "Step is missing required parameter 'xoutputfile'" in exc_info.value.args[0]
+        )
+
+    # Wrong file path used
+    reana_yaml = yaml.load(create_cwl_yaml_workflow_schema, Loader=yaml.FullLoader)
+    with pytest.raises(SystemExit) as exc_info:
+        _validate_cwl_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert "ERROR: Workflow path main.cwl is not valid." in captured.err
 
 
 def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):

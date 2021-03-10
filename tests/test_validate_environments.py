@@ -10,7 +10,7 @@
 
 import pytest
 
-from reana_client.validation import _validate_image_tag
+from reana_client.validation import _get_full_image_name, _validate_image_tag
 
 
 @pytest.mark.parametrize(
@@ -35,3 +35,16 @@ def test_validate_environment_image_tag(image, output, exit_, capsys):
         _validate_image_tag(image)
     captured = capsys.readouterr()
     assert output in (captured.err if exit_ else captured.out)
+
+
+@pytest.mark.parametrize(
+    "image, tag, full_image_name",
+    [
+        ("foo", "bar", "foo:bar"),
+        ("foo", "", "foo"),
+        ("foo", None, "foo"),
+        ("foo", "latest", "foo:latest"),
+    ],
+)
+def test_get_full_image_name(image, tag, full_image_name):
+    assert _get_full_image_name(image, tag) == full_image_name

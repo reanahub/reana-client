@@ -13,7 +13,6 @@ import logging
 import re
 import subprocess
 import sys
-import traceback
 from collections import defaultdict
 from itertools import chain
 
@@ -25,6 +24,7 @@ from reana_client.config import (
     COMMAND_DANGEROUS_OPERATIONS,
     DOCKER_REGISTRY_INDEX_URL,
     ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR,
+    GITLAB_CERN_REGISTRY_PREFIX,
 )
 
 
@@ -177,8 +177,32 @@ def _validate_image_tag(image):
 
 
 def _image_exists(image, tag):
-    """Verify if image exists."""
+    """Verify if image exists locally or remotely."""
 
+    image_exists_remotely = (
+        _image_exists_in_gitlab_cern
+        if image.startswith(GITLAB_CERN_REGISTRY_PREFIX)
+        else _image_exists_in_dockerhub
+    )
+
+    if not any([_image_exists_locally(image, tag), image_exists_remotely(image, tag)]):
+        click.secho(
+            "==> ERROR: Environment image {} does not exist locally or remotely.".format(
+                _get_full_image_name(image, tag)
+            ),
+            err=True,
+            fg="red",
+        )
+        sys.exit(1)
+
+
+def _get_full_image_name(image, tag=None):
+    """Return full image name with tag if is passed."""
+    return "{}{}".format(image, ":{}".format(tag) if tag else "")
+
+
+def _image_exists_in_dockerhub(image, tag):
+    """Verify if image exists in DockerHub."""
     docker_registry_url = DOCKER_REGISTRY_INDEX_URL.format(image=image, tag=tag)
     # Remove traling slash if no tag was specified
     if not tag:
@@ -186,7 +210,7 @@ def _image_exists(image, tag):
     try:
         response = requests.get(docker_registry_url)
     except requests.exceptions.RequestException as e:
-        logging.error(traceback.format_exc())
+        logging.error(e)
         click.secho(
             "==> ERROR: Something went wrong when querying {}".format(
                 docker_registry_url
@@ -194,37 +218,81 @@ def _image_exists(image, tag):
             err=True,
             fg="red",
         )
-        raise e
+        return False
 
     if not response.ok:
         if response.status_code == 404:
             msg = response.text
             click.secho(
-                "==> ERROR: Environment image {}{} does not exist: {}".format(
-                    image, ":{}".format(tag) if tag else "", msg
+                "==> WARNING: Environment image {} does not exist in Docker Hub: {}".format(
+                    _get_full_image_name(image, tag), msg
                 ),
-                err=True,
-                fg="red",
+                fg="yellow",
             )
         else:
             click.secho(
-                "==> ERROR: Existence of environment image {}{} could not be verified. Status code: {} {}".format(
-                    image,
-                    ":{}".format(tag) if tag else "",
+                "==> WARNING: Existence of environment image {} in Docker Hub could not be verified. Status code: {} {}".format(
+                    _get_full_image_name(image, tag),
                     response.status_code,
                     response.reason,
                 ),
-                err=True,
-                fg="red",
+                fg="yellow",
             )
-        sys.exit(1)
+        return False
     else:
         click.secho(
-            "==> Environment image {}{} exists.".format(
-                image, ":{}".format(tag) if tag else ""
+            "==> Environment image {} exists in Docker Hub.".format(
+                _get_full_image_name(image, tag)
             ),
             fg="green",
         )
+        return True
+
+
+def _image_exists_in_gitlab_cern(image, tag):
+    """Verify if image exists in GitLab CERN."""
+    if image.startswith(GITLAB_CERN_REGISTRY_PREFIX):
+        # TODO: Perform checks against CERN GitLab API.
+        # https://github.com/reanahub/reana-client/issues/463
+        click.secho(
+            "==> Environment image {} seems to exist in the GitLab CERN registry.".format(
+                _get_full_image_name(image, tag)
+            ),
+            fg="green",
+        )
+        return True
+    return False
+
+
+def _image_exists_locally(image, tag):
+    """Verify if image exists locally."""
+    full_image = _get_full_image_name(image, tag)
+    local_images = _get_local_docker_images()
+    if full_image in local_images:
+        click.secho(
+            "==> Environment image {} exists locally.".format(full_image), fg="green",
+        )
+        return True
+    else:
+        click.secho(
+            "==> WARNING: Environment image {} does not exist locally.".format(
+                full_image
+            ),
+            fg="yellow",
+        )
+        return False
+
+
+def _get_local_docker_images():
+    """Return a list with local docker images."""
+    # Check if docker is installed.
+    run_command("docker version", display=False, return_output=True)
+    docker_images = run_command(
+        'docker images --format "{{ .Repository }}:{{ .Tag }}"',
+        display=False,
+        return_output=True,
+    )
+    return docker_images.splitlines()
 
 
 def _get_image_uid_gids(image, tag):
@@ -236,8 +304,8 @@ def _get_image_uid_gids(image, tag):
     run_command("docker version", display=False, return_output=True)
     # Run ``id``` command inside the container.
     uid_gid_output = run_command(
-        'docker run -i -t --rm {}{} bash -c "/usr/bin/id -u && /usr/bin/id -G"'.format(
-            image, ":{}".format(tag) if tag else ""
+        'docker run -i -t --rm {} bash -c "/usr/bin/id -u && /usr/bin/id -G"'.format(
+            _get_full_image_name(image, tag)
         ),
         display=False,
         return_output=True,
@@ -274,7 +342,6 @@ def _validate_uid_gids(uid, gids, kubernetes_uid=None):
             "==> WARNING: Environment image UID is recommended to be {}. UID {} was found.".format(
                 WORKFLOW_RUNTIME_USER_UID, uid
             ),
-            err=True,
             fg="yellow",
         )
 

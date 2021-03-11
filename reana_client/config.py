@@ -46,6 +46,11 @@ ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR = ["latest", "master", ""]
 DOCKER_REGISTRY_INDEX_URL = "https://index.docker.io/v1/repositories/{image}/tags/{tag}"
 """Docker Hub registry index URL."""
 
+GITLAB_CERN_REGISTRY_INDEX_URL = (
+    "https://gitlab.cern.ch/api/v4/projects/{image}/registry/repositories?tags=1"
+)
+"""GitLab CERN registry index URL."""
+
 GITLAB_CERN_REGISTRY_PREFIX = "gitlab-registry.cern.ch"
 """Prefix for GitLab image registry at CERN."""
 

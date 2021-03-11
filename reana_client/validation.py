@@ -24,6 +24,7 @@ from reana_client.config import (
     COMMAND_DANGEROUS_OPERATIONS,
     DOCKER_REGISTRY_INDEX_URL,
     ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR,
+    GITLAB_CERN_REGISTRY_INDEX_URL,
     GITLAB_CERN_REGISTRY_PREFIX,
 )
 
@@ -251,22 +252,63 @@ def _image_exists_in_dockerhub(image, tag):
 
 def _image_exists_in_gitlab_cern(image, tag):
     """Verify if image exists in GitLab CERN."""
-    if image.startswith(GITLAB_CERN_REGISTRY_PREFIX):
-        # TODO: Perform checks against CERN GitLab API.
-        # https://github.com/reanahub/reana-client/issues/463
+    # Remove registry prefix
+    image = image.split("/", 1)[-1]
+    # Encode image name slashes
+    remote_registry_url = GITLAB_CERN_REGISTRY_INDEX_URL.format(
+        image=requests.utils.quote(image, safe="")
+    )
+    try:
+        # FIXME: if image is private we can't access it, we'd
+        # need to pass a GitLab API token generated from the UI.
+        response = requests.get(remote_registry_url)
+    except requests.exceptions.RequestException as e:
+        logging.error(e)
         click.secho(
-            "==> Environment image {} seems to exist in the GitLab CERN registry.".format(
-                _get_full_image_name(image, tag)
+            "==> ERROR: Something went wrong when querying {}".format(
+                remote_registry_url
             ),
-            fg="green",
+            err=True,
+            fg="red",
         )
-        return True
-    return False
+        return False
+
+    if not response.ok:
+        msg = response.json().get("message")
+        click.secho(
+            "==> WARNING: Existence of environment image {} in GitLab CERN could not be verified: {}".format(
+                _get_full_image_name(image, tag), msg
+            ),
+            fg="yellow",
+        )
+        return False
+    else:
+        # If not tag was set, use `latest` (default) to verify.
+        tag = tag or "latest"
+        tag_exists = any(
+            tag_dict["name"] == tag for tag_dict in response.json()[0].get("tags")
+        )
+        if tag_exists:
+            click.secho(
+                "==> Environment image {} exists in GitLab CERN.".format(
+                    _get_full_image_name(image, tag)
+                ),
+                fg="green",
+            )
+            return True
+        else:
+            click.secho(
+                '==> WARNING: Environment image {} in GitLab CERN does not exist: Tag "{}" missing.'.format(
+                    _get_full_image_name(image, tag), tag
+                ),
+                fg="yellow",
+            )
+            return False
 
 
 def _image_exists_locally(image, tag):
     """Verify if image exists locally."""
-    full_image = _get_full_image_name(image, tag)
+    full_image = _get_full_image_name(image, tag or "latest")
     local_images = _get_local_docker_images()
     if full_image in local_images:
         click.secho(
@@ -304,7 +346,7 @@ def _get_image_uid_gids(image, tag):
     run_command("docker version", display=False, return_output=True)
     # Run ``id``` command inside the container.
     uid_gid_output = run_command(
-        'docker run -i -t --rm {} bash -c "/usr/bin/id -u && /usr/bin/id -G"'.format(
+        'docker run -i -t --rm {} sh -c "/usr/bin/id -u && /usr/bin/id -G"'.format(
             _get_full_image_name(image, tag)
         ),
         display=False,

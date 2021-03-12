@@ -114,7 +114,12 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
     return workflow_load[workflow_type](workflow_file, **kwargs)
 
 
-def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=True):
+def load_reana_spec(
+    filepath,
+    skip_validation=False,
+    skip_validate_environments=True,
+    pull_environment_image=False,
+):
     """Load and validate reana specification file.
 
     :raises IOError: Error while reading REANA spec file from given `filepath`.
@@ -170,7 +175,7 @@ def load_reana_spec(filepath, skip_validation=False, skip_validate_environments=
                 "Validating environments in REANA specification file: "
                 "{filepath}".format(filepath=filepath)
             )
-            validate_environment(reana_yaml)
+            validate_environment(reana_yaml, pull=pull_environment_image)
 
         if workflow_type == "cwl" and "inputs" in reana_yaml:
             with open(reana_yaml["inputs"]["parameters"]["input"]) as f:

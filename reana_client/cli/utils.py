@@ -187,6 +187,20 @@ def key_value_to_dict(ctx, param, value):
         sys.exit(1)
 
 
+def requires_environments(ctx, param, value):
+    """Require passing ``--environments`` flag."""
+    if value and not ctx.params.get("environments"):
+        click.secho(
+            "==> ERROR: `{}` flag requires `--environments` flag.".format(
+                param.opts[0]
+            ),
+            err=True,
+            fg="red",
+        )
+        sys.exit(1)
+    return value
+
+
 class NotRequiredIf(click.Option):
     """Allow only one of two arguments to be missing."""
 

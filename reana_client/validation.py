@@ -29,28 +29,49 @@ from reana_client.config import (
 )
 
 
-def validate_environment(reana_yaml):
+def validate_environment(reana_yaml, pull=False):
     """Validate environments in REANA specification file according to workflow type.
 
     :param reana_yaml: Dictionary which represents REANA specifications file.
+    :param pull: If true, attempt to pull remote environment image to perform GID/UID validation.
     """
     workflow_type = reana_yaml["workflow"]["type"]
 
     if workflow_type == "serial":
         workflow_steps = reana_yaml["workflow"]["specification"]["steps"]
-        _validate_serial_workflow_environment(workflow_steps)
+        _validate_serial_workflow_environment(workflow_steps, pull=pull)
     elif workflow_type == "yadage":
         workflow_steps = reana_yaml["workflow"]["specification"]["stages"]
-        _validate_yadage_workflow_environment(workflow_steps)
+        _validate_yadage_workflow_environment(workflow_steps, pull=pull)
     elif workflow_type == "cwl":
         workflow_file = reana_yaml["workflow"].get("file")
-        _validate_cwl_workflow_environment(workflow_file)
+        _validate_cwl_workflow_environment(workflow_file, pull=pull)
 
 
-def _validate_yadage_workflow_environment(workflow_steps):
+def _validate_environment_image(image, kubernetes_uid=None, pull=False):
+    """Validate image environment.
+
+    :param image: Full image name with tag if specified.
+    :param kubernetes_uid: Kubernetes UID defined in workflow spec.
+    :param pull: If true, attempt to pull remote environment image to perform GID/UID validation.
+    """
+    image_name, image_tag = _validate_image_tag(image)
+    exists_locally, _ = _image_exists(image_name, image_tag)
+    if exists_locally or pull:
+        uid, gids = _get_image_uid_gids(image_name, image_tag)
+        _validate_uid_gids(uid, gids, kubernetes_uid=kubernetes_uid)
+    else:
+        click.secho(
+            "==> WARNING: UID/GIDs validation skipped, specify `--pull` to enable it.",
+            fg="yellow",
+        )
+
+
+def _validate_yadage_workflow_environment(workflow_steps, pull=False):
     """Validate environments in REANA yadage workflow.
 
     :param workflow_steps: List of dictionaries which represents different steps involved in workflow.
+    :param pull: If true, attempt to pull remote environment image to perform GID/UID validation.
     :raises Warning: Warns user if the workflow environment is invalid in yadage workflow steps.
     """
 
@@ -78,9 +99,6 @@ def _validate_yadage_workflow_environment(workflow_steps):
             environment["image"],
             ":{}".format(environment["imagetag"]) if "imagetag" in environment else "",
         )
-        image_name, image_tag = _validate_image_tag(image)
-        _image_exists(image_name, image_tag)
-        uid, gids = _get_image_uid_gids(image_name, image_tag)
         k8s_uid = next(
             (
                 resource["kubernetes_uid"]
@@ -89,15 +107,16 @@ def _validate_yadage_workflow_environment(workflow_steps):
             ),
             None,
         )
-        _validate_uid_gids(uid, gids, kubernetes_uid=k8s_uid)
+        _validate_environment_image(image, kubernetes_uid=k8s_uid, pull=pull)
 
     traverse_yadage_workflow(workflow_steps)
 
 
-def _validate_cwl_workflow_environment(workflow_file):
+def _validate_cwl_workflow_environment(workflow_file, pull=False):
     """Validate environments in REANA CWL workflow.
 
     :param workflow_file: Path to CWL workflow specification.
+    :param pull: If true, attempt to pull remote environment image to perform GID/UID validation.
     :raises Warning: Warns user if the workflow environment is invalid in CWL workflow steps.
     """
     try:
@@ -114,24 +133,21 @@ def _validate_cwl_workflow_environment(workflow_file):
     top = cwl_parser.load_document(workflow_file)
 
     for image in traverse(top):
-        image_name, image_tag = _validate_image_tag(image)
-        _image_exists(image_name, image_tag)
-        uid, gids = _get_image_uid_gids(image_name, image_tag)
-        _validate_uid_gids(uid, gids)
+        _validate_environment_image(image, pull=pull)
 
 
-def _validate_serial_workflow_environment(workflow_steps):
+def _validate_serial_workflow_environment(workflow_steps, pull=False):
     """Validate environments in REANA serial workflow.
 
     :param workflow_steps: List of dictionaries which represents different steps involved in workflow.
+    :param pull: If true, attempt to pull remote environment image to perform GID/UID validation.
     :raises Warning: Warns user if the workflow environment is invalid in serial workflow steps.
     """
     for step in workflow_steps:
         image = step["environment"]
-        image_name, image_tag = _validate_image_tag(image)
-        _image_exists(image_name, image_tag)
-        uid, gids = _get_image_uid_gids(image_name, image_tag)
-        _validate_uid_gids(uid, gids, kubernetes_uid=step.get("kubernetes_uid"))
+        _validate_environment_image(
+            image, kubernetes_uid=step.get("kubernetes_uid"), pull=pull
+        )
 
 
 def _validate_image_tag(image):
@@ -178,7 +194,10 @@ def _validate_image_tag(image):
 
 
 def _image_exists(image, tag):
-    """Verify if image exists locally or remotely."""
+    """Verify if image exists locally or remotely.
+
+    :returns: A tuple with two boolean values: image exists locally, image exists remotely.
+    """
 
     image_exists_remotely = (
         _image_exists_in_gitlab_cern
@@ -186,7 +205,11 @@ def _image_exists(image, tag):
         else _image_exists_in_dockerhub
     )
 
-    if not any([_image_exists_locally(image, tag), image_exists_remotely(image, tag)]):
+    exists_locally, exists_remotely = (
+        _image_exists_locally(image, tag),
+        image_exists_remotely(image, tag),
+    )
+    if not any([exists_locally, exists_remotely]):
         click.secho(
             "==> ERROR: Environment image {} does not exist locally or remotely.".format(
                 _get_full_image_name(image, tag)
@@ -195,6 +218,7 @@ def _image_exists(image, tag):
             fg="red",
         )
         sys.exit(1)
+    return exists_locally, exists_remotely
 
 
 def _get_full_image_name(image, tag=None):

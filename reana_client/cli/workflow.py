@@ -26,6 +26,7 @@ from reana_client.cli.utils import (
     format_session_uri,
     key_value_to_dict,
     parse_parameters,
+    requires_environments,
     validate_workflow_name,
 )
 from reana_client.config import ERROR_MESSAGES, TIMECHECK
@@ -868,8 +869,16 @@ def workflow_logs(
     help="If set, check all runtime environments specified in REANA "
     "specification file. [default=False]",
 )
+@click.option(
+    "--pull",
+    is_flag=True,
+    default=False,
+    callback=requires_environments,
+    help="If set, try to pull remote environment image from registry to perform "
+    "validation locally. Requires ``--environments`` flag. [default=False]",
+)
 @click.pass_context
-def workflow_validate(ctx, file, environments):  # noqa: D301
+def workflow_validate(ctx, file, environments, pull):  # noqa: D301
     """Validate workflow specification file.
 
     The `validate` command allows to check syntax and validate the reana.yaml
@@ -883,7 +892,9 @@ def workflow_validate(ctx, file, environments):  # noqa: D301
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     try:
         load_reana_spec(
-            click.format_filename(file), skip_validate_environments=not environments
+            click.format_filename(file),
+            skip_validate_environments=not environments,
+            pull_environment_image=pull,
         )
         click.echo(
             click.style(

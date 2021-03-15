@@ -186,7 +186,7 @@ def _validate_image_tag(image):
     if not has_warnings:
         click.echo(
             click.style(
-                "==> Environment image {} has correct format.".format(image),
+                "==> SUCCESS: Environment image {} has correct format.".format(image),
                 fg="green",
             )
         )
@@ -266,7 +266,7 @@ def _image_exists_in_dockerhub(image, tag):
         return False
     else:
         click.secho(
-            "==> Environment image {} exists in Docker Hub.".format(
+            "==> SUCCESS: Environment image {} exists in Docker Hub.".format(
                 _get_full_image_name(image, tag)
             ),
             fg="green",
@@ -277,6 +277,7 @@ def _image_exists_in_dockerhub(image, tag):
 def _image_exists_in_gitlab_cern(image, tag):
     """Verify if image exists in GitLab CERN."""
     # Remove registry prefix
+    prefixed_image = image
     image = image.split("/", 1)[-1]
     # Encode image name slashes
     remote_registry_url = GITLAB_CERN_REGISTRY_INDEX_URL.format(
@@ -301,7 +302,7 @@ def _image_exists_in_gitlab_cern(image, tag):
         msg = response.json().get("message")
         click.secho(
             "==> WARNING: Existence of environment image {} in GitLab CERN could not be verified: {}".format(
-                _get_full_image_name(image, tag), msg
+                _get_full_image_name(prefixed_image, tag), msg
             ),
             fg="yellow",
         )
@@ -314,8 +315,8 @@ def _image_exists_in_gitlab_cern(image, tag):
         )
         if tag_exists:
             click.secho(
-                "==> Environment image {} exists in GitLab CERN.".format(
-                    _get_full_image_name(image, tag)
+                "==> SUCCESS: Environment image {} exists in GitLab CERN.".format(
+                    _get_full_image_name(prefixed_image, tag)
                 ),
                 fg="green",
             )
@@ -323,7 +324,7 @@ def _image_exists_in_gitlab_cern(image, tag):
         else:
             click.secho(
                 '==> WARNING: Environment image {} in GitLab CERN does not exist: Tag "{}" missing.'.format(
-                    _get_full_image_name(image, tag), tag
+                    _get_full_image_name(prefixed_image, tag), tag
                 ),
                 fg="yellow",
             )
@@ -336,7 +337,8 @@ def _image_exists_locally(image, tag):
     local_images = _get_local_docker_images()
     if full_image in local_images:
         click.secho(
-            "==> Environment image {} exists locally.".format(full_image), fg="green",
+            "==> SUCCESS: Environment image {} exists locally.".format(full_image),
+            fg="green",
         )
         return True
     else:
@@ -444,7 +446,7 @@ def _warn_not_used_parameters(workflow_parameters, command_parameters, type_="RE
 
     for parameter in workflow_parameters.difference(command_parameters):
         click.secho(
-            '==> WARNING: {} input parameter "{}" is not being used.'.format(
+            '==> WARNING: {} input parameter "{}" does not seem to be used.'.format(
                 type_, parameter
             ),
             fg="yellow",

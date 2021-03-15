@@ -29,7 +29,9 @@ def test_validate_parameters_serial(create_yaml_workflow_schema, capsys):
     reana_yaml["inputs"]["parameters"]["foo"] = "foo"
     _validate_serial_parameters(reana_yaml)
     captured = capsys.readouterr()
-    assert 'WARNING: REANA input parameter "foo" is not being used' in captured.out
+    assert (
+        'WARNING: REANA input parameter "foo" does not seem to be used' in captured.out
+    )
     del reana_yaml["inputs"]["parameters"]["foo"]
 
     # Escaped env vars don't trigger validation warning
@@ -84,7 +86,9 @@ def test_validate_parameters_yadage(yadage_workflow_spec_loaded, capsys):
     reana_yaml["inputs"]["parameters"]["qux"] = "qux_val"
     _validate_yadage_parameters(reana_yaml)
     captured = capsys.readouterr()
-    assert 'WARNING: REANA input parameter "qux" is not being used' in captured.out
+    assert (
+        'WARNING: REANA input parameter "qux" does not seem to be used' in captured.out
+    )
     del reana_yaml["inputs"]["parameters"]["qux"]
 
     # Yadage parameter not being used.
@@ -102,7 +106,9 @@ def test_validate_parameters_yadage(yadage_workflow_spec_loaded, capsys):
     )
     _validate_yadage_parameters(reana_yaml)
     captured = capsys.readouterr()
-    assert 'WARNING: Yadage input parameter "qux" is not being used' in captured.out
+    assert (
+        'WARNING: Yadage input parameter "qux" does not seem to be used' in captured.out
+    )
     reana_yaml["workflow"]["specification"]["stages"][0]["scheduler"][
         "parameters"
     ].pop()
@@ -139,7 +145,10 @@ def test_validate_parameters_yadage(yadage_workflow_spec_loaded, capsys):
     )
     _validate_yadage_parameters(reana_yaml)
     captured = capsys.readouterr()
-    assert 'WARNING: Yadage input parameter "subfoo" is not being used' in captured.out
+    assert (
+        'WARNING: Yadage input parameter "subfoo" does not seem to be used'
+        in captured.out
+    )
 
     # Use previous parameter in command
     process = subworkflow["workflow"]["stages"][0]["scheduler"]["step"]["process"]

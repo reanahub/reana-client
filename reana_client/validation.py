@@ -389,14 +389,23 @@ def _get_image_uid_gids(image, tag):
 def _validate_uid_gids(uid, gids, kubernetes_uid=None):
     """Check whether container UID and GIDs are valid."""
     if WORKFLOW_RUNTIME_USER_GID not in gids:
-        click.secho(
-            "==> ERROR: Environment image GID must be {}. GIDs {} were found.".format(
-                WORKFLOW_RUNTIME_USER_GID, gids
-            ),
-            err=True,
-            fg="red",
-        )
-        sys.exit(1)
+        if kubernetes_uid is None:
+            click.secho(
+                "==> ERROR: Environment image GID must be {}. GIDs {} were found.".format(
+                    WORKFLOW_RUNTIME_USER_GID, gids
+                ),
+                err=True,
+                fg="red",
+            )
+            sys.exit(1)
+        else:
+            click.secho(
+                "==> WARNING: Environment image GID is recommended to be {}. GIDs {} were found.".format(
+                    WORKFLOW_RUNTIME_USER_GID, gids
+                ),
+                err=True,
+                fg="yellow",
+            )
     if kubernetes_uid is not None:
         if kubernetes_uid != uid:
             click.secho(

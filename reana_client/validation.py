@@ -451,6 +451,7 @@ def _warn_not_used_parameters(workflow_parameters, command_parameters, type_="RE
     :param command_parameters: Set of parameters used inside workflow.
     :param type: Type of workflow parameters, e.g. REANA for input parameters, Yadage
                  for parameters defined in Yadage spec.
+    :returns: Set of command parameters not referenced by workflow parameters.
     """
 
     for parameter in workflow_parameters.difference(command_parameters):
@@ -460,6 +461,7 @@ def _warn_not_used_parameters(workflow_parameters, command_parameters, type_="RE
             ),
             fg="yellow",
         )
+    return command_parameters.difference(workflow_parameters)
 
 
 def _warn_not_defined_parameters(
@@ -536,6 +538,20 @@ def _validate_yadage_parameters(reana_yaml):
             ]
         return parse_command(str(step_value))
 
+    def get_publisher_definitions(
+        step, step_name, step_key, step_val,
+    ):
+        """Save publisher definitions as command params."""
+        publisher_cmd_param_steps_mapping = defaultdict(set)
+        if step == "publisher":
+            command_params = {
+                "publish": lambda: step_val.keys(),
+                "outputkey": lambda: [step_val],
+            }.get(step_key, lambda: [])()
+            for command_param in command_params:
+                publisher_cmd_param_steps_mapping[command_param].add(step_name)
+        return publisher_cmd_param_steps_mapping
+
     def parse_params(stages):
         params = []
         cmd_param_steps_mapping = defaultdict(set)
@@ -552,9 +568,15 @@ def _validate_yadage_parameters(reana_yaml):
 
             for param in stage["scheduler"]["parameters"]:
                 params.append(param["key"])
+                if isinstance(param["value"], dict) and "output" in param["value"]:
+                    params.append(param["value"]["output"])
 
             for step in stage["scheduler"].get("step", {}).keys():
                 for step_key, step_val in stage["scheduler"]["step"][step].items():
+                    publisher_cmd_param_steps_mapping = get_publisher_definitions(
+                        step, step_name, step_key, step_val
+                    )
+                    cmd_param_steps_mapping.update(publisher_cmd_param_steps_mapping)
                     if step_key == "script":
                         command = step_val
                         _validate_dangerous_operations(command, step_name)
@@ -565,7 +587,7 @@ def _validate_yadage_parameters(reana_yaml):
         return params, cmd_param_steps_mapping
 
     # REANA input parameters
-    input_parameters = set(reana_yaml["inputs"].get("parameters", {}).keys())
+    input_params = set(reana_yaml["inputs"].get("parameters", {}).keys())
 
     # Yadage parameters
     workflow_spec = reana_yaml["workflow"]["specification"]
@@ -575,9 +597,9 @@ def _validate_yadage_parameters(reana_yaml):
     command_params = set(cmd_param_steps_mapping.keys())
 
     # REANA input parameters validation
-    _warn_not_used_parameters(input_parameters, workflow_params)
+    rest_workflow_params = _warn_not_used_parameters(input_params, workflow_params)
     # Yadage parameters validation
-    _warn_not_used_parameters(workflow_params, command_params, type_="Yadage")
+    _warn_not_used_parameters(rest_workflow_params, command_params, type_="Yadage")
     # Yadage command parameters validation
     _warn_not_defined_parameters(cmd_param_steps_mapping, workflow_params, "yadage")
 

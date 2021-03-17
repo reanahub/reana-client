@@ -1,10 +1,10 @@
 Changes
 =======
 
-Version 0.7.3 (UNRELEASED)
+Version 0.7.3 (2021-03-24)
 --------------------------
-- Adds workflow parameters validation to ``validate`` command.
-- Adds option ``--environments`` to ``validate`` to perform workflow image validations.
+- Adds validation of workflow input parameters to the ``validate`` command.
+- Adds optional validation of workflow environment images (``--environments``) to the ``validate`` command.
 
 Version 0.7.2 (2021-01-15)
 --------------------------

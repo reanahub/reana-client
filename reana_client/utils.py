@@ -30,6 +30,7 @@ from reana_client.config import (
     reana_yaml_schema_file_path,
     reana_yaml_valid_file_names,
 )
+from reana_client.printer import display_message
 from reana_client.validation import validate_environment, validate_parameters
 
 
@@ -158,22 +159,21 @@ def load_reana_spec(
         )
 
         if not skip_validation:
-            logging.info(
-                "Validating REANA specification file: {filepath}".format(
+            display_message(
+                "Verifing REANA specification file... {filepath}".format(
                     filepath=filepath
-                )
+                ),
+                msg_type="info",
             )
             _validate_reana_yaml(reana_yaml)
-            logging.info(
-                "Validating parameters in REANA specification file: "
-                "{filepath}".format(filepath=filepath)
+            display_message(
+                "Verifing workflow parameters and commands... ", msg_type="info",
             )
             validate_parameters(workflow_type, reana_yaml)
 
         if not skip_validate_environments:
-            logging.info(
-                "Validating environments in REANA specification file: "
-                "{filepath}".format(filepath=filepath)
+            display_message(
+                "Verifing environments in REANA specification file...", msg_type="info",
             )
             validate_environment(reana_yaml, pull=pull_environment_image)
 
@@ -214,6 +214,7 @@ def _validate_reana_yaml(reana_yaml):
             reana_yaml_schema = json.loads(f.read())
 
             validate(reana_yaml, reana_yaml_schema)
+        display_message("reana.yaml is valid.", msg_type="success", indented=True)
 
     except IOError as e:
         logging.info(

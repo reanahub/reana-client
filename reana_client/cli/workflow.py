@@ -30,6 +30,7 @@ from reana_client.cli.utils import (
     validate_workflow_name,
 )
 from reana_client.config import ERROR_MESSAGES, TIMECHECK
+from reana_client.printer import display_message
 from reana_client.utils import (
     get_reana_yaml_file_path,
     get_workflow_name_and_run_number,
@@ -287,9 +288,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
     # Otherwise it would mess up `--workflow` flag usage because no distinction
     # could be made between the name and actual UUID of workflow.
     if is_uuid_v4(name):
-        click.echo(
-            click.style("Workflow name cannot be a valid UUIDv4", fg="red"), err=True
-        )
+        display_message("Workflow name cannot be a valid UUIDv4", msg_type="error")
     try:
         reana_specification = load_reana_spec(
             click.format_filename(file), skip_validation
@@ -303,11 +302,8 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        click.echo(
-            click.style(
-                "Cannot create workflow {}: \n{}".format(name, str(e)), fg="red"
-            ),
-            err=True,
+        display_message(
+            "Cannot create workflow {}: \n{}".format(name, str(e)), msg_type="error"
         )
         if "invoked_by_subcommand" in ctx.parent.__dict__:
             sys.exit(1)
@@ -896,35 +892,28 @@ def workflow_validate(ctx, file, environments, pull):  # noqa: D301
             skip_validate_environments=not environments,
             pull_environment_image=pull,
         )
-        click.echo(
-            click.style(
-                "File {filename} is a valid REANA specification file.".format(
-                    filename=click.format_filename(file)
-                ),
-                fg="green",
-            )
+        display_message(
+            "File {filename} is a valid REANA specification file.".format(
+                filename=click.format_filename(file)
+            ),
+            msg_type="success",
         )
 
     except ValidationError as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        click.echo(
-            click.style(
-                "{0} is not a valid REANA specification:\n{1}".format(
-                    click.format_filename(file), e.message
-                ),
-                fg="red",
+        display_message(
+            "{0} is not a valid REANA specification:\n{1}".format(
+                click.format_filename(file), e.message
             ),
-            err=True,
+            msg_type="error",
         )
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        click.echo(
-            click.style(
-                "Something went wrong when trying to validate {}".format(file), fg="red"
-            ),
-            err=True,
+        display_message(
+            "Something went wrong when trying to validate {}".format(file),
+            msg_type="error",
         )
 
 

@@ -29,6 +29,8 @@ from reana_client.config import (
     GITLAB_CERN_REGISTRY_PREFIX,
 )
 
+from reana_client.printer import display_message
+
 
 def validate_environment(reana_yaml, pull=False):
     """Validate environments in REANA specification file according to workflow type.
@@ -62,9 +64,10 @@ def _validate_environment_image(image, kubernetes_uid=None, pull=False):
         uid, gids = _get_image_uid_gids(image_name, image_tag)
         _validate_uid_gids(uid, gids, kubernetes_uid=kubernetes_uid)
     else:
-        click.secho(
-            "==> WARNING: UID/GIDs validation skipped, specify `--pull` to enable it.",
-            fg="yellow",
+        display_message(
+            "UID/GIDs validation skipped, specify `--pull` to enable it.",
+            msg_type="warning",
+            indented=True,
         )
 
 
@@ -84,12 +87,12 @@ def _validate_yadage_workflow_environment(workflow_steps, pull=False):
             else:
                 environment = stage["scheduler"]["step"]["environment"]
                 if environment["environment_type"] != "docker-encapsulated":
-                    click.secho(
-                        '==> ERROR: The only Yadage environment type supported is "docker-encapsulated". Found "{}".'.format(
+                    display_message(
+                        'The only Yadage environment type supported is "docker-encapsulated". Found "{}".'.format(
                             environment["environment_type"]
                         ),
-                        err=True,
-                        fg="red",
+                        msg_type="error",
+                        indented=True,
                     )
                     sys.exit(1)
                 else:
@@ -124,10 +127,10 @@ def _validate_cwl_workflow_environment(workflow_file, pull=False):
         import cwl_utils.parser_v1_0 as cwl_parser
         from cwl_utils.docker_extract import traverse
     except ImportError as e:
-        click.secho(
-            "==> ERROR: Cannot validate environment. Please install reana-client on Python 3+ to enable environment validation for CWL workflows.",
-            err=True,
-            fg="red",
+        display_message(
+            "Cannot validate environment. Please install reana-client on Python 3+ to enable environment validation for CWL workflows.",
+            msg_type="error",
+            indented=True,
         )
         raise e
 
@@ -159,38 +162,38 @@ def _validate_image_tag(image):
         environment = image.split(":", 1)
         image_name, image_tag = environment[0], environment[-1]
         if ":" in image_tag:
-            click.secho(
-                "==> ERROR: Environment image {} has invalid tag '{}'".format(
+            display_message(
+                "Environment image {} has invalid tag '{}'".format(
                     image_name, image_tag
                 ),
-                err=True,
-                fg="red",
+                msg_type="error",
+                indented=True,
             )
             sys.exit(1)
         elif image_tag in ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR:
-            click.secho(
-                "==> WARNING: Using '{}' tag is not recommended in {} environment image.".format(
+            display_message(
+                "Using '{}' tag is not recommended in {} environment image.".format(
                     image_tag, image_name
                 ),
-                fg="yellow",
+                msg_type="warning",
+                indented=True,
             )
             has_warnings = True
     else:
-        click.secho(
-            "==> WARNING: Environment image {} does not have an explicit tag.".format(
-                image
-            ),
-            fg="yellow",
+        display_message(
+            "Environment image {} does not have an explicit tag.".format(image),
+            msg_type="warning",
+            indented=True,
         )
         has_warnings = True
         image_name = image
     if not has_warnings:
-        click.echo(
-            click.style(
-                "==> SUCCESS: Environment image {} has correct format.".format(image),
-                fg="green",
-            )
+        display_message(
+            "Environment image {} has correct format.".format(image),
+            msg_type="success",
+            indented=True,
         )
+
     return image_name, image_tag
 
 
@@ -211,12 +214,12 @@ def _image_exists(image, tag):
         image_exists_remotely(image, tag),
     )
     if not any([exists_locally, exists_remotely]):
-        click.secho(
-            "==> ERROR: Environment image {} does not exist locally or remotely.".format(
+        display_message(
+            "Environment image {} does not exist locally or remotely.".format(
                 _get_full_image_name(image, tag)
             ),
-            err=True,
-            fg="red",
+            msg_type="error",
+            indented=True,
         )
         sys.exit(1)
     return exists_locally, exists_remotely
@@ -237,40 +240,41 @@ def _image_exists_in_dockerhub(image, tag):
         response = requests.get(docker_registry_url)
     except requests.exceptions.RequestException as e:
         logging.error(e)
-        click.secho(
-            "==> ERROR: Something went wrong when querying {}".format(
-                docker_registry_url
-            ),
-            err=True,
-            fg="red",
+        display_message(
+            "Something went wrong when querying {}".format(docker_registry_url),
+            msg_type="error",
+            indented=True,
         )
         return False
 
     if not response.ok:
         if response.status_code == 404:
             msg = response.text
-            click.secho(
-                "==> WARNING: Environment image {} does not exist in Docker Hub: {}".format(
+            display_message(
+                "Environment image {} does not exist in Docker Hub: {}".format(
                     _get_full_image_name(image, tag), msg
                 ),
-                fg="yellow",
+                msg_type="warning",
+                indented=True,
             )
         else:
-            click.secho(
+            display_message(
                 "==> WARNING: Existence of environment image {} in Docker Hub could not be verified. Status code: {} {}".format(
                     _get_full_image_name(image, tag),
                     response.status_code,
                     response.reason,
                 ),
-                fg="yellow",
+                msg_type="warning",
+                indented=True,
             )
         return False
     else:
-        click.secho(
-            "==> SUCCESS: Environment image {} exists in Docker Hub.".format(
+        display_message(
+            "Environment image {} exists in Docker Hub.".format(
                 _get_full_image_name(image, tag)
             ),
-            fg="green",
+            msg_type="success",
+            indented=True,
         )
         return True
 
@@ -290,22 +294,21 @@ def _image_exists_in_gitlab_cern(image, tag):
         response = requests.get(remote_registry_url)
     except requests.exceptions.RequestException as e:
         logging.error(e)
-        click.secho(
-            "==> ERROR: Something went wrong when querying {}".format(
-                remote_registry_url
-            ),
-            err=True,
-            fg="red",
+        display_message(
+            "Something went wrong when querying {}".format(remote_registry_url),
+            msg_type="error",
+            indented=True,
         )
         return False
 
     if not response.ok:
         msg = response.json().get("message")
-        click.secho(
-            "==> WARNING: Existence of environment image {} in GitLab CERN could not be verified: {}".format(
+        display_message(
+            "Existence of environment image {} in GitLab CERN could not be verified: {}".format(
                 _get_full_image_name(prefixed_image, tag), msg
             ),
-            fg="yellow",
+            msg_type="warning",
+            indented=True,
         )
         return False
     else:
@@ -315,19 +318,21 @@ def _image_exists_in_gitlab_cern(image, tag):
             tag_dict["name"] == tag for tag_dict in response.json()[0].get("tags")
         )
         if tag_exists:
-            click.secho(
-                "==> SUCCESS: Environment image {} exists in GitLab CERN.".format(
+            display_message(
+                "Environment image {} exists in GitLab CERN.".format(
                     _get_full_image_name(prefixed_image, tag)
                 ),
-                fg="green",
+                msg_type="success",
+                indented=True,
             )
             return True
         else:
-            click.secho(
-                '==> WARNING: Environment image {} in GitLab CERN does not exist: Tag "{}" missing.'.format(
+            display_message(
+                'Environment image {} in GitLab CERN does not exist: Tag "{}" missing.'.format(
                     _get_full_image_name(prefixed_image, tag), tag
                 ),
-                fg="yellow",
+                msg_type="warning",
+                indented=True,
             )
             return False
 
@@ -337,17 +342,17 @@ def _image_exists_locally(image, tag):
     full_image = _get_full_image_name(image, tag or "latest")
     local_images = _get_local_docker_images()
     if full_image in local_images:
-        click.secho(
-            "==> SUCCESS: Environment image {} exists locally.".format(full_image),
-            fg="green",
+        display_message(
+            "Environment image {} exists locally.".format(full_image),
+            msg_type="success",
+            indented=True,
         )
         return True
     else:
-        click.secho(
-            "==> WARNING: Environment image {} does not exist locally.".format(
-                full_image
-            ),
-            fg="yellow",
+        display_message(
+            "Environment image {} does not exist locally.".format(full_image),
+            msg_type="warning",
+            indented=True,
         )
         return False
 
@@ -391,36 +396,38 @@ def _validate_uid_gids(uid, gids, kubernetes_uid=None):
     """Check whether container UID and GIDs are valid."""
     if WORKFLOW_RUNTIME_USER_GID not in gids:
         if kubernetes_uid is None:
-            click.secho(
-                "==> ERROR: Environment image GID must be {}. GIDs {} were found.".format(
+            display_message(
+                "Environment image GID must be {}. GIDs {} were found.".format(
                     WORKFLOW_RUNTIME_USER_GID, gids
                 ),
-                err=True,
-                fg="red",
+                msg_type="error",
+                indented=True,
             )
             sys.exit(1)
         else:
-            click.secho(
-                "==> WARNING: Environment image GID is recommended to be {}. GIDs {} were found.".format(
+            display_message(
+                "Environment image GID is recommended to be {}. GIDs {} were found.".format(
                     WORKFLOW_RUNTIME_USER_GID, gids
                 ),
-                err=True,
-                fg="yellow",
+                msg_type="warning",
+                indented=True,
             )
     if kubernetes_uid is not None:
         if kubernetes_uid != uid:
-            click.secho(
-                "==> WARNING: `kubernetes_uid` set to {}. UID {} was found.".format(
+            display_message(
+                "`kubernetes_uid` set to {}. UID {} was found.".format(
                     kubernetes_uid, uid
                 ),
-                fg="yellow",
+                msg_type="warning",
+                indented=True,
             )
     elif uid != WORKFLOW_RUNTIME_USER_UID:
-        click.secho(
-            "==> WARNING: Environment image UID is recommended to be {}. UID {} was found.".format(
+        display_message(
+            "Environment image UID is recommended to be {}. UID {} was found.".format(
                 WORKFLOW_RUNTIME_USER_UID, uid
             ),
-            fg="yellow",
+            msg_type="warning",
+            indented=True,
         )
 
 
@@ -437,9 +444,10 @@ def validate_parameters(workflow_type, reana_yaml):
     }
     """Dictionary to extend with new workflow specification loaders."""
     if "inputs" not in reana_yaml:
-        click.secho(
-            '==> WARNING: Workflow "inputs" are missing in the REANA specification.',
-            fg="yellow",
+        display_message(
+            'Workflow "inputs" are missing in the REANA specification.',
+            msg_type="warning",
+            indented=True,
         )
 
     return validate[workflow_type](reana_yaml)
@@ -456,11 +464,12 @@ def _warn_not_used_parameters(workflow_parameters, command_parameters, type_="RE
     """
 
     for parameter in workflow_parameters.difference(command_parameters):
-        click.secho(
-            '==> WARNING: {} input parameter "{}" does not seem to be used.'.format(
+        display_message(
+            '{} input parameter "{}" does not seem to be used.'.format(
                 type_, parameter
             ),
-            fg="yellow",
+            msg_type="warning",
+            indented=True,
         )
     return command_parameters.difference(workflow_parameters)
 
@@ -479,14 +488,15 @@ def _warn_not_defined_parameters(
     for parameter in command_parameters.difference(workflow_parameters):
         steps_used = cmd_param_steps_mapping[parameter]
 
-        click.secho(
-            '==> WARNING: {type} parameter "{parameter}" found on step{s} "{steps}" is not defined in input parameters.'.format(
+        display_message(
+            '{type} parameter "{parameter}" found on step{s} "{steps}" is not defined in input parameters.'.format(
                 type=workflow_type.capitalize(),
                 parameter=parameter,
                 steps=", ".join(steps_used),
                 s="s" if len(steps_used) > 1 else "",
             ),
-            fg="yellow",
+            msg_type="warning",
+            indented=True,
         )
 
 
@@ -504,10 +514,10 @@ def _validate_cwl_parameters(reana_yaml):
             stderr_output=True,
         )
     else:
-        click.secho(
-            "==> ERROR: Workflow path {} is not valid.".format(cwl_main_spec_path),
-            err=True,
-            fg="red",
+        display_message(
+            "Workflow path {} is not valid.".format(cwl_main_spec_path),
+            msg_type="error",
+            indented=True,
         )
         sys.exit(1)
 
@@ -635,11 +645,12 @@ def _validate_dangerous_operations(command, step):
     """
     for operation in COMMAND_DANGEROUS_OPERATIONS:
         if operation in command:
-            click.secho(
-                '==> WARNING: Operation "{}" found in step "{}" might be dangerous.'.format(
+            display_message(
+                'Operation "{}" found in step "{}" might be dangerous.'.format(
                     operation.strip(), step
                 ),
-                fg="yellow",
+                msg_type="warning",
+                indented=True,
             )
 
 

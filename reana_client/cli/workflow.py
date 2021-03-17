@@ -892,12 +892,6 @@ def workflow_validate(ctx, file, environments, pull):  # noqa: D301
             skip_validate_environments=not environments,
             pull_environment_image=pull,
         )
-        display_message(
-            "File {filename} is a valid REANA specification file.".format(
-                filename=click.format_filename(file)
-            ),
-            msg_type="success",
-        )
 
     except ValidationError as e:
         logging.debug(traceback.format_exc())

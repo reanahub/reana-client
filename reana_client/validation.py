@@ -189,7 +189,7 @@ def _validate_image_tag(image):
         image_name = image
     if not has_warnings:
         display_message(
-            "Environment image {} has correct format.".format(image),
+            "Environment image {} has the correct format.".format(image),
             msg_type="success",
             indented=True,
         )
@@ -232,6 +232,7 @@ def _get_full_image_name(image, tag=None):
 
 def _image_exists_in_dockerhub(image, tag):
     """Verify if image exists in DockerHub."""
+    full_image = _get_full_image_name(image, tag or "latest")
     docker_registry_url = DOCKER_REGISTRY_INDEX_URL.format(image=image, tag=tag)
     # Remove traling slash if no tag was specified
     if not tag:
@@ -252,7 +253,7 @@ def _image_exists_in_dockerhub(image, tag):
             msg = response.text
             display_message(
                 "Environment image {} does not exist in Docker Hub: {}".format(
-                    _get_full_image_name(image, tag), msg
+                    full_image, msg
                 ),
                 msg_type="warning",
                 indented=True,
@@ -260,9 +261,7 @@ def _image_exists_in_dockerhub(image, tag):
         else:
             display_message(
                 "==> WARNING: Existence of environment image {} in Docker Hub could not be verified. Status code: {} {}".format(
-                    _get_full_image_name(image, tag),
-                    response.status_code,
-                    response.reason,
+                    full_image, response.status_code, response.reason,
                 ),
                 msg_type="warning",
                 indented=True,
@@ -270,9 +269,7 @@ def _image_exists_in_dockerhub(image, tag):
         return False
     else:
         display_message(
-            "Environment image {} exists in Docker Hub.".format(
-                _get_full_image_name(image, tag)
-            ),
+            "Environment image {} exists in Docker Hub.".format(full_image),
             msg_type="success",
             indented=True,
         )
@@ -283,6 +280,7 @@ def _image_exists_in_gitlab_cern(image, tag):
     """Verify if image exists in GitLab CERN."""
     # Remove registry prefix
     prefixed_image = image
+    full_prefixed_image = _get_full_image_name(image, tag or "latest")
     image = image.split("/", 1)[-1]
     # Encode image name slashes
     remote_registry_url = GITLAB_CERN_REGISTRY_INDEX_URL.format(
@@ -320,7 +318,7 @@ def _image_exists_in_gitlab_cern(image, tag):
         if tag_exists:
             display_message(
                 "Environment image {} exists in GitLab CERN.".format(
-                    _get_full_image_name(prefixed_image, tag)
+                    full_prefixed_image
                 ),
                 msg_type="success",
                 indented=True,
@@ -329,7 +327,7 @@ def _image_exists_in_gitlab_cern(image, tag):
         else:
             display_message(
                 'Environment image {} in GitLab CERN does not exist: Tag "{}" missing.'.format(
-                    _get_full_image_name(prefixed_image, tag), tag
+                    full_prefixed_image, tag
                 ),
                 msg_type="warning",
                 indented=True,

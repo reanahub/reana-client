@@ -16,8 +16,8 @@ from reana_client.validation import _get_full_image_name, _validate_image_tag
 @pytest.mark.parametrize(
     "image, output, exit_",
     [
-        ("foo:bar", "has correct format", False),
-        ("foo/bar:baz", "has correct format", False),
+        ("foo:bar", "has the correct format", False),
+        ("foo/bar:baz", "has the correct format", False),
         ("foo/bar", "not have an explicit tag", False),
         ("foo/bar:", "tag is not recommended", False),
         ("foo/bar:latest", "tag is not recommended", False),

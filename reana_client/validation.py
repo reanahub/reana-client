@@ -521,6 +521,33 @@ def _validate_cwl_parameters(reana_yaml):
         )
         sys.exit(1)
 
+    def _check_dangerous_operations(workflow):
+        """Check for "baseCommand" and "arguments" in workflow.
+
+        If these keys are found, validate if they have dangerous operations.
+        """
+        cmd_keys = ["baseCommand", "arguments"]
+        for cmd_key in cmd_keys:
+            if cmd_key in workflow:
+                cmd_values = (
+                    workflow[cmd_key]
+                    if isinstance(workflow[cmd_key], list)
+                    else [workflow[cmd_key]]
+                )
+                for cmd_value in cmd_values:
+                    _validate_dangerous_operations(
+                        str(cmd_value), step=workflow.get("id")
+                    )
+
+    workflow = reana_yaml["workflow"]["specification"].get(
+        "$graph", reana_yaml["workflow"]["specification"]
+    )
+    if isinstance(workflow, dict):
+        _check_dangerous_operations(workflow)
+    elif isinstance(workflow, list):
+        for wf in workflow:
+            _check_dangerous_operations(wf)
+
 
 def _validate_serial_parameters(reana_yaml):
     """Validate input parameters for Serial workflows.
@@ -540,7 +567,7 @@ def _validate_serial_parameters(reana_yaml):
     ):
         step_name = step.get("name", str(idx))
         for command in step["commands"]:
-            _validate_dangerous_operations(command, step_name)
+            _validate_dangerous_operations(command, step=step_name)
             cmd_params = parse_command(command)
             for cmd_param in cmd_params:
                 cmd_param_steps_mapping[cmd_param].add(step_name)
@@ -612,7 +639,7 @@ def _validate_yadage_parameters(reana_yaml):
                     cmd_param_steps_mapping.update(publisher_cmd_param_steps_mapping)
                     if step_key == "script":
                         command = step_val
-                        _validate_dangerous_operations(command, step_name)
+                        _validate_dangerous_operations(command, step=step_name)
                     step_commands_params = parse_command_params(step_val)
                     for command_param in step_commands_params:
                         cmd_param_steps_mapping[command_param].add(step_name)
@@ -637,7 +664,7 @@ def _validate_yadage_parameters(reana_yaml):
     _warn_not_defined_parameters(cmd_param_steps_mapping, workflow_params, "yadage")
 
 
-def _validate_dangerous_operations(command, step):
+def _validate_dangerous_operations(command, step=None):
     """Warn the user if a command has dangerous operations.
 
     :param command: A workflow step command to validate.
@@ -645,10 +672,11 @@ def _validate_dangerous_operations(command, step):
     """
     for operation in COMMAND_DANGEROUS_OPERATIONS:
         if operation in command:
+            msg = 'Operation "{}" found in step "{}" might be dangerous.'
+            if not step:
+                msg = 'Operation "{}" might be dangerous.'
             display_message(
-                'Operation "{}" found in step "{}" might be dangerous.'.format(
-                    operation.strip(), step
-                ),
+                msg.format(operation.strip(), step if step else None),
                 msg_type="warning",
                 indented=True,
             )

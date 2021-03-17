@@ -238,10 +238,11 @@ def test_validate_parameters_yadage(yadage_workflow_spec_loaded, capsys):
             "installation",
             '"cd /" found in step "installation" might be dangerous.',
         ),
+        ("sudo npm install", None, '"sudo" might be dangerous.',),
     ],
 )
 def test_validate_dangerous_operations(command, step, warning, capsys):
     """Validate if dangerous operations in a command trigger a warning."""
-    _validate_dangerous_operations(command, step)
+    _validate_dangerous_operations(command, step=step)
     captured = capsys.readouterr()
     assert warning in captured.out

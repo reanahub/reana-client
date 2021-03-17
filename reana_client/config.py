@@ -56,3 +56,12 @@ GITLAB_CERN_REGISTRY_PREFIX = "gitlab-registry.cern.ch"
 
 COMMAND_DANGEROUS_OPERATIONS = ["sudo ", "cd /"]
 """Operations in workflow commands considered dangerous."""
+
+PRINTER_COLOUR_SUCCESS = "green"
+"""Default colour for success messages on terminal."""
+
+PRINTER_COLOUR_WARNING = "yellow"
+"""Default colour for warning messages on terminal."""
+
+PRINTER_COLOUR_ERROR = "red"
+"""Default colour for error messages on terminal."""

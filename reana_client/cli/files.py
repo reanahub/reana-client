@@ -66,11 +66,12 @@ def files_group(ctx):
     default=None,
     help="Get URLs of output files.",
 )
+@click.argument("filename", metavar="SOURCE", nargs=1, required=False)
 @add_access_token_options
 @add_pagination_options
 @click.pass_context
 def get_files(
-    ctx, workflow, _filter, output_format, access_token, page, size
+    ctx, workflow, _filter, output_format, filename, access_token, page, size
 ):  # noqa: D301
     """List workspace files.
 
@@ -79,8 +80,9 @@ def get_files(
     `--workflow` or `-w`.
 
     Examples: \n
-    \t $ reana-client ls --workflow myanalysis.42
-    """
+    \t $ reana-client ls --workflow myanalysis.42 \n
+    \t $ reana-client ls --workflow myanalysis.42 'code/\*'
+    """  # noqa: W605
     import tablib
     from reana_client.api.client import current_rs_api_client, list_files
 
@@ -93,7 +95,7 @@ def get_files(
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
-            response = list_files(workflow, access_token, page, size)
+            response = list_files(workflow, access_token, filename, page, size)
             headers = ["name", "size", "last-modified"]
             data = []
             file_path = get_path_from_operation_id(

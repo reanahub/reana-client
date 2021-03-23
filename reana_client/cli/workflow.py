@@ -81,7 +81,11 @@ def workflow_execution_group(ctx):
     help="Get output in JSON format.",
 )
 @click.option(
-    "--all", "show_all", count=True, help="Show all workflows including deleted ones."
+    "--all",
+    "show_all",
+    count=True,
+    default=True,
+    help="Show all workflows including deleted ones.",
 )
 @click.option(
     "-v",

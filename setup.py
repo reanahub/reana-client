@@ -50,7 +50,7 @@ install_requires = [
     "rfc3987>=1.3.8",  # FIXME remove once yadage-schemas solves deps.
     "six==1.12.0",
     "strict-rfc3339>=0.7",  # FIXME remove once yadage-schemas solves deps.
-    "tablib>=0.12.1,<0.13",
+    "tablib>=0.14.0,<1.0.0",
     "webcolors==1.9.1",  # FIXME remove once yadage-schemas solves deps.
     "werkzeug>=0.14.1",
     "yadage-schemas==0.10.6",

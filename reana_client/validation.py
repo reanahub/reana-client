@@ -31,6 +31,10 @@ from reana_client.config import (
 
 from reana_client.printer import display_message
 
+VALIDATED_IMAGES = set()
+"""Keep track of already validated images in order to avoid output repetition
+and increase performance."""
+
 
 def validate_environment(reana_yaml, pull=False):
     """Validate environments in REANA specification file according to workflow type.
@@ -49,6 +53,7 @@ def validate_environment(reana_yaml, pull=False):
     elif workflow_type == "cwl":
         workflow_file = reana_yaml["workflow"].get("file")
         _validate_cwl_workflow_environment(workflow_file, pull=pull)
+    VALIDATED_IMAGES = set()  # noqa:F841
 
 
 def _validate_environment_image(image, kubernetes_uid=None, pull=False):
@@ -58,17 +63,19 @@ def _validate_environment_image(image, kubernetes_uid=None, pull=False):
     :param kubernetes_uid: Kubernetes UID defined in workflow spec.
     :param pull: If true, attempt to pull remote environment image to perform GID/UID validation.
     """
-    image_name, image_tag = _validate_image_tag(image)
-    exists_locally, _ = _image_exists(image_name, image_tag)
-    if exists_locally or pull:
-        uid, gids = _get_image_uid_gids(image_name, image_tag)
-        _validate_uid_gids(uid, gids, kubernetes_uid=kubernetes_uid)
-    else:
-        display_message(
-            "UID/GIDs validation skipped, specify `--pull` to enable it.",
-            msg_type="warning",
-            indented=True,
-        )
+    if image not in VALIDATED_IMAGES:
+        image_name, image_tag = _validate_image_tag(image)
+        exists_locally, _ = _image_exists(image_name, image_tag)
+        if exists_locally or pull:
+            uid, gids = _get_image_uid_gids(image_name, image_tag)
+            _validate_uid_gids(uid, gids, kubernetes_uid=kubernetes_uid)
+        else:
+            display_message(
+                "UID/GIDs validation skipped, specify `--pull` to enable it.",
+                msg_type="warning",
+                indented=True,
+            )
+    VALIDATED_IMAGES.add(image)
 
 
 def _validate_yadage_workflow_environment(workflow_steps, pull=False):
@@ -421,7 +428,7 @@ def _validate_uid_gids(uid, gids, kubernetes_uid=None):
             )
     elif uid != WORKFLOW_RUNTIME_USER_UID:
         display_message(
-            "Environment image UID is recommended to be {}. UID {} was found.".format(
+            "Environment image uses UID {} but will run as UID {}.".format(
                 WORKFLOW_RUNTIME_USER_UID, uid
             ),
             msg_type="info",

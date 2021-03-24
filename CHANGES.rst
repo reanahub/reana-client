@@ -1,6 +1,10 @@
 Changes
 =======
 
+Version 0.7.4 (UNRELEASED)
+--------------------------
+- Fixes environment image validation info message where UIDs were switched.
+
 Version 0.7.3 (2021-03-24)
 --------------------------
 - Adds validation of workflow input parameters to the ``validate`` command.

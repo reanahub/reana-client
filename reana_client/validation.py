@@ -429,7 +429,7 @@ def _validate_uid_gids(uid, gids, kubernetes_uid=None):
     elif uid != WORKFLOW_RUNTIME_USER_UID:
         display_message(
             "Environment image uses UID {} but will run as UID {}.".format(
-                WORKFLOW_RUNTIME_USER_UID, uid
+                uid, WORKFLOW_RUNTIME_USER_UID
             ),
             msg_type="info",
             indented=True,

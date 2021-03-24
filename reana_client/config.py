@@ -65,3 +65,6 @@ PRINTER_COLOUR_WARNING = "yellow"
 
 PRINTER_COLOUR_ERROR = "red"
 """Default colour for error messages on terminal."""
+
+PRINTER_COLOUR_INFO = "cyan"
+"""Default colour for info messages on terminal."""

@@ -12,6 +12,7 @@ import click
 
 from reana_client.config import (
     PRINTER_COLOUR_ERROR,
+    PRINTER_COLOUR_INFO,
     PRINTER_COLOUR_SUCCESS,
     PRINTER_COLOUR_WARNING,
 )
@@ -31,12 +32,19 @@ def display_message(msg, msg_type=None, indented=False):
         "success": PRINTER_COLOUR_SUCCESS,
         "warning": PRINTER_COLOUR_WARNING,
         "error": PRINTER_COLOUR_ERROR,
+        "info": PRINTER_COLOUR_INFO,
     }
     msg_color = msg_color_map.get(msg_type, "")
 
     if msg_type == "info":
-        click.secho("==> ", bold=True, nl=False)
-        click.secho("{}".format(msg), bold=True, nl=True)
+        if indented:
+            click.secho(
+                "  -> {}: ".format(msg_type.upper()), bold=True, nl=False, fg=msg_color,
+            )
+            click.secho("{}".format(msg), nl=True)
+        else:
+            click.secho("==> ", bold=True, nl=False)
+            click.secho("{}".format(msg), bold=True, nl=True)
     elif msg_type in ["error", "warning", "success"]:
         prefix_tpl = "  -> {}: " if indented else "==> {}: "
         click.secho(
@@ -44,7 +52,7 @@ def display_message(msg, msg_type=None, indented=False):
             bold=True,
             nl=False,
             err=msg_type == "error",
-            fg="{}".format(msg_color),
+            fg=msg_color,
         )
         click.secho("{}".format(msg), bold=False, err=msg_type == "error", nl=True)
     else:

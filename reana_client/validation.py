@@ -424,7 +424,7 @@ def _validate_uid_gids(uid, gids, kubernetes_uid=None):
             "Environment image UID is recommended to be {}. UID {} was found.".format(
                 WORKFLOW_RUNTIME_USER_UID, uid
             ),
-            msg_type="warning",
+            msg_type="info",
             indented=True,
         )
 
@@ -434,6 +434,7 @@ def validate_parameters(workflow_type, reana_yaml):
 
     :param workflow_type: A supported workflow specification type.
     :param reana_yaml: REANA YAML specification.
+    :returns: A bool indicating if parameters and commands are fully valid.
     """
     validate = {
         "yadage": _validate_yadage_parameters,
@@ -448,7 +449,14 @@ def validate_parameters(workflow_type, reana_yaml):
             indented=True,
         )
 
-    return validate[workflow_type](reana_yaml)
+    valid = validate[workflow_type](reana_yaml)
+    if valid:
+        display_message(
+            "Workflow parameters and commands appear valid.",
+            msg_type="success",
+            indented=True,
+        )
+    return valid
 
 
 def _warn_not_used_parameters(workflow_parameters, command_parameters, type_="REANA"):
@@ -458,10 +466,12 @@ def _warn_not_used_parameters(workflow_parameters, command_parameters, type_="RE
     :param command_parameters: Set of parameters used inside workflow.
     :param type: Type of workflow parameters, e.g. REANA for input parameters, Yadage
                  for parameters defined in Yadage spec.
-    :returns: Set of command parameters not referenced by workflow parameters.
+    :returns: A dictionary containing the set of command parameters not referenced by
+              workflow parameters and whether warnings were displayed.
     """
 
-    for parameter in workflow_parameters.difference(command_parameters):
+    unused_parameters = workflow_parameters.difference(command_parameters)
+    for parameter in unused_parameters:
         display_message(
             '{} input parameter "{}" does not seem to be used.'.format(
                 type_, parameter
@@ -469,7 +479,10 @@ def _warn_not_used_parameters(workflow_parameters, command_parameters, type_="RE
             msg_type="warning",
             indented=True,
         )
-    return command_parameters.difference(workflow_parameters)
+    return {
+        "rest_workflow_params": command_parameters.difference(workflow_parameters),
+        "has_warnings": bool(unused_parameters),
+    }
 
 
 def _warn_not_defined_parameters(
@@ -480,10 +493,11 @@ def _warn_not_defined_parameters(
     :param cmd_param_steps_mapping: Mapping between command parameters and its step.
     :param workflow_parameters: Set of parameters in workflow definition.
     :param workflow_type: Workflow type being checked.
+    :returns: A dictionary containing whether warnings were displayed.
     """
     command_parameters = set(cmd_param_steps_mapping.keys())
-
-    for parameter in command_parameters.difference(workflow_parameters):
+    command_parameters_not_defined = command_parameters.difference(workflow_parameters)
+    for parameter in command_parameters_not_defined:
         steps_used = cmd_param_steps_mapping[parameter]
 
         display_message(
@@ -496,28 +510,15 @@ def _warn_not_defined_parameters(
             msg_type="warning",
             indented=True,
         )
+    return {"has_warnings": bool(command_parameters_not_defined)}
 
 
 def _validate_cwl_parameters(reana_yaml):
     """Validate input parameters for CWL workflows.
 
     :param reana_yaml: REANA YAML specification.
+    :returns: A bool indicating if no warnings were displayed, i.e. it's fully valid.
     """
-    cwl_main_spec_path = reana_yaml["workflow"].get("file")
-    if os.path.exists(cwl_main_spec_path):
-        run_command(
-            "cwltool --validate --strict {}".format(cwl_main_spec_path),
-            display=False,
-            return_output=True,
-            stderr_output=True,
-        )
-    else:
-        display_message(
-            "Workflow path {} is not valid.".format(cwl_main_spec_path),
-            msg_type="error",
-            indented=True,
-        )
-        sys.exit(1)
 
     def _check_dangerous_operations(workflow):
         """Check for "baseCommand" and "arguments" in workflow.
@@ -537,6 +538,22 @@ def _validate_cwl_parameters(reana_yaml):
                         str(cmd_value), step=workflow.get("id")
                     )
 
+    cwl_main_spec_path = reana_yaml["workflow"].get("file")
+    if os.path.exists(cwl_main_spec_path):
+        run_command(
+            "cwltool --validate --strict {}".format(cwl_main_spec_path),
+            display=False,
+            return_output=True,
+            stderr_output=True,
+        )
+    else:
+        display_message(
+            "Workflow path {} is not valid.".format(cwl_main_spec_path),
+            msg_type="error",
+            indented=True,
+        )
+        sys.exit(1)
+
     workflow = reana_yaml["workflow"]["specification"].get(
         "$graph", reana_yaml["workflow"]["specification"]
     )
@@ -546,11 +563,14 @@ def _validate_cwl_parameters(reana_yaml):
         for wf in workflow:
             _check_dangerous_operations(wf)
 
+    return True
+
 
 def _validate_serial_parameters(reana_yaml):
     """Validate input parameters for Serial workflows.
 
     :param reana_yaml: REANA YAML specification.
+    :returns: A bool indicating if no warnings were displayed, i.e. it's fully valid.
     """
 
     def parse_command(command):
@@ -572,14 +592,19 @@ def _validate_serial_parameters(reana_yaml):
 
     command_parameters = set(cmd_param_steps_mapping.keys())
 
-    _warn_not_used_parameters(input_parameters, command_parameters)
-    _warn_not_defined_parameters(cmd_param_steps_mapping, input_parameters, "serial")
+    params_warning = _warn_not_used_parameters(input_parameters, command_parameters)
+    command_warning = _warn_not_defined_parameters(
+        cmd_param_steps_mapping, input_parameters, "serial"
+    )
+
+    return not (params_warning["has_warnings"] or command_warning["has_warnings"])
 
 
 def _validate_yadage_parameters(reana_yaml):
     """Validate parameters for Yadage workflows.
 
     :param reana_yaml: REANA YAML specification.
+    :returns: A bool indicating if no warnings were displayed, i.e. it's fully valid.
     """
 
     def parse_command(command):
@@ -635,7 +660,7 @@ def _validate_yadage_parameters(reana_yaml):
                         step, step_name, step_key, step_val
                     )
                     cmd_param_steps_mapping.update(publisher_cmd_param_steps_mapping)
-                    if step_key == "script":
+                    if step_key in ["script", "cmd"]:
                         command = step_val
                         _validate_dangerous_operations(command, step=step_name)
                     step_commands_params = parse_command_params(step_val)
@@ -655,11 +680,22 @@ def _validate_yadage_parameters(reana_yaml):
     command_params = set(cmd_param_steps_mapping.keys())
 
     # REANA input parameters validation
-    rest_workflow_params = _warn_not_used_parameters(input_params, workflow_params)
+    reana_params_warning = _warn_not_used_parameters(input_params, workflow_params)
+    rest_workflow_params = reana_params_warning["rest_workflow_params"]
     # Yadage parameters validation
-    _warn_not_used_parameters(rest_workflow_params, command_params, type_="Yadage")
+    yadage_params_warning = _warn_not_used_parameters(
+        rest_workflow_params, command_params, type_="Yadage"
+    )
     # Yadage command parameters validation
-    _warn_not_defined_parameters(cmd_param_steps_mapping, workflow_params, "yadage")
+    yadage_command_warning = _warn_not_defined_parameters(
+        cmd_param_steps_mapping, workflow_params, "yadage"
+    )
+
+    return not (
+        reana_params_warning["has_warnings"]
+        or yadage_params_warning["has_warnings"]
+        or yadage_command_warning["has_warnings"]
+    )
 
 
 def _validate_dangerous_operations(command, step=None):

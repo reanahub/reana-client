@@ -5,6 +5,8 @@ Version 0.7.4 (UNRELEASED)
 --------------------------
 - Fixes environment image validation info message where UIDs were switched.
 - Changes ``list`` command to include deleted workflows by default.
+- Adds support of wildcard patterns to ``ls`` command.
+- Adds support of directory download and wildcard patterns to ``download`` command.
 
 Version 0.7.3 (2021-03-24)
 --------------------------

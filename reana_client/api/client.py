@@ -7,6 +7,7 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA REST API client."""
 
+import cgi
 import json
 import logging
 import os
@@ -363,6 +364,7 @@ def download_file(workflow, file_name, access_token):
     :param workflow: name or id which identifies the workflow.
     :param file_name: file name or path to the file requested.
     :param access_token: access token of the current user.
+    :return: Tuple containing file binary content and filename.
     """
     try:
         from reana_client.utils import get_api_url
@@ -376,8 +378,13 @@ def download_file(workflow, file_name, access_token):
             params={"file_name": file_name, "access_token": access_token},
             verify=False,
         )
+        if "Content-Disposition" in http_response.headers:
+            content_disposition = http_response.headers.get("Content-Disposition")
+            value, params = cgi.parse_header(content_disposition)
+            file_name = params.get("filename", "downloaded_file")
+
         if http_response.status_code == 200:
-            return http_response.content
+            return http_response.content, file_name
         else:
             raise Exception(
                 "Error {status_code} {reason} {message}".format(

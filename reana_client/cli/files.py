@@ -194,7 +194,9 @@ def download_files(
     if workflow:
         for file_name in filenames:
             try:
-                binary_file = download_file(workflow, file_name, access_token)
+                binary_file, file_name = download_file(
+                    workflow, file_name, access_token
+                )
 
                 logging.info(
                     "{0} binary file downloaded ... writing to {1}".format(

@@ -158,18 +158,21 @@ def create_workflow(reana_specification, name, access_token):
 
 
 def create_workflow_from_json(
-    workflow_json,
     name,
     access_token,
+    workflow_json=None,
+    workflow_file=None,
     parameters=None,
     workflow_engine="yadage",
     outputs=None,
 ):
     """Create a workflow from json specification.
 
-    :param workflow_json: workflow specification in json format.
     :param name: name or UUID of the workflow to be started.
     :param access_token: access token of the current user.
+    :param workflow_json: workflow specification in json format.
+    :param workflow_file: workflow specification file path.
+                          Ignores ``workflow_json`` if provided.
     :param parameters: workflow input parameters dictionary.
     :param workflow_engine: one of the workflow engines (yadage, serial, cwl)
     :param outputs: dictionary with expected workflow outputs.
@@ -198,8 +201,11 @@ def create_workflow_from_json(
             "these engines - {}".format(workflow_engine, WORKFLOW_ENGINES)
         )
     try:
-        reana_yaml = {}
-        reana_yaml["workflow"] = {"specification": workflow_json}
+        reana_yaml = dict(workflow={})
+        if workflow_file:
+            reana_yaml["workflow"]["file"] = workflow_file
+        else:
+            reana_yaml["workflow"]["specification"] = workflow_json
         reana_yaml["workflow"]["type"] = workflow_engine
         if parameters:
             reana_yaml["inputs"] = parameters

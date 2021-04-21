@@ -48,5 +48,6 @@ RUN_STATUSES = [
     "deleted",
     "stopped",
     "queued",
+    "pending",
 ]
 """Available run statuses."""

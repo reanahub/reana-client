@@ -178,6 +178,8 @@ def workflow_workflows(  # noqa: C901
             workflow["size"] = workflow["size"][human_readable_or_raw]
             if workflow["status"] == "deleted" and not show_all:
                 continue
+            if workflow["status"] == "pending":
+                workflow["status"] = "queued"
             name, run_number = get_workflow_name_and_run_number(workflow["name"])
             workflow["name"] = name
             workflow["run_number"] = run_number
@@ -626,6 +628,9 @@ def workflow_status(  # noqa: C901
             finished_jobs = finished_jobs.get("total")
         else:
             finished_jobs = 0
+
+        if row["status"] == "pending":
+            row["status"] = "queued"
 
         parsed_response = list(
             map(str, [name, run_number, row["created"], row["status"]])

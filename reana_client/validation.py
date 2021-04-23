@@ -520,6 +520,54 @@ def _warn_not_defined_parameters(
     return {"has_warnings": bool(command_parameters_not_defined)}
 
 
+def _warn_misused_parameters_in_steps(
+    param_steps_mapping, cmd_param_steps_mapping, workflow_type
+):
+    """Warn user about not used command parameters and not defined input parameters after checking each step of workflow definition.
+
+    :param param_steps_mapping: Mapping between parameters in workflow definition and its step.
+    :param cmd_param_steps_mapping: Mapping between command parameters and its step.
+    :param workflow_type: Workflow type being checked.
+    :returns: A dictionary containing whether warnings were displayed.
+    """
+    command_parameters = set(cmd_param_steps_mapping.keys())
+    workflow_params = set(param_steps_mapping.keys())
+    has_warnings = False
+    for parameter in command_parameters:
+        cmd_param_steps = cmd_param_steps_mapping[parameter]
+        param_steps = param_steps_mapping[parameter]
+        steps_diff = cmd_param_steps.difference(param_steps)
+        if steps_diff:
+            has_warnings = True
+            display_message(
+                '{type} parameter "{parameter}" found on step{s} "{steps}" is not defined in input parameters.'.format(
+                    type=workflow_type.capitalize(),
+                    parameter=parameter,
+                    steps=", ".join(steps_diff),
+                    s="s" if len(steps_diff) > 1 else "",
+                ),
+                msg_type="warning",
+                indented=True,
+            )
+    for parameter in workflow_params:
+        param_steps = param_steps_mapping[parameter]
+        cmd_param_steps = cmd_param_steps_mapping[parameter]
+        steps_diff = param_steps.difference(cmd_param_steps)
+        if steps_diff:
+            has_warnings = True
+            display_message(
+                '{type} input parameter "{parameter}" found on step{s} "{steps}" does not seem to be used.'.format(
+                    type=workflow_type.capitalize(),
+                    parameter=parameter,
+                    steps=", ".join(steps_diff),
+                    s="s" if len(steps_diff) > 1 else "",
+                ),
+                msg_type="warning",
+                indented=True,
+            )
+    return {"has_warnings": has_warnings}
+
+
 def _validate_cwl_parameters(reana_yaml):
     """Validate input parameters for CWL workflows.
 
@@ -607,7 +655,7 @@ def _validate_serial_parameters(reana_yaml):
     return not (params_warning["has_warnings"] or command_warning["has_warnings"])
 
 
-def _validate_yadage_parameters(reana_yaml):
+def _validate_yadage_parameters(reana_yaml):  # noqa: C901
     """Validate parameters for Yadage workflows.
 
     :param reana_yaml: REANA YAML specification.
@@ -643,65 +691,69 @@ def _validate_yadage_parameters(reana_yaml):
         return publisher_cmd_param_steps_mapping
 
     def parse_params(stages):
-        params = []
+        param_steps_mapping = defaultdict(set)
         cmd_param_steps_mapping = defaultdict(set)
         for stage in stages:
             step_name = stage["name"]
+
+            # Handle nested stages
             if "workflow" in stage["scheduler"]:
                 nested_stages = stage["scheduler"]["workflow"].get("stages", {})
-                nested_params, nested_cmd_param_steps_mapping = parse_params(
+                nested_params_mapping, nested_cmd_param_mapping = parse_params(
                     nested_stages
                 )
-                params += nested_params
-                for param, steps in nested_cmd_param_steps_mapping.items():
+
+                for param, steps in nested_params_mapping.items():
+                    param_steps_mapping[param].update(steps)
+
+                for param, steps in nested_cmd_param_mapping.items():
                     cmd_param_steps_mapping[param].update(steps)
 
-            for param in stage["scheduler"]["parameters"]:
-                params.append(param["key"])
-                if isinstance(param["value"], dict) and "output" in param["value"]:
-                    params.append(param["value"]["output"])
+            # Extract defined stage params
+            if "step" in stage["scheduler"].keys():
+                for param in stage["scheduler"]["parameters"]:
+                    param_steps_mapping[param["key"]].add(step_name)
 
+            # Extract command params used in stage steps
             for step in stage["scheduler"].get("step", {}).keys():
                 for step_key, step_val in stage["scheduler"]["step"][step].items():
+
+                    # Parse publisher definitions
                     publisher_cmd_param_steps_mapping = get_publisher_definitions(
                         step, step_name, step_key, step_val
                     )
                     cmd_param_steps_mapping.update(publisher_cmd_param_steps_mapping)
+
+                    # Validate operations
                     if step_key in ["script", "cmd"]:
                         command = step_val
                         _validate_dangerous_operations(command, step=step_name)
+
+                    # Parse command params
                     step_commands_params = parse_command_params(step_val)
                     for command_param in step_commands_params:
                         cmd_param_steps_mapping[command_param].add(step_name)
 
-        return params, cmd_param_steps_mapping
+        return param_steps_mapping, cmd_param_steps_mapping
 
     # REANA input parameters
     input_params = set(reana_yaml["inputs"].get("parameters", {}).keys())
 
     # Yadage parameters
     workflow_spec = reana_yaml["workflow"]["specification"]
-    workflow_params, cmd_param_steps_mapping = parse_params(workflow_spec["stages"])
-
-    workflow_params = set(workflow_params)
-    command_params = set(cmd_param_steps_mapping.keys())
+    param_steps_mapping, cmd_param_steps_mapping = parse_params(workflow_spec["stages"])
+    workflow_params = set(param_steps_mapping.keys())
 
     # REANA input parameters validation
     reana_params_warning = _warn_not_used_parameters(input_params, workflow_params)
-    rest_workflow_params = reana_params_warning["rest_workflow_params"]
-    # Yadage parameters validation
-    yadage_params_warning = _warn_not_used_parameters(
-        rest_workflow_params, command_params, type_="Yadage"
-    )
-    # Yadage command parameters validation
-    yadage_command_warning = _warn_not_defined_parameters(
-        cmd_param_steps_mapping, workflow_params, "yadage"
+
+    # Yadage command and input parameter validation
+    yadage_params_warning = _warn_misused_parameters_in_steps(
+        param_steps_mapping, cmd_param_steps_mapping, "Yadage"
     )
 
     return not (
-        reana_params_warning["has_warnings"]
-        or yadage_params_warning["has_warnings"]
-        or yadage_command_warning["has_warnings"]
+        reana_params_warning["has_warnings"] or yadage_params_warning["has_warnings"]
     )
 
 

@@ -158,7 +158,8 @@ def test_validate_parameters_yadage(yadage_workflow_spec_loaded, capsys):
     _validate_yadage_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert (
-        'WARNING: Yadage input parameter "qux" does not seem to be used' in captured.out
+        'WARNING: Yadage input parameter "qux" found on step "gendata" does not seem to be used.'
+        in captured.out
     )
     reana_yaml["workflow"]["specification"]["stages"][0]["scheduler"][
         "parameters"
@@ -197,7 +198,7 @@ def test_validate_parameters_yadage(yadage_workflow_spec_loaded, capsys):
     _validate_yadage_parameters(reana_yaml)
     captured = capsys.readouterr()
     assert (
-        'WARNING: Yadage input parameter "subfoo" does not seem to be used'
+        'WARNING: Yadage input parameter "subfoo" found on step "nested_step" does not seem to be used.'
         in captured.out
     )
 
@@ -215,6 +216,18 @@ def test_validate_parameters_yadage(yadage_workflow_spec_loaded, capsys):
     captured = capsys.readouterr()
     assert (
         'WARNING: Yadage parameter "subbar" found on step "nested_step" is not defined in input parameters'
+        in captured.out
+    )
+
+    # Parameter defined in one stage, but forgotten in the other one
+    process = reana_yaml["workflow"]["specification"]["stages"][1]["scheduler"]["step"][
+        "process"
+    ]
+    process["script"] += " && ./run-job {foo}"
+    _validate_yadage_parameters(reana_yaml)
+    captured = capsys.readouterr()
+    assert (
+        'WARNING: Yadage parameter "foo" found on step "fitdata" is not defined in input parameters.'
         in captured.out
     )
 

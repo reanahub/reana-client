@@ -283,6 +283,13 @@ def yadage_workflow_spec_loaded():
                                             "scheduler_type": "singlestep-stage",
                                             "parameters": [
                                                 {
+                                                    "key": "nested_foo",
+                                                    "value": {
+                                                        "step": "init",
+                                                        "output": "nested_foo",
+                                                    },
+                                                },
+                                                {
                                                     "key": "inputs",
                                                     "value": {
                                                         "stages": "run_mc[*].mergeallvars",

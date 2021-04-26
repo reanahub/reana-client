@@ -297,6 +297,8 @@ def output_user_friendly_logs(workflow_logs, steps):
         "docker_img": "Docker image",
         "cmd": "Command",
         "status": "Status",
+        "started_at": "Started",
+        "finished_at": "Finished",
     }
     leading_mark = "==>"
 
@@ -345,13 +347,15 @@ def output_user_friendly_logs(workflow_logs, steps):
             del logs_info["job_name"]
 
             for key, value in logs_info.items():
-                title = click.style(
-                    "{mark} {description}:".format(
-                        mark=leading_mark, description=key_to_description_mapping[key]
-                    ),
-                    fg=status_to_color_mapping.get(logs_info["status"]),
-                )
-                click.secho("{title} {value}".format(title=title, value=value))
+                if value:
+                    title = click.style(
+                        "{mark} {description}:".format(
+                            mark=leading_mark,
+                            description=key_to_description_mapping[key],
+                        ),
+                        fg=status_to_color_mapping.get(logs_info["status"]),
+                    )
+                    click.secho("{title} {value}".format(title=title, value=value))
             # show actual log content
             if logs_output:
                 click.secho(

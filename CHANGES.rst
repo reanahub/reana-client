@@ -6,6 +6,7 @@ Version 0.8.0 (UNRELEASED)
 
 - Adds new command ``quota-show``.
 - Adds possibility to filter by workflow status and search by workflow name to ``list``.
+- Adds job start and finish times to ``logs`` command output.
 - Changes ``delete`` to prevent workflow hard deletion.
 - Changes ``list`` to display interactive session status.
 

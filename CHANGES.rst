@@ -1,7 +1,7 @@
 Changes
 =======
 
-Version 0.7.4 (UNRELEASED)
+Version 0.7.4 (2021-04-28)
 --------------------------
 - Fixes environment image validation info message where UIDs were switched.
 - Changes ``list`` command to include deleted workflows by default.

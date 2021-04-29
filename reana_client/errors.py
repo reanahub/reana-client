@@ -15,3 +15,7 @@ class FileUploadError(Exception):
 
 class FileDeletionError(Exception):
     """File deletion didn't succeed."""
+
+
+class EnvironmentValidationError(Exception):
+    """Environment validation didn't succeed."""

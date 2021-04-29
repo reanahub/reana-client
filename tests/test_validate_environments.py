@@ -10,7 +10,8 @@
 
 import pytest
 
-from reana_client.validation import _get_full_image_name, _validate_image_tag
+from reana_client.errors import EnvironmentValidationError
+from reana_client.validation.utils import _get_full_image_name, _validate_image_tag
 
 
 @pytest.mark.parametrize(
@@ -26,15 +27,15 @@ from reana_client.validation import _get_full_image_name, _validate_image_tag
         ("foo:bar:", "has invalid tag", True),
     ],
 )
-def test_validate_environment_image_tag(image, output, exit_, capsys):
+def test_validate_environment_image_tag(image, output, exit_):
     """Validate workflow environment image tags."""
     if exit_:
-        with pytest.raises(SystemExit):
+        with pytest.raises(EnvironmentValidationError) as e:
             _validate_image_tag(image)
+        assert output in str(e)
     else:
-        _validate_image_tag(image)
-    captured = capsys.readouterr()
-    assert output in (captured.err if exit_ else captured.out)
+        __name, _tag, msg = _validate_image_tag(image)
+        assert output in msg["message"]
 
 
 @pytest.mark.parametrize(

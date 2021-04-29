@@ -31,7 +31,8 @@ from reana_client.config import (
     reana_yaml_valid_file_names,
 )
 from reana_client.printer import display_message
-from reana_client.validation import validate_environment, validate_parameters
+from reana_client.validation.environments import validate_environment
+from reana_client.validation.parameters import validate_parameters
 
 
 def workflow_uuid_or_name(ctx, param, value):

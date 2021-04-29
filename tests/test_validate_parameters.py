@@ -13,7 +13,7 @@ import yaml
 from click.testing import CliRunner
 
 from reana_client.utils import cwl_load
-from reana_client.validation import (
+from reana_client.validation.parameters import (
     _validate_dangerous_operations,
     _validate_serial_parameters,
     _validate_yadage_parameters,

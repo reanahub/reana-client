@@ -7,6 +7,7 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA REST API client."""
 
+import cgi
 import json
 import logging
 import os
@@ -123,7 +124,11 @@ def get_workflows(
 
 
 def get_workflow_status(workflow, access_token):
-    """Get status of previously created workflow."""
+    """Get status of previously created workflow.
+
+    :param workflow: name or id of the workflow.
+    :param access_token: access token of the current user.
+    """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_status(
             workflow_id_or_name=workflow, access_token=access_token
@@ -181,18 +186,21 @@ def create_workflow(reana_specification, name, access_token):
 
 
 def create_workflow_from_json(
-    workflow_json,
     name,
     access_token,
+    workflow_json=None,
+    workflow_file=None,
     parameters=None,
     workflow_engine="yadage",
     outputs=None,
 ):
     """Create a workflow from json specification.
 
-    :param workflow_json: workflow specification in json format.
     :param name: name or UUID of the workflow to be started.
-    :param access_token: Access token of the current user.
+    :param access_token: access token of the current user.
+    :param workflow_json: workflow specification in json format.
+    :param workflow_file: workflow specification file path.
+                          Ignores ``workflow_json`` if provided.
     :param parameters: workflow input parameters dictionary.
     :param workflow_engine: one of the workflow engines (yadage, serial, cwl)
     :param outputs: dictionary with expected workflow outputs.
@@ -221,8 +229,11 @@ def create_workflow_from_json(
             "these engines - {}".format(workflow_engine, WORKFLOW_ENGINES)
         )
     try:
-        reana_yaml = {}
-        reana_yaml["workflow"] = {"specification": workflow_json}
+        reana_yaml = dict(workflow={})
+        if workflow_file:
+            reana_yaml["workflow"]["file"] = workflow_file
+        else:
+            reana_yaml["workflow"]["specification"] = workflow_json
         reana_yaml["workflow"]["type"] = workflow_engine
         if parameters:
             reana_yaml["inputs"] = parameters
@@ -265,8 +276,6 @@ def start_workflow(workflow, access_token, parameters):
     :param access_token: access token of the current user.
     :param parameters: dict of workflow parameters to override the original
         ones (after workflow creation).
-    :param restart: boolean if workflow should be restarted on the same
-        workspace.
     """
     try:
         (response, http_response) = current_rs_api_client.api.start_workflow(
@@ -295,10 +304,10 @@ def start_workflow(workflow, access_token, parameters):
         raise e
 
 
-def upload_file(workflow_id, file_, file_name, access_token):
+def upload_file(workflow, file_, file_name, access_token):
     """Upload file to workflow workspace.
 
-    :param workflow_id: UID which identifies the workflow.
+    :param workflow: name or id which identifies the workflow.
     :param file_: content of a file that will be uploaded.
     :param file_name: name of a file that will be uploaded.
     :param access_token: access token of the current user.
@@ -307,7 +316,7 @@ def upload_file(workflow_id, file_, file_name, access_token):
 
     try:
         endpoint = current_rs_api_client.api.upload_file.operation.path_name.format(
-            workflow_id_or_name=workflow_id
+            workflow_id_or_name=workflow
         )
         http_response = requests.post(
             urljoin(get_api_url(), endpoint),
@@ -337,11 +346,18 @@ def upload_file(workflow_id, file_, file_name, access_token):
         raise e
 
 
-def get_workflow_logs(workflow_id, access_token, steps=None, page=None, size=None):
-    """Get logs from a workflow engine."""
+def get_workflow_logs(workflow, access_token, steps=None, page=None, size=None):
+    """Get logs from a workflow engine.
+
+    :param workflow: name or id which identifies the workflow.
+    :param access_token: access token of the current user.
+    :param steps: list of step names to get logs for.
+    :param page: page number of returned log list.
+    :param size: page size of returned log list.
+    """
     try:
         (response, http_response) = current_rs_api_client.api.get_workflow_logs(
-            workflow_id_or_name=workflow_id,
+            workflow_id_or_name=workflow,
             steps=steps,
             access_token=access_token,
             page=page,
@@ -369,27 +385,33 @@ def get_workflow_logs(workflow_id, access_token, steps=None, page=None, size=Non
         raise e
 
 
-def download_file(workflow_id, file_name, access_token):
+def download_file(workflow, file_name, access_token):
     """Download the requested file if it exists.
 
-    :param workflow_id: UUID which identifies the workflow.
-    :param file_name: File name or path to the file requested.
-    :returns: .
+    :param workflow: name or id which identifies the workflow.
+    :param file_name: file name or path to the file requested.
+    :param access_token: access token of the current user.
+    :return: Tuple containing file binary content and filename.
     """
     try:
         from reana_client.utils import get_api_url
 
         logging.getLogger("urllib3").setLevel(logging.CRITICAL)
         endpoint = current_rs_api_client.api.download_file.operation.path_name.format(
-            workflow_id_or_name=workflow_id, file_name=file_name
+            workflow_id_or_name=workflow, file_name=file_name
         )
         http_response = requests.get(
             urljoin(get_api_url(), endpoint),
             params={"file_name": file_name, "access_token": access_token},
             verify=False,
         )
+        if "Content-Disposition" in http_response.headers:
+            content_disposition = http_response.headers.get("Content-Disposition")
+            value, params = cgi.parse_header(content_disposition)
+            file_name = params.get("filename", "downloaded_file")
+
         if http_response.status_code == 200:
-            return http_response.content
+            return http_response.content, file_name
         else:
             raise Exception(
                 "Error {status_code} {reason} {message}".format(
@@ -412,15 +434,15 @@ def download_file(workflow_id, file_name, access_token):
         raise e
 
 
-def delete_file(workflow_id, file_name, access_token):
+def delete_file(workflow, file_name, access_token):
     """Delete the requested file if it exists.
 
-    :param workflow_id: UUID which identifies the workflow.
-    :param file_name: File name or path to the file requested.
+    :param workflow: name or id which identifies the workflow.
+    :param file_name: file name or path to the file requested.
     """
     try:
         (response, http_response) = current_rs_api_client.api.delete_file(
-            workflow_id_or_name=workflow_id,
+            workflow_id_or_name=workflow,
             file_name=file_name,
             access_token=access_token,
         ).result()
@@ -451,17 +473,22 @@ def delete_file(workflow_id, file_name, access_token):
         raise e
 
 
-def list_files(workflow_id, access_token, page=None, size=None):
-    """Return the list of file for a given workflow workspace.
+def list_files(workflow, access_token, file_name=None, page=None, size=None):
+    """Return the list of files for a given workflow workspace.
 
-    :param workflow_id: UUID which identifies the workflow.
-    :returns: A list of dictionaries composed by the `name`, `size` and
+    :param workflow: name or id which identifies the workflow.
+    :param access_token: access token of the current user.
+    :param file_name: file name(s) (glob) to list.
+    :param page: page number of returned file list.
+    :param size: page size of returned file list.
+    :returns: a list of dictionaries composed by the `name`, `size` and
                 `last-modified`.
     """
     try:
         (response, http_response) = current_rs_api_client.api.get_files(
-            workflow_id_or_name=workflow_id,
+            workflow_id_or_name=workflow,
             access_token=access_token,
+            file_name=file_name,
             page=page,
             size=size,
         ).result()
@@ -491,9 +518,10 @@ def upload_to_server(workflow, paths, access_token):
 
     Shared e.g. by `code upload` and `inputs upload`.
 
-    :param workflow: ID of that workflow whose workspace should be
+    :param workflow: name or id of workflow whose workspace should be
         used to store the files.
-    :param paths: Absolute filepath(s) of files to be uploaded.
+    :param paths: absolute filepath(s) of files to be uploaded.
+    :param access_token: access token of the current user.
     """
     if not workflow:
         raise ValueError("Workflow name or id must be provided")
@@ -772,8 +800,8 @@ def open_interactive_session(
 def close_interactive_session(workflow, access_token):
     """Close an interactive workflow session.
 
-    :param workflow: Workflow name to close.
-    :param access_token: Workflow owner REANA access token.
+    :param workflow: name or id of the workflow to close.
+    :param access_token: workflow owner REANA access token.
 
     :return: Gives the relative path to the interactive service.
     """
@@ -806,7 +834,7 @@ def mv_files(source, target, workflow, access_token):
 
     :param source: source filename or path.
     :param target: target filename or path.
-    :param workflow_id: UUID which identifies the workflowself.
+    :param workflow: name or id which identifies the workflow.
     :param access_token: token of user.
     """
     try:
@@ -911,7 +939,7 @@ def add_secrets(secrets, overwrite, access_token):
 def delete_secrets(secrets, access_token):
     """Delete a list of secrets.
 
-    :param secrets: List of secret names to be deleted.
+    :param secrets: list of secret names to be deleted.
     :param access_token: access token of the current user.
 
     """

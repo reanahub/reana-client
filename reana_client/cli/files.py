@@ -66,6 +66,7 @@ def files_group(ctx):
     default=None,
     help="Get URLs of output files.",
 )
+@click.argument("filename", metavar="SOURCE", nargs=1, required=False)
 @human_readable_or_raw_option
 @add_access_token_options
 @add_pagination_options
@@ -75,6 +76,7 @@ def get_files(
     workflow,
     _format,
     output_format,
+    filename,
     access_token,
     page,
     size,
@@ -84,12 +86,14 @@ def get_files(
 
     The `ls` command lists workspace files of a workflow specified by the
     environment variable REANA_WORKON or provided as a command-line flag
-    `--workflow` or `-w`.
+    `--workflow` or `-w`. The SOURCE argument is optional and specifies a
+    pattern matching files and directories.
 
     Examples: \n
     \t $ reana-client ls --workflow myanalysis.42 \n
     \t $ reana-client ls --workflow myanalysis.42 --human-readable
-    """
+    \t $ reana-client ls --workflow myanalysis.42 'code/\*'
+    """  # noqa: W605
     import tablib
     from reana_client.api.client import current_rs_api_client, list_files
 
@@ -102,7 +106,7 @@ def get_files(
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
-            response = list_files(workflow, access_token, page, size)
+            response = list_files(workflow, access_token, filename, page, size)
             headers = ["name", "size", "last-modified"]
             data = []
             file_path = get_path_from_operation_id(
@@ -204,7 +208,9 @@ def download_files(
     if workflow:
         for file_name in filenames:
             try:
-                binary_file = download_file(workflow, file_name, access_token)
+                binary_file, file_name = download_file(
+                    workflow, file_name, access_token
+                )
 
                 logging.info(
                     "{0} binary file downloaded ... writing to {1}".format(

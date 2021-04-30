@@ -10,6 +10,18 @@ Version 0.8.0 (UNRELEASED)
 - Changes ``delete`` to prevent workflow hard deletion.
 - Changes ``list`` to display interactive session status.
 
+Version 0.7.4 (2021-04-28)
+--------------------------
+- Fixes environment image validation info message where UIDs were switched.
+- Changes ``list`` command to include deleted workflows by default.
+- Adds support of wildcard patterns to ``ls`` command.
+- Adds support of directory download and wildcard patterns to ``download`` command.
+
+Version 0.7.3 (2021-03-24)
+--------------------------
+- Adds validation of workflow input parameters to the ``validate`` command.
+- Adds optional validation of workflow environment images (``--environments``) to the ``validate`` command.
+
 Version 0.7.2 (2021-01-15)
 --------------------------
 

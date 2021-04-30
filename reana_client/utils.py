@@ -24,7 +24,14 @@ from reana_commons.operational_options import validate_operational_options
 from reana_commons.serial import serial_load
 from reana_commons.utils import get_workflow_status_change_verb
 
-from reana_client.config import reana_yaml_schema_file_path, reana_yaml_valid_file_names
+from reana_client.config import (
+    DOCKER_REGISTRY_INDEX_URL,
+    ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR,
+    reana_yaml_schema_file_path,
+    reana_yaml_valid_file_names,
+)
+from reana_client.printer import display_message
+from reana_client.validation import validate_environment, validate_parameters
 
 
 def workflow_uuid_or_name(ctx, param, value):
@@ -70,10 +77,9 @@ def yadage_load(workflow_file, toplevel=".", **kwargs):
     }
 
     try:
-        yadageschemas.load(
+        return yadageschemas.load(
             spec=workflow_file, specopts=specopts, validopts=validopts, validate=True
         )
-
     except ValidationError as e:
         e.message = str(e)
         raise e
@@ -109,7 +115,12 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
     return workflow_load[workflow_type](workflow_file, **kwargs)
 
 
-def load_reana_spec(filepath, skip_validation=False):
+def load_reana_spec(
+    filepath,
+    skip_validation=False,
+    skip_validate_environments=True,
+    pull_environment_image=False,
+):
     """Load and validate reana specification file.
 
     :raises IOError: Error while reading REANA spec file from given `filepath`.
@@ -125,7 +136,7 @@ def load_reana_spec(filepath, skip_validation=False):
             kwargs["parameters"] = reana_yaml.get("inputs", {}).get("parameters", {})
             kwargs["original"] = True
 
-        if "options" in reana_yaml["inputs"]:
+        if "options" in reana_yaml.get("inputs", {}):
             try:
                 reana_yaml["inputs"]["options"] = validate_operational_options(
                     workflow_type, reana_yaml["inputs"]["options"]
@@ -140,14 +151,6 @@ def load_reana_spec(filepath, skip_validation=False):
         with open(filepath) as f:
             reana_yaml = yaml.load(f.read(), Loader=yaml.FullLoader)
 
-        if not skip_validation:
-            logging.info(
-                "Validating REANA specification file: {filepath}".format(
-                    filepath=filepath
-                )
-            )
-            _validate_reana_yaml(reana_yaml)
-
         workflow_type = reana_yaml["workflow"]["type"]
         reana_yaml["workflow"]["specification"] = load_workflow_spec(
             workflow_type,
@@ -155,11 +158,38 @@ def load_reana_spec(filepath, skip_validation=False):
             **_prepare_kwargs(reana_yaml)
         )
 
+        if not skip_validation:
+            display_message(
+                "Verifying REANA specification file... {filepath}".format(
+                    filepath=filepath
+                ),
+                msg_type="info",
+            )
+            _validate_reana_yaml(reana_yaml)
+            display_message(
+                "Verifying workflow parameters and commands... ", msg_type="info",
+            )
+            validate_parameters(workflow_type, reana_yaml)
+
+        if not skip_validate_environments:
+            display_message(
+                "Verifying environments in REANA specification file...",
+                msg_type="info",
+            )
+            validate_environment(reana_yaml, pull=pull_environment_image)
+
         if workflow_type == "cwl" and "inputs" in reana_yaml:
             with open(reana_yaml["inputs"]["parameters"]["input"]) as f:
                 reana_yaml["inputs"]["parameters"] = yaml.load(
                     f, Loader=yaml.FullLoader
                 )
+
+        if workflow_type == "yadage":
+            # We don't send the loaded Yadage workflow spec to the cluster as
+            # it may result in inconsistencies between what's displayed in the
+            # UI and the actual spec loaded at the workflow engine level.
+            # More info: https://github.com/reanahub/reana-client/pull/462#discussion_r585794297
+            reana_yaml["workflow"]["specification"] = None
 
         return reana_yaml
     except IOError as e:
@@ -185,6 +215,9 @@ def _validate_reana_yaml(reana_yaml):
             reana_yaml_schema = json.loads(f.read())
 
             validate(reana_yaml, reana_yaml_schema)
+        display_message(
+            "Valid REANA specification file.", msg_type="success", indented=True,
+        )
 
     except IOError as e:
         logging.info(
@@ -276,7 +309,7 @@ def validate_input_parameters(live_parameters, original_parameters):
         if parameter not in original_parameters:
             click.echo(
                 click.style(
-                    "Given parameter - {0}, is not in " "reana.yaml".format(parameter),
+                    "Given parameter - {0}, is not in reana.yaml".format(parameter),
                     fg="red",
                 ),
                 err=True,

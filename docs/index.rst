@@ -21,7 +21,7 @@ API docs
 ========
 
 .. automodule:: reana_client.api.client
-  :members: create_workflow_from_json, upload_file, start_workflow, download_file
+  :members: create_workflow_from_json, upload_to_server, upload_file, start_workflow, list_files, get_workflow_status, download_file, get_workflow_logs
 
 .. include:: ../CHANGES.rst
 

@@ -51,3 +51,32 @@ RUN_STATUSES = [
     "pending",
 ]
 """Available run statuses."""
+
+ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR = ["latest", "master", ""]
+"""Warns user if above environment image tags are used."""
+
+DOCKER_REGISTRY_INDEX_URL = "https://index.docker.io/v1/repositories/{image}/tags/{tag}"
+"""Docker Hub registry index URL."""
+
+GITLAB_CERN_REGISTRY_INDEX_URL = (
+    "https://gitlab.cern.ch/api/v4/projects/{image}/registry/repositories?tags=1"
+)
+"""GitLab CERN registry index URL."""
+
+GITLAB_CERN_REGISTRY_PREFIX = "gitlab-registry.cern.ch"
+"""Prefix for GitLab image registry at CERN."""
+
+COMMAND_DANGEROUS_OPERATIONS = ["sudo ", "cd /"]
+"""Operations in workflow commands considered dangerous."""
+
+PRINTER_COLOUR_SUCCESS = "green"
+"""Default colour for success messages on terminal."""
+
+PRINTER_COLOUR_WARNING = "yellow"
+"""Default colour for warning messages on terminal."""
+
+PRINTER_COLOUR_ERROR = "red"
+"""Default colour for error messages on terminal."""
+
+PRINTER_COLOUR_INFO = "cyan"
+"""Default colour for info messages on terminal."""

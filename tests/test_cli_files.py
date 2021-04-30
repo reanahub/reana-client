@@ -109,15 +109,18 @@ def test_download_file():
     status_code = 200
     response = "Content of file to download"
     env = {"REANA_SERVER_URL": "localhost"}
+    file = "dummy_file.txt"
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     mock_http_response.content = str(response).encode()
+    mock_http_response.headers = {
+        "Content-Disposition": "attachment; filename={}".format(file)
+    }
     mock_requests = Mock()
     mock_requests.get = Mock(return_value=mock_http_response)
 
     reana_token = "000000"
     response_md5 = hashlib.md5(response.encode("utf-8")).hexdigest()
-    file = "dummy_file.txt"
     message = "File {0} downloaded to".format(file)
     runner = CliRunner(env=env)
     with runner.isolation():

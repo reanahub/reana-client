@@ -462,7 +462,7 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
 
 def test_workflows_validate(create_yaml_workflow_schema):
     """Test validation of REANA specifications file."""
-    message = "is a valid REANA specification file"
+    message = "Valid REANA specification file"
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
@@ -660,7 +660,7 @@ def test_multiple_specifications(create_yaml_workflow_schema):
 def test_yml_ext_specification(create_yaml_workflow_schema):
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    message = "is a valid REANA specification file"
+    message = "Valid REANA specification file"
     with runner.isolated_filesystem():
         with open("reana.yml", "w") as reana_schema:
             reana_schema.write(create_yaml_workflow_schema)

@@ -167,9 +167,6 @@ def load_reana_spec(
                 msg_type="info",
             )
             _validate_reana_yaml(reana_yaml)
-            display_message(
-                "Verifying workflow parameters and commands... ", msg_type="info",
-            )
             validate_parameters(workflow_type, reana_yaml)
 
         if not skip_validate_environments:

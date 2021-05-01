@@ -82,9 +82,6 @@ def workflow_execution_group(ctx):
     help="Get output in JSON format.",
 )
 @click.option(
-    "--all", "show_all", count=True, help="Show all workflows including deleted ones."
-)
-@click.option(
     "-v",
     "--verbose",
     count=True,
@@ -115,7 +112,6 @@ def workflow_workflows(  # noqa: C901
     _format,
     output_format,
     access_token,
-    show_all,
     verbose,
     human_readable_or_raw,
     sort_columm_name,
@@ -176,8 +172,6 @@ def workflow_workflows(  # noqa: C901
         data = []
         for workflow in response:
             workflow["size"] = workflow["size"][human_readable_or_raw]
-            if workflow["status"] == "deleted" and not show_all:
-                continue
             name, run_number = get_workflow_name_and_run_number(workflow["name"])
             workflow["name"] = name
             workflow["run_number"] = run_number

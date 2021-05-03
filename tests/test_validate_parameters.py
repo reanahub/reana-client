@@ -14,7 +14,7 @@ from click.testing import CliRunner
 
 from reana_client.utils import cwl_load
 from reana_client.validation.parameters import (
-    _validate_dangerous_operations,
+    SerialParameterValidator,
     validate_parameters,
 )
 
@@ -234,28 +234,30 @@ def test_validate_parameters_yadage(yadage_workflow_spec_loaded, capsys):
 
 
 @pytest.mark.parametrize(
-    "command, step, warning",
+    "commands, step, warning",
     [
-        ("python foo.py", "gendata", ""),
+        (["python foo.py"], "gendata", ""),
         (
-            "sudo python foo.py",
+            ["python foo.py", "sudo python foo.py"],
             "fitdata",
             '"sudo" found in step "fitdata" might be dangerous.',
         ),
         (
-            'echo "hello world!" && sudo python foo.py',
+            ['echo "hello world!" && sudo python foo.py'],
             "fitdata",
             '"sudo" found in step "fitdata" might be dangerous.',
         ),
         (
-            "cd /foo && npm install",
+            ["cd /foo && npm install", 'echo "hello world!"'],
             "installation",
             '"cd /" found in step "installation" might be dangerous.',
         ),
-        ("sudo npm install", None, '"sudo" might be dangerous.',),
+        (["sudo npm install"], None, '"sudo" might be dangerous.',),
     ],
 )
-def test_validate_dangerous_operations(command, step, warning, capsys):
+def test_validate_dangerous_operations(commands, step, warning, capsys):
     """Validate if dangerous operations in a command trigger a warning."""
-    warnings = _validate_dangerous_operations(command, step=step)
-    assert warning in (warnings[0]["message"] if warnings else "")
+    validator = SerialParameterValidator({})
+    validator._validate_dangerous_operations(commands, step=step)
+    warnings = validator.operations_warnings
+    assert warning in (warnings.pop()["message"] if warnings else "")

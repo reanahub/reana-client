@@ -14,9 +14,7 @@ import sys
 from collections import defaultdict
 import os
 
-
 from reana_client.config import COMMAND_DANGEROUS_OPERATIONS
-from reana_client.validation.utils import run_command
 from reana_client.printer import display_message
 from reana_client.errors import ParameterValidationError
 
@@ -82,7 +80,6 @@ class ParameterValidatorBase:
 
     def display_messages(self):
         """Display messages in console."""
-
         self._display_reana_params_warnings()
         self._display_workflow_params_warnings()
         self._display_operations_warnings()
@@ -128,7 +125,7 @@ class ParameterValidatorBase:
             )
 
     def _validate_dangerous_operations(self, commands, step=None):
-        """Validate if commands has dangerous operations.
+        """Validate if commands have dangerous operations.
 
         :param commands: A workflow step command list to validate.
         :param step: The workflow step that contains the given command.
@@ -151,7 +148,7 @@ class ParameterValidatorBase:
     def _validate_not_used_parameters(
         self, workflow_parameters, command_parameters, type_="REANA"
     ):
-        """Validate defined workflow parameter which are not being used.
+        """Validate defined workflow parameters which are not being used.
 
         :param workflow_parameters: Set of parameters in workflow definition.
         :param command_parameters: Set of parameters used inside workflow.
@@ -293,7 +290,7 @@ class SerialParameterValidator(ParameterValidatorBase):
 
 
 class YadageParameterValidator(ParameterValidatorBase):
-    """REANA yadage workflow parameter validation."""
+    """REANA Yadage workflow parameter validation."""
 
     def validate_parameters(self):
         """Validate parameters for Yadage workflows."""
@@ -323,7 +320,7 @@ class YadageParameterValidator(ParameterValidatorBase):
         )
 
     def parse_specification(self):
-        """Parse yadage workflow tree."""
+        """Parse Yadage workflow tree."""
 
         def parse_command(command):
             return re.findall(r".*?\{+(.*?)\}+.*?", command)
@@ -428,6 +425,8 @@ class CWLParameterValidator(ParameterValidatorBase):
                     self._validate_dangerous_operations(
                         commands, step=workflow.get("id")
                     )
+
+        from reana_client.utils import run_command
 
         cwl_main_spec_path = self.reana_yaml["workflow"].get("file")
         if os.path.exists(cwl_main_spec_path):

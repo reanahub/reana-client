@@ -11,7 +11,7 @@
 import pytest
 
 from reana_client.errors import EnvironmentValidationError
-from reana_client.validation.utils import _get_full_image_name, _validate_image_tag
+from reana_client.validation.environments import SerialEnvironmentValidator
 
 
 @pytest.mark.parametrize(
@@ -29,13 +29,14 @@ from reana_client.validation.utils import _get_full_image_name, _validate_image_
 )
 def test_validate_environment_image_tag(image, output, exit_):
     """Validate workflow environment image tags."""
+    validator = SerialEnvironmentValidator()
     if exit_:
         with pytest.raises(EnvironmentValidationError) as e:
-            _validate_image_tag(image)
+            validator._validate_image_tag(image)
         assert output in str(e)
     else:
-        __name, _tag, msg = _validate_image_tag(image)
-        assert output in msg["message"]
+        validator._validate_image_tag(image)
+        assert output in validator.messages.pop()["message"]
 
 
 @pytest.mark.parametrize(
@@ -48,4 +49,5 @@ def test_validate_environment_image_tag(image, output, exit_):
     ],
 )
 def test_get_full_image_name(image, tag, full_image_name):
-    assert _get_full_image_name(image, tag) == full_image_name
+    validator = SerialEnvironmentValidator()
+    assert validator._get_full_image_name(image, tag) == full_image_name

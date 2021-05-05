@@ -7,6 +7,7 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client utils."""
 import base64
+import datetime
 import json
 import logging
 import os
@@ -31,7 +32,8 @@ from reana_client.config import (
     reana_yaml_valid_file_names,
 )
 from reana_client.printer import display_message
-from reana_client.validation import validate_environment, validate_parameters
+from reana_client.validation.environments import validate_environment
+from reana_client.validation.parameters import validate_parameters
 
 
 def workflow_uuid_or_name(ctx, param, value):
@@ -166,9 +168,6 @@ def load_reana_spec(
                 msg_type="info",
             )
             _validate_reana_yaml(reana_yaml)
-            display_message(
-                "Verifying workflow parameters and commands... ", msg_type="info",
-            )
             validate_parameters(workflow_type, reana_yaml)
 
         if not skip_validate_environments:
@@ -422,3 +421,35 @@ def get_reana_yaml_file_path():
             return path
     # If none of the valid paths exists, fall back to reana.yaml.
     return "reana.yaml"
+
+
+def run_command(cmd, display=True, return_output=False, stderr_output=False):
+    """Run given command on shell in the current directory.
+
+    Exit in case of troubles.
+
+    :param cmd: shell command to run
+    :param display: should we display command to run?
+    :param return_output: shall the output of the command be returned?
+    :type cmd: str
+    :type display: bool
+    :type return_output: bool
+    """
+    now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    if display:
+        click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
+        click.secho("{0}".format(cmd), bold=True)
+    try:
+        if return_output:
+            stderr_flag_val = subprocess.STDOUT if stderr_output else None
+            result = subprocess.check_output(cmd, stderr=stderr_flag_val, shell=True)
+            return result.decode().rstrip("\r\n")
+        else:
+            subprocess.check_call(cmd, shell=True)
+    except subprocess.CalledProcessError as err:
+        if display:
+            click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
+            click.secho("{0}".format(err), bold=True, fg="red")
+        if stderr_output:
+            sys.exit(err.output.decode())
+        sys.exit(err.returncode)

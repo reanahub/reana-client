@@ -10,6 +10,12 @@ Version 0.8.0 (UNRELEASED)
 - Changes ``delete`` to prevent workflow hard deletion.
 - Changes ``list`` to display interactive session status.
 
+Version 0.7.5 (UNRELEASED)
+--------------------------
+- Changes workflow validation to display more granular output.
+- Changes workflow parameters validation to warn about misused parameters for each step.
+- Fixes environment image validation not to test repetitively the same image.
+
 Version 0.7.4 (2021-04-28)
 --------------------------
 - Fixes environment image validation info message where UIDs were switched.

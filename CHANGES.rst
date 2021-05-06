@@ -9,6 +9,8 @@ Version 0.8.0 (UNRELEASED)
 - Adds job start and finish times to ``logs`` command output.
 - Changes ``delete`` to prevent workflow hard deletion.
 - Changes ``list`` to display interactive session status.
+- Changes ``list`` command to stop including workflow progress and workspace size by default. Adds
+  ``--include-progress`` and ``--include-workspace-size`` options to add them to the output.
 
 Version 0.7.5 (UNRELEASED)
 --------------------------

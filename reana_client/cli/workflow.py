@@ -35,6 +35,7 @@ from reana_client.cli.utils import (
     parse_format_parameters,
     requires_environments,
     validate_workflow_name,
+    get_formatted_progress,
 )
 from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
 from reana_client.printer import display_message
@@ -111,6 +112,20 @@ def workflow_execution_group(ctx):
     "Use --filter `<columm_name>=<column_value>` pairs. "
     "Available filters are `name` and `status`.",
 )
+@click.option(
+    "--include-progress",
+    "include_progress",
+    is_flag=True,
+    default=None,
+    help="Include progress information of the workflows.",
+)
+@click.option(
+    "--include-workspace-size",
+    "include_workspace_size",
+    is_flag=True,
+    default=None,
+    help="Include size information of the workspace.",
+)
 @add_access_token_options
 @add_pagination_options
 @check_connection
@@ -128,6 +143,8 @@ def workflow_workflows(  # noqa: C901
     page,
     size,
     filters,
+    include_progress,
+    include_workspace_size,
 ):  # noqa: D301
     """List all workflows and sessions.
 
@@ -164,8 +181,12 @@ def workflow_workflows(  # noqa: C901
             size=size,
             status=status_filter,
             search=search_filter,
+            include_progress=include_progress,
+            include_workspace_size=include_workspace_size,
         )
-        verbose_headers = ["id", "user", "size"]
+        verbose_headers = ["id", "user"]
+        workspace_size_header = ["size"]
+        progress_header = ["progress"]
         headers = {
             "batch": ["name", "run_number", "created", "started", "ended", "status"],
             "interactive": [
@@ -179,6 +200,10 @@ def workflow_workflows(  # noqa: C901
         }
         if verbose:
             headers[type] += verbose_headers
+        if verbose or include_workspace_size:
+            headers[type] += workspace_size_header
+        if verbose or include_progress:
+            headers[type] += progress_header
         data = []
         for workflow in response:
             workflow["size"] = workflow["size"][human_readable_or_raw]
@@ -195,13 +220,16 @@ def workflow_workflows(  # noqa: C901
                 )
             row = []
             for header in headers[type]:
-                if header == "started":
-                    header = "run_started_at"
-                elif header == "ended":
-                    header = "run_finished_at"
-                value = workflow.get(header)
+                value = None
+                if header in progress_header:
+                    value = get_formatted_progress(workflow.get("progress"))
+                elif header in ["started", "ended"]:
+                    _key = (
+                        "run_started_at" if header == "started" else "run_finished_at"
+                    )
+                    value = workflow.get("progress", {}).get(_key) or "-"
                 if not value:
-                    value = workflow.get("progress", {}).get(header) or "-"
+                    value = workflow.get(header)
                 row.append(value)
             data.append(row)
         sort_column_id = 2

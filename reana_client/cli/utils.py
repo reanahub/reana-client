@@ -212,6 +212,13 @@ def format_session_uri(reana_server_url, path, access_token):
     )
 
 
+def get_formatted_progress(progress):
+    """Return workflow progress in format of finished/total jobs."""
+    total_jobs = progress.get("total", {}).get("total") or "-"
+    finished_jobs = progress.get("finished", {}).get("total") or "-"
+    return "{0}/{1}".format(finished_jobs, total_jobs)
+
+
 def validate_workflow_name(ctx, _, workflow_name):
     """Validate workflow name."""
     not_allowed_characters = ["."]

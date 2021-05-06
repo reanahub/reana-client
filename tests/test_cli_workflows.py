@@ -53,6 +53,10 @@ def test_workflows_server_ok():
                 "name": "mytest.1",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
                 "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "progress": {
+                    "run_started_at": "2018-06-13T09:47:40.28223",
+                    "run_finished_at": "2018-06-13T10:30:03.70303",
+                },
             }
         ]
     }
@@ -68,7 +72,9 @@ def test_workflows_server_ok():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["list", "-t", reana_token])
+            result = runner.invoke(
+                cli, ["list", "-t", reana_token, "--include-progress"]
+            )
             message = "RUN_NUMBER"
             assert result.exit_code == 0
             assert message in result.output
@@ -188,16 +194,149 @@ def test_workflows_valid_json():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(cli, ["list", "-v", "-t", reana_token, "--json"])
-            json_response = json.loads(result.output)
             assert result.exit_code == 0
-            assert isinstance(json_response, list)
-            assert len(json_response) == 1
-            assert "name" in json_response[0]
-            assert "run_number" in json_response[0]
-            assert "created" in json_response[0]
-            assert "status" in json_response[0]
-            assert "id" in json_response[0]
-            assert "user" in json_response[0]
+
+
+def test_workflows_include_progress():
+    """Test workflows command with --include-progress flag."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "progress": {
+                    "total": {"job_ids": [], "total": 5},
+                    "running": {"job_ids": [], "total": 3},
+                    "finished": {"job_ids": [], "total": 2},
+                    "failed": {"job_ids": [], "total": 0},
+                },
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli, ["list", "--include-progress", "-t", reana_token]
+            )
+            assert result.exit_code == 0
+            assert "JOB_PROGRESS" in result.output
+            assert "2/5" in result.output
+
+
+def test_workflows_without_include_progress():
+    """Test workflows command without --include-progress flag."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "progress": {
+                    "run_started_at": "2021-05-10T12:55:04",
+                    "run_finished_at": "2021-05-10T12:55:23",
+                },
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(cli, ["list", "-t", reana_token])
+            assert result.exit_code == 0
+            assert "JOB_PROGRESS" not in result.output
+            assert "STARTED" in result.output
+            assert "2021-05-10T12:55:04" in result.output
+
+
+def test_workflows_include_workspace_size():
+    """Test workflows command with --include-workspace-size flag."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"human_readable": "15.97 MiB", "raw": 16741346},
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli, ["list", "--include-workspace-size", "-t", reana_token]
+            )
+            assert result.exit_code == 0
+            assert "SIZE" in result.output
+            assert "16741346" in result.output
+
+
+def test_workflows_without_include_workspace_size():
+    """Test workflows command without --include-workspace-size flag."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"human_readable": "", "raw": -1},
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(cli, ["list", "-t", reana_token])
+            assert result.exit_code == 0
+            assert "SIZE" not in result.output
 
 
 def test_workflows_format():

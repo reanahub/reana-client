@@ -111,6 +111,20 @@ def workflow_execution_group(ctx):
     "Use --filter `<columm_name>=<column_value>` pairs. "
     "Available filters are `name` and `status`.",
 )
+@click.option(
+    "--include-progress",
+    "include_progress",
+    is_flag=True,
+    default=False,
+    help="Include progress information of the workflows.",
+)
+@click.option(
+    "--include-workspace-size",
+    "include_workspace_size",
+    is_flag=True,
+    default=False,
+    help="Include size information of the workspace.",
+)
 @add_access_token_options
 @add_pagination_options
 @check_connection
@@ -128,6 +142,8 @@ def workflow_workflows(  # noqa: C901
     page,
     size,
     filters,
+    include_progress,
+    include_workspace_size,
 ):  # noqa: D301
     """List all workflows and sessions.
 
@@ -164,6 +180,8 @@ def workflow_workflows(  # noqa: C901
             size=size,
             status=status_filter,
             search=search_filter,
+            include_progress=include_progress,
+            include_workspace_size=include_workspace_size,
         )
         verbose_headers = ["id", "user", "size"]
         headers = {

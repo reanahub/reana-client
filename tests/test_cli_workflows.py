@@ -53,6 +53,10 @@ def test_workflows_server_ok():
                 "name": "mytest.1",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
                 "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "progress": {
+                    "run_started_at": "2018-06-13T09:47:40.28223",
+                    "run_finished_at": "2018-06-13T10:30:03.70303",
+                },
             }
         ]
     }
@@ -68,7 +72,9 @@ def test_workflows_server_ok():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["list", "-t", reana_token])
+            result = runner.invoke(
+                cli, ["list", "-t", reana_token, "--include-progress"]
+            )
             message = "RUN_NUMBER"
             assert result.exit_code == 0
             assert message in result.output

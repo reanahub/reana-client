@@ -90,7 +90,15 @@ def get_user_quota(access_token):
 
 
 def get_workflows(
-    access_token, type, verbose=False, page=None, size=None, status=None, search=None,
+    access_token,
+    type,
+    verbose=False,
+    page=None,
+    size=None,
+    status=None,
+    search=None,
+    include_progress=None,
+    include_workspace_size=None,
 ):
     """List all existing workflows."""
     try:
@@ -102,6 +110,8 @@ def get_workflows(
             size=size,
             status=status,
             search=search,
+            include_progress=include_progress,
+            include_workspace_size=include_workspace_size,
         ).result()
         if http_response.status_code == 200:
             return response.get("items")

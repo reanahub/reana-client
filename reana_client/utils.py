@@ -34,6 +34,7 @@ from reana_client.config import (
 from reana_client.printer import display_message
 from reana_client.validation.environments import validate_environment
 from reana_client.validation.parameters import validate_parameters
+from reana_client.validation.complexity import estimate_complexity
 
 
 def workflow_uuid_or_name(ctx, param, value):
@@ -161,14 +162,15 @@ def load_reana_spec(
         )
 
         if not skip_validation:
-            display_message(
-                "Verifying REANA specification file... {filepath}".format(
-                    filepath=filepath
-                ),
-                msg_type="info",
-            )
-            _validate_reana_yaml(reana_yaml)
-            validate_parameters(workflow_type, reana_yaml)
+            # display_message(
+            #     "Verifying REANA specification file... {filepath}".format(
+            #         filepath=filepath
+            #     ),
+            #     msg_type="info",
+            # )
+            # _validate_reana_yaml(reana_yaml)
+            # validate_parameters(workflow_type, reana_yaml)
+            estimate_complexity(workflow_type, reana_yaml)
 
         if not skip_validate_environments:
             display_message(

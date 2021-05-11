@@ -71,27 +71,34 @@ class ComplexityEstimatorBase:
             complexity += step["complexity"]
         return complexity
 
+    def _get_number_of_jobs(self, step):
+        """Get number of jobs based on compute backend."""
+        backend = step.get("compute_backend")
+        if backend and backend != "kubernetes":
+            return 0
+        return 1
+
+    def _get_memory_limit(self, step):
+        """Get memory limit value."""
+        # TODO: convert memory limit value to bytes (`kubernetes_memory_to_bytes`)
+        # TODO: validate memory limit value. Reuse code from (`set_memory_limit` in RJC)
+        # TODO: get `default_memory_limit` from config
+        default_memory_limit = os.getenv("REANA_KUBERNETES_JOBS_MEMORY_LIMIT", "8Gi")
+        return step.get("kubernetes_memory_limit", default_memory_limit)
+
 
 class SerialComplexityEstimator(ComplexityEstimatorBase):
     """REANA serial workflow complexity estimation."""
 
     def _parse_steps(self, steps):
         """Parse serial workflow specification tree."""
-
-        def _get_memory_limit(step):
-            # TODO: convert memory limit value to bytes (`kubernetes_memory_to_bytes`)
-            # TODO: validate memory limit value. Reuse code from (`set_memory_limit` in RJC)
-            # TODO: get `default_memory_limit` from config
-            default_memory_limit = os.getenv(
-                "REANA_KUBERNETES_JOBS_MEMORY_LIMIT", "8Gi"
-            )
-            return step.get("kubernetes_memory_limit", default_memory_limit)
-
         tree = []
         for idx, step in enumerate(steps):
             name = step.get("name", str(idx))
-            memory_limit = _get_memory_limit(step)
-            tree.append({name: {"complexity": [(1, memory_limit)]}})
+            jobs = self._get_number_of_jobs(step)
+            memory_limit = self._get_memory_limit(step)
+            complexity = [(jobs, memory_limit)]
+            tree.append({name: {"complexity": complexity}})
         return tree
 
     def parse_specification(self, initial_step):
@@ -120,22 +127,22 @@ class YadageComplexityEstimator(ComplexityEstimatorBase):
                 return not dependencies
             return False
 
-        def _get_memory_limit(stage):
-            # TODO: convert memory limit value to bytes (`kubernetes_memory_to_bytes`)
-            # TODO: validate memory limit value. Reuse code from (`set_memory_limit` in RJC)
-            # TODO: get `default_memory_limit` from config
+        def _get_stage_complexity(stage):
             resources = (
                 stage.get("scheduler", {})
                 .get("step", {})
                 .get("environment", {})
                 .get("resources", [])
             )
-            default_memory_limit = os.getenv(
-                "REANA_KUBERNETES_JOBS_MEMORY_LIMIT", "8Gi"
+            compute_backend = next(
+                filter(lambda r: "compute_backend" in r.keys(), resources), {},
             )
-            return next(
+            k8s_memory_limit = next(
                 filter(lambda r: "kubernetes_memory_limit" in r.keys(), resources), {},
-            ).get("kubernetes_memory_limit", default_memory_limit)
+            )
+            jobs = self._get_number_of_jobs(compute_backend)
+            memory_limit = self._get_memory_limit(k8s_memory_limit)
+            return [(jobs, memory_limit)]
 
         def _parse_stages(stages):
             tree = {}
@@ -147,8 +154,8 @@ class YadageComplexityEstimator(ComplexityEstimatorBase):
                 parameters = scheduler.get("parameters", [])
                 tree[name] = {"params": parameters, "stages": {}, "scatter_params": []}
 
-                # Parse memory limit
-                tree[name]["memory_limit"] = _get_memory_limit(stage)
+                # Parse stage complexity
+                tree[name]["complexity"] = _get_stage_complexity(stage)
 
                 # Parse nested stages
                 if "workflow" in scheduler:
@@ -203,7 +210,7 @@ class YadageComplexityEstimator(ComplexityEstimatorBase):
             stages = stages.copy()
             for stage in stages.keys():
                 stage_value = stages[stage]
-                complexity = [(1, stage_value["memory_limit"])]
+                complexity = stage_value["complexity"]
 
                 # Handle nested stages
                 parsed_stages = _parse_stages(stage_value["stages"])

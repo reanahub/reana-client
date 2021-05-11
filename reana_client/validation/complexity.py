@@ -75,9 +75,32 @@ class ComplexityEstimatorBase:
 class SerialComplexityEstimator(ComplexityEstimatorBase):
     """REANA serial workflow complexity estimation."""
 
-    def parse_specification(self, initial_step):
+    def _parse_steps(self, steps):
         """Parse serial workflow specification tree."""
-        return {}
+
+        def _get_memory_limit(step):
+            # TODO: convert memory limit value to bytes (`kubernetes_memory_to_bytes`)
+            # TODO: validate memory limit value. Reuse code from (`set_memory_limit` in RJC)
+            # TODO: get `default_memory_limit` from config
+            default_memory_limit = os.getenv(
+                "REANA_KUBERNETES_JOBS_MEMORY_LIMIT", "8Gi"
+            )
+            return step.get("kubernetes_memory_limit", default_memory_limit)
+
+        tree = []
+        for idx, step in enumerate(steps):
+            name = step.get("name", str(idx))
+            memory_limit = _get_memory_limit(step)
+            tree.append({name: {"complexity": [(1, memory_limit)]}})
+        return tree
+
+    def parse_specification(self, initial_step):
+        """Parse and filter out serial workflow specification tree."""
+        spec_steps = self.specification.get("steps", [])
+        steps = self._parse_steps(spec_steps)
+        if initial_step == "init":
+            return steps[0] if steps else {}
+        return next(filter(lambda step: initial_step in step.keys(), steps), {})
 
 
 class YadageComplexityEstimator(ComplexityEstimatorBase):

@@ -240,6 +240,97 @@ class YadageComplexityEstimator(ComplexityEstimatorBase):
 class CWLComplexityEstimator(ComplexityEstimatorBase):
     """REANA CWL workflow complexity estimation."""
 
-    def parse_specification(self, initial_step):
+    def _parse_steps(self, workflow):
         """Parse CWL workflow specification tree."""
-        return {}
+        tree = {}
+        steps = workflow.get("steps", [])
+        for step in steps:
+            name = step.get("id")
+            hints = step.get("hints", [{}]).pop()
+            # Parse scatter params
+            scatter = step.get("scatter")
+            scatter_params = None
+            if scatter:
+                scatter_params = next(
+                    filter(lambda p: p["id"] == scatter, step.get("in", [])), {},
+                ).get("source")
+            # Parse nested workflows
+            workflow_file = step.get("run")
+            nested_workflow = workflow_file if isinstance(workflow_file, str) else None
+            # Parse initial complexity
+            jobs = self._get_number_of_jobs(hints)
+            memory_limit = self._get_memory_limit(hints)
+            complexity = [(jobs, memory_limit)]
+            # Parse params and dependencies
+            params = list(map(lambda i: i.get("source", ""), step.get("in", [])))
+            dependencies = set()
+            for param in params:
+                # Extract dependencies from param (e.g '#main/gendata/data')
+                if param:
+                    dependencies.update(param.split("/")[1:-1])
+
+            tree[name] = {
+                "complexity": complexity,
+                "params": params,
+                "dependencies": list(dependencies),
+                "scatter_params": scatter_params,
+                "workflow": nested_workflow,
+            }
+        return tree
+
+    def _parse_workflow(self, workflow):
+        """Parse CWL workflow specification tree."""
+        tree = {}
+        if isinstance(workflow, dict):
+            return self._parse_steps(workflow)
+        elif isinstance(workflow, list):
+            for wf in workflow:
+                tree.update(self._parse_steps(wf))
+        return tree
+
+    def _populate_dependencies(self, steps):
+        """Populate dependencies to parsed CWL workflow tree steps."""
+        for step, value in steps.items():
+            nested_workflow = value.get("workflow")
+            if nested_workflow:
+                for nested_step, nested_value in steps.items():
+                    if nested_workflow in nested_step:
+                        nested_value["dependencies"] += value["dependencies"]
+        return steps
+
+    def _populate_complexity(self, steps):
+        """Populate complexity to parsed CWL workflow tree steps."""
+        for step, value in steps.items():
+            scatter_params = value.get("scatter_params")
+            if scatter_params:
+                param_len = len(self.input_params.get(scatter_params, []))
+                if not param_len:
+                    continue
+                complexity = value.get("complexity")
+                value["complexity"] = [
+                    (item[0] * param_len, item[1]) for item in complexity
+                ]
+        return steps
+
+    def _filter_initial_steps(self, steps, initial_step):
+        """Filter out initial CWL workflow tree steps."""
+        tree = {}
+        for step, value in steps.items():
+            dependencies = value.get("dependencies", [])
+
+            if dependencies == [initial_step]:
+                tree[step] = value
+
+            if initial_step == "init" and not dependencies:
+                tree[step] = value
+
+        return tree
+
+    def parse_specification(self, initial_step):
+        """Parse and filter out CWL workflow specification tree."""
+        workflow = self.specification.get("$graph", self.specification)
+        steps = self._parse_workflow(workflow)
+        steps = self._populate_dependencies(steps)
+        steps = self._populate_complexity(steps)
+        steps = self._filter_initial_steps(steps, initial_step)
+        return steps

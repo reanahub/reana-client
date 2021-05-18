@@ -233,7 +233,7 @@ def test_workflows_include_progress():
                 cli, ["list", "--include-progress", "-t", reana_token]
             )
             assert result.exit_code == 0
-            assert "JOB_PROGRESS" in result.output
+            assert "PROGRESS" in result.output
             assert "2/5" in result.output
 
 
@@ -269,7 +269,7 @@ def test_workflows_without_include_progress():
         ):
             result = runner.invoke(cli, ["list", "-t", reana_token])
             assert result.exit_code == 0
-            assert "JOB_PROGRESS" not in result.output
+            assert "PROGRESS" not in result.output
             assert "STARTED" in result.output
             assert "2021-05-10T12:55:04" in result.output
 

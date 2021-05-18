@@ -55,6 +55,7 @@ install_requires = [
     "webcolors==1.9.1",  # FIXME remove once yadage-schemas solves deps.
     "werkzeug>=0.14.1",
     "yadage-schemas==0.10.6",
+    'websocket-client==0.59.0 ; python_version=="2.7"',  # pin due to py2 support drop
 ]
 
 packages = find_packages()

@@ -16,7 +16,7 @@ import traceback
 
 import click
 from jsonschema.exceptions import ValidationError
-from reana_commons.config import INTERACTIVE_SESSION_TYPES
+from reana_commons.config import INTERACTIVE_SESSION_TYPES, REANA_COMPUTE_BACKENDS
 from reana_commons.errors import REANAValidationError
 from reana_commons.operational_options import validate_operational_options
 from reana_commons.utils import click_table_printer
@@ -793,11 +793,6 @@ def workflow_logs(
         "docker_img": "docker_img",
         "status": "status",
     }
-    compute_backends = {
-        "kubernetes": "Kubernetes",
-        "htcondor": "HTCondor",
-        "slurm": "Slurm",
-    }
     steps = []
     chosen_filters = dict()
 
@@ -826,9 +821,9 @@ def workflow_logs(
                         # Case insensitive for compute backends
                         if (
                             key == "compute_backend"
-                            and value.lower() in compute_backends
+                            and value.lower() in REANA_COMPUTE_BACKENDS
                         ):
-                            value = compute_backends[value.lower()]
+                            value = REANA_COMPUTE_BACKENDS[value.lower()]
                         elif key == "status" and value not in RUN_STATUSES:
                             click.secho(
                                 "==> ERROR: Input status value {} is not valid. ".format(

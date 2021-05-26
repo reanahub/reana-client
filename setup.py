@@ -48,16 +48,11 @@ install_requires = [
     'click==7.0 ; python_version=="2.7"',
     "cwltool==1.0.20191022103248",
     'cwl-utils==0.5 ; python_version>="3"',
-    "pyOpenSSL>=19.0.0",  # FIXME remove once yadage-schemas solves deps.
     "jsonpointer>=2.0",
-    "reana-commons>=0.8.0a13,<0.9.0",
-    "rfc3987>=1.3.8",  # FIXME remove once yadage-schemas solves deps.
+    "reana-commons[yadage]>=0.8.0a13,<0.9.0",
     "six>=1.12.0",
-    "strict-rfc3339>=0.7",  # FIXME remove once yadage-schemas solves deps.
     "tablib>=0.12.1,<0.13",
-    "webcolors==1.9.1",  # FIXME remove once yadage-schemas solves deps.
     "werkzeug>=0.14.1",
-    "yadage-schemas==0.10.6",
     'websocket-client==0.59.0 ; python_version=="2.7"',  # pin due to py2 support drop
 ]
 

@@ -17,12 +17,12 @@ import traceback
 from uuid import UUID
 
 import click
-import yadageschemas
 import yaml
 from jsonschema import ValidationError, validate
 from reana_commons.errors import REANAValidationError
 from reana_commons.operational_options import validate_operational_options
 from reana_commons.serial import serial_load
+from reana_commons.yadage import yadage_load
 from reana_commons.utils import get_workflow_status_change_verb
 
 from reana_client.config import (
@@ -50,41 +50,6 @@ def workflow_uuid_or_name(ctx, param, value):
         )
     else:
         return value
-
-
-def yadage_load(workflow_file, toplevel=".", **kwargs):
-    """Validate and return yadage workflow specification.
-
-    :param workflow_file: A specification file compliant with
-        `yadage` workflow specification.
-    :type workflow_file: string
-    :param toplevel: URL/path for the workflow file
-    :type toplevel: string
-
-    :returns: A dictionary which represents the valid `yadage` workflow.
-    """
-    schema_name = "yadage/workflow-schema"
-    schemadir = None
-
-    specopts = {
-        "toplevel": toplevel,
-        "schema_name": schema_name,
-        "schemadir": schemadir,
-        "load_as_ref": False,
-    }
-
-    validopts = {
-        "schema_name": schema_name,
-        "schemadir": schemadir,
-    }
-
-    try:
-        return yadageschemas.load(
-            spec=workflow_file, specopts=specopts, validopts=validopts, validate=True
-        )
-    except ValidationError as e:
-        e.message = str(e)
-        raise e
 
 
 def cwl_load(workflow_file, **kwargs):

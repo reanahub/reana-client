@@ -49,7 +49,7 @@ install_requires = [
     "jsonpointer>=2.0",
     "reana-commons>=0.7.5a1,<0.8.0",
     "rfc3987>=1.3.8",  # FIXME remove once yadage-schemas solves deps.
-    "six==1.12.0",
+    "six>=1.12.0",
     "strict-rfc3339>=0.7",  # FIXME remove once yadage-schemas solves deps.
     "tablib>=0.12.1,<0.13",
     "webcolors==1.9.1",  # FIXME remove once yadage-schemas solves deps.

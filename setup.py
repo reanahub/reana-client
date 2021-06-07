@@ -21,6 +21,9 @@ history = open("CHANGES.rst").read()
 tests_require = [
     "pytest-reana>=0.8.0a3,<0.9.0",
     'google-auth==1.24.0 ; python_version=="2.7"',
+    'oauthlib==3.1.0; python_version=="2.7"',
+    'pluggy==0.13.1; python_version=="2.7"',
+    'websocket-client==0.59.0; python_version=="2.7"',
 ]
 
 extras_require = {
@@ -49,7 +52,7 @@ install_requires = [
     "jsonpointer>=2.0",
     "reana-commons>=0.8.0a13,<0.9.0",
     "rfc3987>=1.3.8",  # FIXME remove once yadage-schemas solves deps.
-    "six==1.12.0",
+    "six>=1.12.0",
     "strict-rfc3339>=0.7",  # FIXME remove once yadage-schemas solves deps.
     "tablib>=0.12.1,<0.13",
     "webcolors==1.9.1",  # FIXME remove once yadage-schemas solves deps.

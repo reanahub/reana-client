@@ -91,8 +91,8 @@ def get_files(
 
     Examples: \n
     \t $ reana-client ls --workflow myanalysis.42 \n
-    \t $ reana-client ls --workflow myanalysis.42 --human-readable
-    \t $ reana-client ls --workflow myanalysis.42 'code/\*'
+    \t $ reana-client ls --workflow myanalysis.42 --human-readable \n
+    \t $ reana-client ls --workflow myanalysis.42 'data/*root*'
     """  # noqa: W605
     import tablib
     from reana_client.api.client import current_rs_api_client, list_files
@@ -370,7 +370,7 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
 
     Examples:\n
     \t $ reana-client rm -w myanalysis.42 data/mydata.csv \n
-    \t $ reana-client rm -w myanalysis.42 'code/\*'
+    \t $ reana-client rm -w myanalysis.42 'data/*root*'
     """  # noqa: W605
     from reana_client.api.client import delete_file
 

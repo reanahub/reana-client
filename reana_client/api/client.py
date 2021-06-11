@@ -483,7 +483,9 @@ def delete_file(workflow, file_name, access_token):
         raise e
 
 
-def list_files(workflow, access_token, file_name=None, page=None, size=None):
+def list_files(
+    workflow, access_token, file_name=None, page=None, size=None, search=None
+):
     """Return the list of files for a given workflow workspace.
 
     :param workflow: name or id which identifies the workflow.
@@ -491,6 +493,7 @@ def list_files(workflow, access_token, file_name=None, page=None, size=None):
     :param file_name: file name(s) (glob) to list.
     :param page: page number of returned file list.
     :param size: page size of returned file list.
+    :param search: filter search results by parameters.
     :returns: a list of dictionaries composed by the `name`, `size` and
                 `last-modified`.
     """
@@ -501,6 +504,7 @@ def list_files(workflow, access_token, file_name=None, page=None, size=None):
             file_name=file_name,
             page=page,
             size=size,
+            search=search,
         ).result()
 
         if http_response.status_code == 200:

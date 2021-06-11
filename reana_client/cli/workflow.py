@@ -109,7 +109,7 @@ def workflow_execution_group(ctx):
     "filters",
     multiple=True,
     help="Filter workflow that contains certain filtering criteria. "
-    "Use --filter `<columm_name>=<column_value>` pairs. "
+    "Use `--filter <columm_name>=<column_value>` pairs. "
     "Available filters are `name` and `status`.",
 )
 @click.option(
@@ -169,7 +169,8 @@ def workflow_workflows(  # noqa: C901
     status_filter = None
     search_filter = None
     if filters:
-        status_filter, search_filter = parse_filter_parameters(filters)
+        filter_names = ["name", "status"]
+        status_filter, search_filter = parse_filter_parameters(filters, filter_names)
     if _format:
         parsed_format_filters = parse_format_parameters(_format)
     try:

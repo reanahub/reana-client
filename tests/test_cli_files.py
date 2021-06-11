@@ -241,3 +241,103 @@ def test_move_file_running_workflow():
             )
             assert result.exit_code == 1
             assert message in result.output
+
+
+def test_list_files_filter():
+    """Test list workflow workspace files with filter."""
+    status_code = 200
+    response = {
+        "items": [
+            {
+                "last-modified": "2021-06-14T10:20:13",
+                "name": "data/names.txt",
+                "size": {"human_readable": "20 Bytes", "raw": 20},
+            },
+        ]
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "ls",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "mytest.1",
+                    "--filter",
+                    "name=names",
+                    "--filter",
+                    "size=20",
+                    "--json",
+                ],
+            )
+            json_response = json.loads(result.output)
+            assert result.exit_code == 0
+            assert isinstance(json_response, list)
+            assert len(json_response) == 1
+            assert "names" in json_response[0]["name"]
+
+
+def test_list_files_filter_with_filename():
+    """Test list workflow workspace files with filter and filename."""
+    status_code = 200
+    response = {
+        "items": [
+            {
+                "last-modified": "2021-06-14T10:20:14",
+                "name": "workflow/cwl/helloworld-slurmcern.cwl",
+                "size": {"human_readable": "965 Bytes", "raw": 965},
+            },
+            {
+                "last-modified": "2021-06-14T10:20:14",
+                "name": "workflow/cwl/helloworld-job.yml",
+                "size": {"human_readable": "122 Bytes", "raw": 122},
+            },
+            {
+                "last-modified": "2021-06-14T10:20:14",
+                "name": "workflow/cwl/helloworld.cwl",
+                "size": {"human_readable": "867 Bytes", "raw": 867},
+            },
+        ]
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "ls",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "mytest.1",
+                    "**/*.cwl",
+                    "--filter",
+                    "last-modified=2021-06-14",
+                    "--json",
+                ],
+            )
+            json_response = json.loads(result.output)
+            assert result.exit_code == 0
+            assert isinstance(json_response, list)
+            assert len(json_response) == 3
+            assert json_response[0]["name"] in response["items"][0]["name"]
+            assert "2021-06-14" in json_response[1]["last-modified"]

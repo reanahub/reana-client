@@ -24,6 +24,7 @@ from reana_client.cli.utils import (
     check_connection,
     format_data,
     human_readable_or_raw_option,
+    parse_filter_parameters,
     parse_format_parameters,
 )
 from reana_client.config import ERROR_MESSAGES, JSON, URL
@@ -66,6 +67,15 @@ def files_group(ctx):
     default=None,
     help="Get URLs of output files.",
 )
+@click.option(
+    "--filter",
+    "filters",
+    multiple=True,
+    help="Filter results to show only files that match certain filtering "
+    "criteria such as file name, size or modification date."
+    "Use `--filter <columm_name>=<column_value>` pairs. "
+    "Available filters are `name`, `size` and 'last-modified.",
+)
 @click.argument("filename", metavar="SOURCE", nargs=1, required=False)
 @human_readable_or_raw_option
 @add_access_token_options
@@ -75,6 +85,7 @@ def get_files(
     ctx,
     workflow,
     _format,
+    filters,
     output_format,
     filename,
     access_token,
@@ -92,7 +103,8 @@ def get_files(
     Examples: \n
     \t $ reana-client ls --workflow myanalysis.42 \n
     \t $ reana-client ls --workflow myanalysis.42 --human-readable \n
-    \t $ reana-client ls --workflow myanalysis.42 'data/*root*'
+    \t $ reana-client ls --workflow myanalysis.42 'data/*root*' \n
+    \t $ reana-client ls --workflow myanalysis.42 --filter name=hello
     """  # noqa: W605
     import tablib
     from reana_client.api.client import current_rs_api_client, list_files
@@ -101,13 +113,18 @@ def get_files(
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
 
+    search_filter = None
+    headers = ["name", "size", "last-modified"]
+    if filters:
+        _, search_filter = parse_filter_parameters(filters, headers)
     if _format:
         parsed_format_filters = parse_format_parameters(_format)
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
-            response = list_files(workflow, access_token, filename, page, size)
-            headers = ["name", "size", "last-modified"]
+            response = list_files(
+                workflow, access_token, filename, page, size, search_filter
+            )
             data = []
             file_path = get_path_from_operation_id(
                 current_rs_api_client.swagger_spec.spec_dict["paths"], "download_file"

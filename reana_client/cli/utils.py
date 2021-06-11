@@ -146,17 +146,17 @@ def parse_format_parameters(_format):
         )
 
 
-def parse_filter_parameters(filters):
+def parse_filter_parameters(filters, filter_names):
     """Return parsed filter parameters."""
     try:
         status_filters = []
-        search_filters = None
-        filters = " ".join(filters).split(",")
+        search_filters = {}
+        filters = list(filters)
         for item in filters:
             if "=" in item:
                 filter_name = item.split("=")[0].lower()
                 filter_value = item.split("=")[1]
-                if filter_name == "status":
+                if filter_name == "status" and filter_name in filter_names:
                     if filter_value in RUN_STATUSES:
                         status_filters.append(filter_value)
                     else:
@@ -168,8 +168,11 @@ def parse_filter_parameters(filters):
                             fg="red",
                         ),
                         sys.exit(1)
-                elif filter_name == "name":
-                    search_filters = filter_value
+                elif filter_name in filter_names:
+                    if search_filters.get(filter_name):
+                        search_filters[filter_name].append(filter_value)
+                    else:
+                        search_filters[filter_name] = [filter_value]
                 else:
                     click.secho(
                         "==> ERROR: Filter {} is not valid.".format(filter_name),
@@ -178,7 +181,13 @@ def parse_filter_parameters(filters):
                     ),
                     sys.exit(1)
             else:
-                raise click.BadParameter("Wrong input format")
+                raise click.BadParameter(
+                    "Wrong input format. Please use --filter filter_name=filter_value"
+                )
+        if not search_filters:
+            search_filters = None
+        else:
+            search_filters = json.dumps(search_filters)
         return status_filters, search_filters
     except ValueError as e:
         click.echo(

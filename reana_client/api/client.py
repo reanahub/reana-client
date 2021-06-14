@@ -499,9 +499,10 @@ def upload_to_server(workflow, paths, access_token):
     if not workflow:
         raise ValueError("Workflow name or id must be provided")
     if not paths:
-        raise ValueError(
-            "Please provide path(s) to file(s) that " "should be uploaded to workspace."
+        logging.info(
+            "No path(s) to file(s) that should be uploaded to workspace was provided."
         )
+        return []
 
     logging.info('Workflow "{}" selected'.format(workflow))
 

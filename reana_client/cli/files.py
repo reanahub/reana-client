@@ -16,6 +16,7 @@ import traceback
 import click
 from reana_commons.utils import click_table_printer
 
+from reana_client.printer import display_message
 from reana_client.api.utils import get_path_from_operation_id
 from reana_client.cli.utils import (
     add_access_token_options,
@@ -506,10 +507,19 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
 @check_connection
 @add_access_token_options
 @click.option("-s", "--summarize", is_flag=True, help="Display total.")
+@click.option(
+    "--filter",
+    "filters",
+    multiple=True,
+    help="Filter results to show only files that match certain filtering "
+    "criteria such as file name or size."
+    "Use `--filter <columm_name>=<column_value>` pairs. "
+    "Available filters are `name` and `size`.",
+)
 @human_readable_or_raw_option
 @click.pass_context
 def workflow_disk_usage(
-    ctx, workflow, access_token, summarize, human_readable_or_raw
+    ctx, workflow, access_token, summarize, filters, human_readable_or_raw
 ):  # noqa: D301
     """Get workspace disk usage.
 
@@ -517,7 +527,8 @@ def workflow_disk_usage(
 
     Examples: \n
     \t $ reana-client du -w myanalysis.42 -s \n
-    \t $ reana-client du -w myanalysis.42 -s --human-readable
+    \t $ reana-client du -w myanalysis.42 -s --human-readable \n
+    \t $ reana-client du -w myanalysis.42 --filter name=data/
     """
     from reana_client.api.client import get_workflow_disk_usage
 
@@ -525,11 +536,17 @@ def workflow_disk_usage(
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
 
+    search_filter = None
+    headers = ["size", "name"]
+    if filters:
+        _, search_filter = parse_filter_parameters(filters, headers)
     if workflow:
         try:
-            parameters = {"summarize": summarize}
+            parameters = {"summarize": summarize, "search": search_filter}
             response = get_workflow_disk_usage(workflow, parameters, access_token)
-            headers = ["size", "name"]
+            if not response["disk_usage_info"]:
+                display_message("No files matching filter criteria.", msg_type="error")
+                sys.exit(1)
             data = []
             for disk_usage_info in response["disk_usage_info"]:
                 if not disk_usage_info["name"].startswith(FILES_BLACKLIST):

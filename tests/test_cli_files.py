@@ -288,6 +288,84 @@ def test_list_files_filter():
             assert "names" in json_response[0]["name"]
 
 
+def test_list_disk_usage_with_valid_filter():
+    """Test list disk usage info with valid filter."""
+    status_code = 200
+    response = {
+        "disk_usage_info": [
+            {
+                "name": "/merge/_packtivity",
+                "size": {"human_readable": "4 KiB", "raw": 4096},
+            }
+        ],
+        "user": "00000000-0000-0000-0000-000000000000",
+        "workflow_id": "7767678-766787",
+        "workflow_name": "workflow",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "du",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "workflow.1",
+                    "--filter",
+                    "name=merge",
+                ],
+            )
+            assert result.exit_code == 0
+            assert "merge" in result.output
+            assert "4096" in result.output
+
+
+def test_list_disk_usage_with_invalid_filter():
+    """Test list disk usage info with invalid filter."""
+    status_code = 200
+    response = {
+        "disk_usage_info": [],
+        "user": "00000000-0000-0000-0000-000000000000",
+        "workflow_id": "7767678-766787",
+        "workflow_name": "workflow",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "du",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "workflow.1",
+                    "--filter",
+                    "name=not_valid",
+                ],
+            )
+            assert result.exit_code == 1
+            assert "No files matching filter criteria." in result.output
+
+
 def test_list_files_filter_with_filename():
     """Test list workflow workspace files with filter and filename."""
     status_code = 200

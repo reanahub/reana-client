@@ -74,7 +74,7 @@ def files_group(ctx):
     help="Filter results to show only files that match certain filtering "
     "criteria such as file name, size or modification date."
     "Use `--filter <columm_name>=<column_value>` pairs. "
-    "Available filters are `name`, `size` and 'last-modified.",
+    "Available filters are `name`, `size` and `last-modified`.",
 )
 @click.argument("filename", metavar="SOURCE", nargs=1, required=False)
 @human_readable_or_raw_option

@@ -42,18 +42,19 @@ setup_requires = [
 ]
 
 install_requires = [
-    "PyYAML>=5.1",
-    'typing>=3.7.4 ; python_version=="2.7"',  # workaround for CWL deps
     'click>=7 ; python_version>="3"',
     'click==7.0 ; python_version=="2.7"',
     "cwltool==1.0.20191022103248",
     'cwl-utils==0.5 ; python_version>="3"',
     "jsonpointer>=2.0",
+    "PyYAML>=5.1",
     "reana-commons[yadage]>=0.8.0a17,<0.9.0",
+    'ruamel.yaml.clib==0.2.2 ; python_version=="2.7"',  # pin due to py2 support drop
     "six>=1.12.0",
     "tablib>=0.12.1,<0.13",
-    "werkzeug>=0.14.1",
+    'typing>=3.7.4 ; python_version=="2.7"',  # workaround for CWL deps
     'websocket-client==0.59.0 ; python_version=="2.7"',  # pin due to py2 support drop
+    "werkzeug>=0.14.1",
 ]
 
 packages = find_packages()

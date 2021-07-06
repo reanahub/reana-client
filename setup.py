@@ -43,7 +43,7 @@ install_requires = [
     "cwl-utils==0.5",
     "jsonpointer>=2.0",
     "PyYAML>=5.1",
-    "reana-commons[yadage]>=0.8.0a19,<0.9.0",
+    "reana-commons[yadage,snakemake]>=0.8.0a19,<0.9.0",
     "six>=1.12.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1",

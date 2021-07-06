@@ -33,6 +33,8 @@ def validate_parameters(workflow_type, reana_yaml):
             return YadageParameterValidator(reana_yaml)
         if workflow_type == "cwl":
             return CWLParameterValidator(reana_yaml)
+        if workflow_type == "snakemake":
+            return SnakemakeParameterValidator(reana_yaml)
 
     validator = build_validator(workflow_type, reana_yaml)
     validator.validate()
@@ -448,3 +450,15 @@ class CWLParameterValidator(ParameterValidatorBase):
         elif isinstance(workflow, list):
             for wf in workflow:
                 _check_dangerous_operations(wf)
+
+
+class SnakemakeParameterValidator(ParameterValidatorBase):
+    """REANA Snakemake workflow parameter validation."""
+
+    def validate_parameters(self):
+        """Validate input parameters for Snakemake workflows."""
+        pass
+
+    def parse_specification(self):
+        """Parse Snakemake workflow tree."""
+        pass

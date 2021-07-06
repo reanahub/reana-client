@@ -22,6 +22,7 @@ from jsonschema import ValidationError, validate
 from reana_commons.errors import REANAValidationError
 from reana_commons.operational_options import validate_operational_options
 from reana_commons.serial import serial_load
+from reana_commons.snakemake import snakemake_load
 from reana_commons.yadage import yadage_load
 from reana_commons.utils import get_workflow_status_change_verb
 
@@ -76,6 +77,7 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
         "yadage": yadage_load,
         "cwl": cwl_load,
         "serial": serial_load,
+        "snakemake": snakemake_load,
     }
     """Dictionary to extend with new workflow specification loaders."""
 
@@ -112,6 +114,10 @@ def load_reana_spec(
                 click.secho(e.message, err=True, fg="red")
                 sys.exit(1)
             kwargs.update(reana_yaml["inputs"]["options"])
+        if workflow_type == "snakemake":
+            kwargs["input"] = (
+                reana_yaml.get("inputs", {}).get("parameters", {}).get("input")
+            )
         return kwargs
 
     try:
@@ -142,7 +148,9 @@ def load_reana_spec(
             )
             validate_environment(reana_yaml, pull=pull_environment_image)
 
-        if workflow_type == "cwl" and "inputs" in reana_yaml:
+        if (
+            workflow_type == "cwl" or workflow_type == "snakemake"
+        ) and "inputs" in reana_yaml:
             with open(reana_yaml["inputs"]["parameters"]["input"]) as f:
                 reana_yaml["inputs"]["parameters"] = yaml.load(
                     f, Loader=yaml.FullLoader

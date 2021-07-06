@@ -934,7 +934,7 @@ def workflow_validate(ctx, file, environments, pull):  # noqa: D301
             pull_environment_image=pull,
         )
 
-    except ValidationError as e:
+    except (ValidationError, REANAValidationError) as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
         display_message(

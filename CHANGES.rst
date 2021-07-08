@@ -14,21 +14,26 @@ Version 0.8.0 (UNRELEASED)
   ``--include-progress`` and ``--include-workspace-size`` options to add them to the output.
 - Changes Yadage workflow specification loading to be done in ``reana-commons``.
 
-Version 0.7.5 (UNRELEASED)
+Version 0.7.5 (2021-07-05)
 --------------------------
+
 - Changes workflow validation to display more granular output.
 - Changes workflow parameters validation to warn about misused parameters for each step.
+- Changes dependencies to unpin six so that client may be installed in more contexts.
 - Fixes environment image validation not to test repetitively the same image.
+- Fixes ``upload_to_server()`` Python API function to silently skip uploading in case of none-like inputs.
 
 Version 0.7.4 (2021-04-28)
 --------------------------
-- Fixes environment image validation info message where UIDs were switched.
-- Changes ``list`` command to include deleted workflows by default.
+
 - Adds support of wildcard patterns to ``ls`` command.
 - Adds support of directory download and wildcard patterns to ``download`` command.
+- Changes ``list`` command to include deleted workflows by default.
+- Fixes environment image validation info message where UIDs were switched.
 
 Version 0.7.3 (2021-03-24)
 --------------------------
+
 - Adds validation of workflow input parameters to the ``validate`` command.
 - Adds optional validation of workflow environment images (``--environments``) to the ``validate`` command.
 

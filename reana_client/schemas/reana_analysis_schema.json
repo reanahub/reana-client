@@ -64,12 +64,25 @@
         "files": {
           "id": "/properties/outputs/properties/files",
           "type": "array",
-          "title": "Analysis results.",
+          "title": "Analysis result files.",
           "description": "Expected output from analysis represented by a set of files.",
+          "optional": true,
           "items": {
             "id": "/properties/outputs/properties/files/items",
             "type": "string",
             "title": "Relative path to the file."
+          }
+        },
+        "directories": {
+          "id": "/properties/outputs/properties/directories",
+          "type": "array",
+          "title": "Analysis result directories.",
+          "description": "Expected output from analysis represented by a set of directories.",
+          "optional": true,
+          "items": {
+            "id": "/properties/outputs/properties/directories/items",
+            "type": "string",
+            "title": "Relative path to the directory."
           }
         }
       }

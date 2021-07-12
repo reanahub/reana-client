@@ -171,10 +171,10 @@ def download_files(
 ):  # noqa: D301
     """Download workspace files.
 
-    The `download` command allows to download workspace files. By default, the
-    files specified in the workflow specification as outputs are downloaded.
-    You can also specify the individual files you would like to download, see
-    examples below. Note that downloading directories is not yet supported.
+    The `download` command allows to download workspace files and directories.
+    By default, the files specified in the workflow specification as outputs
+    are downloaded. You can also specify the individual files you would like
+    to download, see examples below.
 
     Examples: \n
     \t $ reana-client download # download all output files \n
@@ -189,7 +189,9 @@ def download_files(
     if not filenames:
         reana_spec = get_workflow_specification(workflow, access_token)["specification"]
         if "outputs" in reana_spec:
-            filenames = reana_spec["outputs"].get("files") or []
+            filenames = []
+            filenames += reana_spec["outputs"].get("files", [])
+            filenames += reana_spec["outputs"].get("directories", [])
 
     if workflow:
         for file_name in filenames:

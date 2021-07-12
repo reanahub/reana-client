@@ -1,6 +1,10 @@
 Changes
 =======
 
+Version 0.7.6 (UNRELEASED)
+--------------------------
+- Adds support for ``outputs.directories`` in ``reana.yaml``
+
 Version 0.7.5 (2021-07-05)
 --------------------------
 

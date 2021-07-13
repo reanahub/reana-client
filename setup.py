@@ -39,8 +39,7 @@ setup_requires = [
 
 install_requires = [
     "click>=7",
-    "cwltool==1.0.20191022103248",
-    "cwl-utils==0.5",
+    "cwltool==3.1.20210628163208",
     "jsonpointer>=2.0",
     "PyYAML>=5.1",
     "reana-commons[yadage,snakemake]>=0.8.0a22,<0.9.0",

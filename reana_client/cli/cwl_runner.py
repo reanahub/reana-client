@@ -19,10 +19,8 @@ from time import sleep
 import click
 import yaml
 from bravado.exception import HTTPServerError
-from cwltool.context import LoadingContext
 from cwltool.load_tool import fetch_document
 from cwltool.main import printdeps
-from cwltool.workflow import findfiles
 
 from reana_client.cli.utils import add_access_token_options
 from reana_client.config import default_user
@@ -32,6 +30,23 @@ from reana_client.version import __version__
 PY3 = sys.version_info > (3,)
 
 
+def findfiles(wo, fn=None):
+    """Return a list CWL workflow files."""
+    if fn is None:
+        fn = []
+    if isinstance(wo, dict):
+        if wo.get("class") == "File":
+            fn.append(wo)
+            findfiles(wo.get("secondaryFiles", None), fn)
+        else:
+            for w in wo.values():
+                findfiles(w, fn)
+    elif isinstance(wo, list):
+        for w in wo:
+            findfiles(w, fn)
+    return fn
+
+
 def get_file_dependencies_obj(cwl_obj, basedir):
     """Return a dictionary which contains the CWL workflow file dependencies.
 
@@ -39,17 +54,19 @@ def get_file_dependencies_obj(cwl_obj, basedir):
     :param basedir: Workflow base dir.
     :returns: A dictionary composed of valid CWL file dependencies.
     """
-    # Load de document
-    loading_context = LoadingContext()
-    document_loader, workflow_obj, uri = fetch_document(
-        cwl_obj,
-        resolver=loading_context.resolver,
-        fetcher_constructor=loading_context.fetcher_constructor,
-    )
+    # Load the document
+    # remove filename additions (e.g. 'v1.0/conflict-wf.cwl#collision')
+    document = cwl_obj.split("#")[0]
+    document_loader, workflow_obj, uri = fetch_document(document)
     in_memory_buffer = io.StringIO() if PY3 else io.BytesIO()
     # Get dependencies
     printdeps(
-        workflow_obj, document_loader, in_memory_buffer, "primary", uri, basedir=basedir
+        workflow_obj,
+        document_loader.loader,
+        in_memory_buffer,
+        "primary",
+        uri,
+        basedir=basedir,
     )
     file_dependencies_obj = yaml.load(
         in_memory_buffer.getvalue(), Loader=yaml.FullLoader
@@ -73,6 +90,7 @@ def get_file_dependencies_obj(cwl_obj, basedir):
 @click.pass_context
 def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
+    import json
     from reana_client.utils import get_api_url
     from reana_client.api.client import (
         create_workflow,
@@ -92,30 +110,29 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
             with open(jobfile) as f:
                 reana_spec = {
                     "workflow": {"type": "cwl"},
-                    "inputs": {
-                        "parameters": {"input": yaml.load(f, Loader=yaml.FullLoader)}
-                    },
+                    "inputs": {"parameters": yaml.load(f, Loader=yaml.FullLoader)},
                 }
 
-            reana_spec["workflow"]["spec"] = load_workflow_spec(
-                reana_spec["workflow"]["type"], processfile,
+            reana_spec["workflow"]["specification"] = load_workflow_spec(
+                reana_spec["workflow"]["type"], processfile
             )
         else:
             with open(jobfile) as f:
                 job = yaml.load(f, Loader=yaml.FullLoader)
-            reana_spec = {"workflow": {"type": "cwl"}, "parameters": {"input": ""}}
+            reana_spec = {"workflow": {"type": "cwl"}}
 
-            reana_spec["workflow"]["spec"] = load_workflow_spec(
+            reana_spec["workflow"]["specification"] = load_workflow_spec(
                 reana_spec["workflow"]["type"], job["cwl:tool"]
             )
             del job["cwl:tool"]
-            reana_spec["inputs"]["parameters"] = {"input": job}
-        reana_spec["workflow"]["spec"] = replace_location_in_cwl_spec(
-            reana_spec["workflow"]["spec"]
+            reana_spec["inputs"]["parameters"] = job
+        reana_spec["workflow"]["specification"] = replace_location_in_cwl_spec(
+            reana_spec["workflow"]["specification"]
         )
 
         logging.info("Connecting to {0}".format(get_api_url()))
-        response = create_workflow(reana_spec, "cwl-test", access_token)
+        reana_specification = json.loads(json.dumps(reana_spec, sort_keys=True))
+        response = create_workflow(reana_specification, "cwl-test", access_token)
         logging.error(response)
         workflow_name = response["workflow_name"]
         workflow_id = response["workflow_id"]
@@ -157,10 +174,13 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
                 # click.echo(response['status'])
                 break
         try:
-            out = re.search(r"success{[\S\s]*", logs).group().replace("success", "")
             import ast
-            import json
 
+            out = (
+                re.search(r"FinalOutput[\s\S]*?FinalOutput", logs)
+                .group()
+                .replace("FinalOutput", "")
+            )
             json_output = json.dumps(ast.literal_eval(str(out)))
         except AttributeError:
             logging.error("Workflow execution failed")

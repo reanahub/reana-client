@@ -20,10 +20,6 @@ history = open("CHANGES.rst").read()
 
 tests_require = [
     "pytest-reana>=0.8.0a5,<0.9.0",
-    'google-auth==1.24.0 ; python_version=="2.7"',
-    'oauthlib==3.1.0; python_version=="2.7"',
-    'pluggy==0.13.1; python_version=="2.7"',
-    'websocket-client==0.59.0; python_version=="2.7"',
 ]
 
 extras_require = {
@@ -42,18 +38,14 @@ setup_requires = [
 ]
 
 install_requires = [
-    'click>=7 ; python_version>="3"',
-    'click==7.0 ; python_version=="2.7"',
+    "click>=7",
     "cwltool==1.0.20191022103248",
-    'cwl-utils==0.5 ; python_version>="3"',
+    "cwl-utils==0.5",
     "jsonpointer>=2.0",
     "PyYAML>=5.1",
-    "reana-commons[yadage]>=0.8.0a17,<0.9.0",
-    'ruamel.yaml.clib==0.2.2 ; python_version=="2.7"',  # pin due to py2 support drop
+    "reana-commons[yadage]>=0.8.0a19,<0.9.0",
     "six>=1.12.0",
     "tablib>=0.12.1,<0.13",
-    'typing>=3.7.4 ; python_version=="2.7"',  # workaround for CWL deps
-    'websocket-client==0.59.0 ; python_version=="2.7"',  # pin due to py2 support drop
     "werkzeug>=0.14.1",
 ]
 
@@ -93,8 +85,6 @@ setup(
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",

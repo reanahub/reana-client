@@ -13,6 +13,7 @@ Version 0.8.0 (UNRELEASED)
 - Changes ``list`` command to stop including workflow progress and workspace size by default. Adds
   ``--include-progress`` and ``--include-workspace-size`` options to add them to the output.
 - Changes Yadage workflow specification loading to be done in ``reana-commons``.
+- Removes support for Python 2.
 
 Version 0.7.5 (2021-07-05)
 --------------------------

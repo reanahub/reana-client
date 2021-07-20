@@ -138,12 +138,6 @@ jobs:
           matrix:
               include:
                 - testenv: lowest
-                  python: 2.7
-
-                - testenv: release
-                  python: 2.7
-
-                - testenv: lowest
                   python: 3.6
 
                 - testenv: release
@@ -179,12 +173,7 @@ jobs:
             run: |
               pip install --upgrade pip setuptools py
               pip install wheel
-              if [[ ${{ matrix.python }} == 2.7 ]]; then
-                  pip install requirements-builder==0.3.0 click==7.0
-              fi
-              if [[ ${{ matrix.python }} != 2.7 ]]; then
-                  pip install requirements-builder
-              fi
+              pip install requirements-builder
               if [[ ${{ matrix.testenv }} == lowest ]]; then
                   requirements-builder -e all --level=min --req requirements-dev.txt setup.py > .lowest-requirements.txt
               fi

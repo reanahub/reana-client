@@ -16,10 +16,11 @@ from functools import partial
 
 import requests
 from bravado.exception import HTTPError
-from reana_client.config import ERROR_MESSAGES, WORKFLOW_ENGINES
+from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import _validate_reana_yaml, is_uuid_v4
 from reana_commons.api_client import get_current_api_client
+from reana_commons.config import REANA_WORKFLOW_ENGINES
 from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
 from werkzeug.local import LocalProxy
 
@@ -233,10 +234,10 @@ def create_workflow_from_json(
     if os.environ.get("REANA_SERVER_URL") is None:
         raise Exception("Environment variable REANA_SERVER_URL is not set")
     workflow_engine = workflow_engine.lower()
-    if workflow_engine not in WORKFLOW_ENGINES:
+    if workflow_engine not in REANA_WORKFLOW_ENGINES:
         raise Exception(
             "Workflow engine - {} not found. You must use one of "
-            "these engines - {}".format(workflow_engine, WORKFLOW_ENGINES)
+            "these engines - {}".format(workflow_engine, REANA_WORKFLOW_ENGINES)
         )
     try:
         reana_yaml = dict(workflow={})

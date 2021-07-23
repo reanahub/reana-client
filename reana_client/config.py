@@ -37,9 +37,6 @@ TIMECHECK = 5
 URL = "url"
 """Url output format."""
 
-WORKFLOW_ENGINES = ["serial", "cwl", "yadage", "snakemake"]
-"""Supported workflow engines."""
-
 RUN_STATUSES = [
     "created",
     "running",

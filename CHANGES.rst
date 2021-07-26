@@ -15,6 +15,10 @@ Version 0.8.0 (UNRELEASED)
 - Changes Yadage workflow specification loading to be done in ``reana-commons``.
 - Removes support for Python 2.
 
+Version 0.7.6 (UNRELEASED)
+--------------------------
+- Adds support for ``outputs.directories`` in ``reana.yaml``
+
 Version 0.7.5 (2021-07-05)
 --------------------------
 

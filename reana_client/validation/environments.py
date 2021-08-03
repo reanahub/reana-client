@@ -43,6 +43,11 @@ def validate_environment(reana_yaml, pull=False):
         if workflow_type == "cwl":
             workflow_file = workflow.get("file")
             return CWLEnvironmentValidator(workflow_file=workflow_file, pull=pull)
+        if workflow_type == "snakemake":
+            workflow_steps = workflow["specification"]["steps"]
+            return SnakemakeEnvironmentValidator(
+                workflow_steps=workflow_steps, pull=pull
+            )
 
     workflow = reana_yaml["workflow"]
     validator = build_validator(workflow)
@@ -471,3 +476,14 @@ class CWLEnvironmentValidator(EnvironmentValidatorBase):
 
         for image in traverse(top):
             self._validate_environment_image(image)
+
+
+class SnakemakeEnvironmentValidator(EnvironmentValidatorBase):
+    """REANA Snakemake workflow environments validation."""
+
+    def validate_environment(self):
+        """Validate environments in REANA Snakemake workflow."""
+        for step in self.workflow_steps:
+            image = step["environment"]
+            kubernetes_uid = step.get("kubernetes_uid")
+            self._validate_environment_image(image, kubernetes_uid=kubernetes_uid)

@@ -43,6 +43,11 @@ def validate_environment(reana_yaml, pull=False):
         if workflow_type == "cwl":
             workflow_file = workflow.get("file")
             return CWLEnvironmentValidator(workflow_file=workflow_file, pull=pull)
+        if workflow_type == "snakemake":
+            workflow_steps = workflow.rules()
+            return SnakemakeEnvironmentValidator(
+                workflow_steps=workflow_steps, pull=pull
+            )
 
     workflow = reana_yaml["workflow"]
     validator = build_validator(workflow)
@@ -471,3 +476,37 @@ class CWLEnvironmentValidator(EnvironmentValidatorBase):
 
         for image in traverse(top):
             self._validate_environment_image(image)
+
+
+class SnakemakeEnvironmentValidator(EnvironmentValidatorBase):
+    """REANA Snakemake workflow environments validation."""
+
+    def extract_steps_environments(self):
+        """Extract environments snakemake workflow steps."""
+
+        def traverse_snakemake_workflow(stages):
+            environments = []
+            for stage in stages:
+                environments.append(stage.container_img)
+            return environments
+
+        return traverse_snakemake_workflow(self.workflow_steps)
+
+    def validate_environment(self):
+        """Validate environments in REANA Snakemake workflow."""
+
+        def _check_environment(environment):
+            image = environment["image"]
+            k8s_uid = next(
+                (
+                    resource["kubernetes_uid"]
+                    for resource in environment.get("resources", [])
+                    if "kubernetes_uid" in resource
+                ),
+                None,
+            )
+            self._validate_environment_image(image, kubernetes_uid=k8s_uid)
+
+        steps_environment = self._extract_steps_environment()
+        for environment in steps_environment:
+            _check_environment(environment)

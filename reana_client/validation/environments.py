@@ -9,6 +9,7 @@
 """REANA client environment validation."""
 
 import sys
+import os
 import logging
 
 import requests
@@ -23,6 +24,8 @@ from reana_client.config import (
     GITLAB_CERN_REGISTRY_PREFIX,
 )
 from reana_client.printer import display_message
+
+from snakemake.workflow import Workflow
 
 
 def validate_environment(reana_yaml, pull=False):
@@ -44,9 +47,17 @@ def validate_environment(reana_yaml, pull=False):
             workflow_file = workflow.get("file")
             return CWLEnvironmentValidator(workflow_file=workflow_file, pull=pull)
         if workflow_type == "snakemake":
-            workflow_steps = workflow.rules()
+            snakefile = os.path.abspath(workflow["file"])
+            sm_workflow = Workflow(snakefile=snakefile)
+
+            # In include command, the following line fails from within the snakemake Workflow class:
+            #   exec(compile(code, snakefile, "exec"), self.globals)
+            #
+            # Without this step, the workflow object retains no rules from the snakefile
+            sm_workflow.include(sm_workflow, snakefile=snakefile)
+
             return SnakemakeEnvironmentValidator(
-                workflow_steps=workflow_steps, pull=pull
+                workflow_steps=sm_workflow.rules, pull=pull
             )
 
     workflow = reana_yaml["workflow"]
@@ -481,13 +492,13 @@ class CWLEnvironmentValidator(EnvironmentValidatorBase):
 class SnakemakeEnvironmentValidator(EnvironmentValidatorBase):
     """REANA Snakemake workflow environments validation."""
 
-    def extract_steps_environments(self):
+    def _extract_rules_environments(self):
         """Extract environments snakemake workflow steps."""
 
-        def traverse_snakemake_workflow(stages):
+        def traverse_snakemake_workflow(rules):
             environments = []
-            for stage in stages:
-                environments.append(stage.container_img)
+            for rule in rules:
+                environments.append(rule.container_img)
             return environments
 
         return traverse_snakemake_workflow(self.workflow_steps)
@@ -507,6 +518,6 @@ class SnakemakeEnvironmentValidator(EnvironmentValidatorBase):
             )
             self._validate_environment_image(image, kubernetes_uid=k8s_uid)
 
-        steps_environment = self._extract_steps_environment()
+        steps_environment = self._extract_rules_environments()
         for environment in steps_environment:
             _check_environment(environment)

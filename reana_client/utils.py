@@ -131,6 +131,14 @@ def load_reana_spec(
             **_prepare_kwargs(reana_yaml)
         )
 
+        if (
+            workflow_type == "cwl" or workflow_type == "snakemake"
+        ) and "inputs" in reana_yaml:
+            with open(reana_yaml["inputs"]["parameters"]["input"]) as f:
+                reana_yaml["inputs"]["parameters"] = yaml.load(
+                    f, Loader=yaml.FullLoader
+                )
+
         if not skip_validation:
             display_message(
                 "Verifying REANA specification file... {filepath}".format(
@@ -147,14 +155,6 @@ def load_reana_spec(
                 msg_type="info",
             )
             validate_environment(reana_yaml, pull=pull_environment_image)
-
-        if (
-            workflow_type == "cwl" or workflow_type == "snakemake"
-        ) and "inputs" in reana_yaml:
-            with open(reana_yaml["inputs"]["parameters"]["input"]) as f:
-                reana_yaml["inputs"]["parameters"] = yaml.load(
-                    f, Loader=yaml.FullLoader
-                )
 
         if workflow_type == "yadage":
             # We don't send the loaded Yadage workflow spec to the cluster as

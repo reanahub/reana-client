@@ -456,9 +456,60 @@ class SnakemakeParameterValidator(ParameterValidatorBase):
     """REANA Snakemake workflow parameter validation."""
 
     def validate_parameters(self):
-        """Validate input parameters for Snakemake workflows."""
-        pass
+        """Validate parameters for Snakemake workflows."""
+        param_steps_mapping = defaultdict(set)
+        cmd_param_steps_mapping = defaultdict(set)
+        for step in self.steps:
+            # validate dangerous operations
+            self._validate_dangerous_operations(step["commands"], step=step["name"])
+            # Map input params with steps
+            for command in step["input_params"]:
+                param_steps_mapping[command].add(step["name"])
+
+            # Map command params with steps
+            for command in step["command_params"]:
+                cmd_param_steps_mapping[command].add(step["name"])
+
+        # We skip REANA input parameter validation as we set these parameters via
+        # `configfile`, so it's possible to assign the input parameters to Snakemake
+        # parameters named differently, thus causing false positives.
+        # E.g. `foo=config["bar"]` would warn that `bar` is not being used as we can't
+        # guess which config variables are being used. We only have access to Snakemake
+        # inputs, outputs and params names.
+
+        # Snakemake command and input parameters validation
+        self._validate_misused_parameters_in_steps(
+            param_steps_mapping, cmd_param_steps_mapping, "Snakemake"
+        )
 
     def parse_specification(self):
         """Parse Snakemake workflow tree."""
-        pass
+
+        def parse_command(command):
+            return re.findall(r".*?{(?:params|input|output)\.(.*?)}.*?", command)
+
+        def parse_commands(commands):
+            cmd_list = set()
+            for command in commands:
+                for cmd in parse_command(command):
+                    cmd_list.add(cmd)
+            return cmd_list
+
+        steps = []
+        for idx, step in enumerate(self.specification.get("steps", [])):
+            commands = step["commands"]
+            steps.append(
+                {
+                    "name": step.get("name", str(idx)),
+                    "commands": commands,
+                    "input_params": set(
+                        [
+                            *step.get("params", {}).keys(),
+                            *step.get("inputs", {}).keys(),
+                            *step.get("outputs", {}).keys(),
+                        ]
+                    ),
+                    "command_params": parse_commands(commands),
+                }
+            )
+        return steps

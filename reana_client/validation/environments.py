@@ -460,17 +460,8 @@ class CWLEnvironmentValidator(EnvironmentValidatorBase):
 
     def validate_environment(self):
         """Validate environments in REANA CWL workflow."""
-
-        try:
-            import cwl_utils.parser_v1_0 as cwl_parser
-            from cwl_utils.docker_extract import traverse
-        except ImportError as e:
-            display_message(
-                "Cannot validate environment. Please install reana-client on Python 3+ to enable environment validation for CWL workflows.",
-                msg_type="error",
-                indented=True,
-            )
-            raise e
+        import cwl_utils.parser_v1_0 as cwl_parser
+        from cwl_utils.docker_extract import traverse
 
         top = cwl_parser.load_document(self.workflow_file)
 

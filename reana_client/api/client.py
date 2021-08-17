@@ -13,6 +13,7 @@ import logging
 import os
 import traceback
 from functools import partial
+from urllib.parse import urljoin
 
 import requests
 from bravado.exception import HTTPError
@@ -23,11 +24,6 @@ from reana_commons.api_client import get_current_api_client
 from reana_commons.config import REANA_WORKFLOW_ENGINES
 from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
 from werkzeug.local import LocalProxy
-
-try:
-    from urllib.parse import urljoin
-except ImportError:
-    from urlparse import urljoin
 
 current_rs_api_client = LocalProxy(
     partial(get_current_api_client, component="reana-server")

@@ -183,7 +183,6 @@ jobs:
 
           - name: Install Python dependencies
             run: |
-              pip uninstall six -y
               pip install -I -r .${{ matrix.testenv }}-requirements.txt
 
           - name: Run pytest

@@ -44,7 +44,6 @@ install_requires = [
     "jsonpointer>=2.0",
     "PyYAML>=5.1",
     "reana-commons[yadage,snakemake]>=0.8.0a22,<0.9.0",
-    "six>=1.12.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1",
 ]

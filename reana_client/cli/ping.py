@@ -81,3 +81,38 @@ def version(ctx):  # noqa: D301
     \t $ reana-client version
     """
     click.echo(__version__)
+
+
+@configuration_group.command("workspaces")
+@click.pass_context
+@add_access_token_options
+@check_connection
+def workspaces(ctx, access_token):  # noqa: D301
+    """List available workspaces.
+
+    The `workspaces` command lists all the available workspaces.
+    It also returns the default workspace defined by the admin.
+
+    Examples: \n
+    \t $ reana-client workspaces
+    """
+    try:
+        from reana_client.api.client import workspaces
+
+        response = workspaces(access_token)
+        click.echo(
+            click.style(
+                "List of available workspaces: {0}\n"
+                "Default workspace: {1}".format(
+                    ", ".join(response.get("workspaces_available")),
+                    response.get("default"),
+                )
+            )
+        )
+
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        error_msg = "Could not list available workspaces:\n{0}".format(e)
+        click.echo(click.style(error_msg, fg="red"), err=True)
+        ctx.exit(1)

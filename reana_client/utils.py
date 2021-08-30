@@ -25,6 +25,7 @@ from reana_commons.serial import serial_load
 from reana_commons.snakemake import snakemake_load
 from reana_commons.yadage import yadage_load
 from reana_commons.utils import get_workflow_status_change_verb
+from reana_commons.workspaces import validate_workspace
 
 from reana_client.config import (
     DOCKER_REGISTRY_INDEX_URL,
@@ -89,6 +90,7 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
 
 def load_reana_spec(
     filepath,
+    access_token,
     skip_validation=False,
     skip_validate_environments=True,
     pull_environment_image=False,
@@ -107,7 +109,6 @@ def load_reana_spec(
             kwargs["specification"] = reana_yaml["workflow"].get("specification")
             kwargs["parameters"] = reana_yaml.get("inputs", {}).get("parameters", {})
             kwargs["original"] = True
-
         if "options" in reana_yaml.get("inputs", {}):
             try:
                 reana_yaml["inputs"]["options"] = validate_operational_options(
@@ -158,6 +159,12 @@ def load_reana_spec(
                 msg_type="info",
             )
             validate_environment(reana_yaml, pull=pull_environment_image)
+
+        if reana_yaml.get("workspace", {}).get("root_path"):
+            display_message(
+                "Verifying workspace in REANA specification file...", msg_type="info",
+            )
+            _validate_workspace(reana_yaml["workspace"]["root_path"], access_token)
 
         if workflow_type == "yadage":
             # We don't send the loaded Yadage workflow spec to the cluster as
@@ -429,3 +436,25 @@ def run_command(cmd, display=True, return_output=False, stderr_output=False):
         if stderr_output:
             sys.exit(err.output.decode())
         sys.exit(err.returncode)
+
+
+def _validate_workspace(workspace, access_token):
+    """Validate workspace in REANA specification file.
+
+    :param workspace: workspace path to be validated.
+    :param access_token: access token of the current user.
+
+    :raises ValidationError: Given workspace in REANA spec file does not validate against
+        allowed workspaces.
+    """
+    from reana_client.api.client import workspaces
+
+    available_workspaces = workspaces(access_token).get("workspaces_available", [])
+    try:
+        workspace = validate_workspace(workspace, available_workspaces)
+        display_message(
+            "REANA workspace appear valid.", msg_type="success", indented=True,
+        )
+    except REANAValidationError as e:
+        click.secho(e.message, err=True, fg="red")
+        sys.exit(1)

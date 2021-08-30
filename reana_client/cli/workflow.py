@@ -914,8 +914,10 @@ def workflow_logs(
     help="If set, try to pull remote environment image from registry to perform "
     "validation locally. Requires ``--environments`` flag. [default=False]",
 )
+@add_access_token_options
+@check_connection
 @click.pass_context
-def workflow_validate(ctx, file, environments, pull):  # noqa: D301
+def workflow_validate(ctx, file, environments, pull, access_token):  # noqa: D301
     """Validate workflow specification file.
 
     The `validate` command allows to check syntax and validate the reana.yaml
@@ -930,6 +932,7 @@ def workflow_validate(ctx, file, environments, pull):  # noqa: D301
     try:
         load_reana_spec(
             click.format_filename(file),
+            access_token,
             skip_validate_environments=not environments,
             pull_environment_image=pull,
         )

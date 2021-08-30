@@ -13,6 +13,7 @@ Quota commands:
 Configuration commands:
   ping     Check connection to REANA server.
   version  Show version.
+  workspaces List available workspaces.
 
 Workflow management commands:
   create  Create a new workflow.

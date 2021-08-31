@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018 CERN.
+# Copyright (C) 2017, 2018, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -33,7 +33,10 @@ def findfiles(wo, fn=None):
     if isinstance(wo, dict):
         if wo.get("class") == "File":
             fn.append(wo)
-            findfiles(wo.get("secondaryFiles", None), fn)
+            findfiles(wo.get("secondaryFiles"), fn)
+        elif wo.get("class") == "Directory":
+            fn.append(wo)
+            findfiles(wo.get("secondaryFiles"), fn)
         else:
             for w in wo.values():
                 findfiles(w, fn)
@@ -71,6 +74,27 @@ def get_file_dependencies_obj(cwl_obj, basedir):
     return file_dependencies_obj
 
 
+def upload_files(files, basedir, workflow_id, access_token):
+    """Upload file or directory to REANA server."""
+    from reana_client.api.client import upload_file
+
+    for cwl_file_object in files:
+        file_path = cwl_file_object.get("location")
+        abs_file_path = os.path.join(basedir, file_path)
+
+        if os.path.isdir(abs_file_path):
+            for root, dirs, files in os.walk(abs_file_path, topdown=False):
+                for next_path in files + dirs:
+                    location = os.path.join(root, next_path).replace(basedir + "/", "")
+                    upload_files(
+                        [{"location": location}], basedir, workflow_id, access_token,
+                    )
+        else:
+            with open(abs_file_path, "r") as f:
+                upload_file(workflow_id, f, file_path, access_token)
+                logging.error("File {} uploaded.".format(file_path))
+
+
 @click.command()
 @click.version_option(version=__version__)
 @click.option("--quiet", is_flag=True, help="No diagnostic output")
@@ -81,8 +105,8 @@ def get_file_dependencies_obj(cwl_obj, basedir):
 )
 @click.option("--basedir", type=click.Path(), help="Base directory.")
 @add_access_token_options
-@click.argument("processfile", required=False)
-@click.argument("jobfile")
+@click.argument("processfile")
+@click.argument("jobfile", required=False)
 @click.pass_context
 def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
@@ -102,30 +126,20 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
     )
     try:
         basedir = basedir or os.path.abspath(os.path.dirname(processfile))
-        if processfile:
+        reana_spec = {"workflow": {"type": "cwl"}}
+        job = {}
+        if jobfile:
             with open(jobfile) as f:
-                reana_spec = {
-                    "workflow": {"type": "cwl"},
-                    "inputs": {"parameters": yaml.load(f, Loader=yaml.FullLoader)},
-                }
+                job = yaml.load(f, Loader=yaml.FullLoader)
 
+        if processfile:
+            reana_spec["inputs"] = {"parameters": job}
             reana_spec["workflow"]["specification"] = load_workflow_spec(
                 reana_spec["workflow"]["type"], processfile
             )
-        else:
-            with open(jobfile) as f:
-                job = yaml.load(f, Loader=yaml.FullLoader)
-            reana_spec = {"workflow": {"type": "cwl"}}
-
-            reana_spec["workflow"]["specification"] = load_workflow_spec(
-                reana_spec["workflow"]["type"], job["cwl:tool"]
-            )
-            del job["cwl:tool"]
-            reana_spec["inputs"]["parameters"] = job
         reana_spec["workflow"]["specification"] = replace_location_in_cwl_spec(
             reana_spec["workflow"]["specification"]
         )
-
         logging.info("Connecting to {0}".format(get_api_url()))
         reana_specification = json.loads(json.dumps(reana_spec, sort_keys=True))
         response = create_workflow(reana_specification, "cwl-test", access_token)
@@ -135,18 +149,14 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
         logging.info(
             "Workflow {0}/{1} has been created.".format(workflow_name, workflow_id)
         )
-
         file_dependencies_list = []
         for cwlobj in [processfile, jobfile]:
-            file_dependencies_list.append(get_file_dependencies_obj(cwlobj, basedir))
+            if not cwlobj:
+                continue
+            file_dependencies_obj = get_file_dependencies_obj(cwlobj, basedir)
+            file_dependencies_list.append(file_dependencies_obj)
         files_to_upload = findfiles(file_dependencies_list)
-        for cwl_file_object in files_to_upload:
-            file_path = cwl_file_object.get("location")
-            abs_file_path = os.path.join(basedir, file_path)
-            with open(abs_file_path, "r") as f:
-                upload_file(workflow_id, f, file_path, access_token)
-                logging.error("File {} uploaded.".format(file_path))
-
+        upload_files(files_to_upload, basedir, workflow_id, access_token)
         response = start_workflow(
             workflow_id, access_token, reana_spec["inputs"]["parameters"]
         )
@@ -177,7 +187,7 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
                 .group()
                 .replace("FinalOutput", "")
             )
-            json_output = json.dumps(ast.literal_eval(str(out)))
+            json_output = out.encode("utf8").decode("unicode_escape")
         except AttributeError:
             logging.error("Workflow execution failed")
             sys.exit(1)

@@ -41,14 +41,11 @@ from reana_client.validation.parameters import validate_parameters
 def workflow_uuid_or_name(ctx, param, value):
     """Get UUID of workflow from configuration / cache file based on name."""
     if not value:
-        click.echo(
-            click.style(
-                "Workflow name must be provided either with "
-                "`--workflow` option or with REANA_WORKON "
-                "environment variable",
-                fg="red",
-            ),
-            err=True,
+        display_message(
+            "Workflow name must be provided either with "
+            "`--workflow` option or with REANA_WORKON "
+            "environment variable",
+            msg_type="error",
         )
     else:
         return value
@@ -115,7 +112,7 @@ def load_reana_spec(
                     workflow_type, reana_yaml["inputs"]["options"]
                 )
             except REANAValidationError as e:
-                click.secho(e.message, err=True, fg="red")
+                display_message(e.message, msg_type="error")
                 sys.exit(1)
             kwargs.update(reana_yaml["inputs"]["options"])
         if workflow_type == "snakemake":
@@ -268,14 +265,11 @@ def get_workflow_root():
             break
         else:
             if workflow_root == parent_dir:
-                click.echo(
-                    click.style(
-                        "Not a workflow directory (or any of the parent"
-                        " directories).\nPlease upload from inside"
-                        " the directory containing the reana.yaml "
-                        "file of your workflow.",
-                        fg="red",
-                    )
+                display_message(
+                    "Not a workflow directory (or any of the parent directories).\n"
+                    "Please upload from inside the directory containing "
+                    "the reana.yaml file of your workflow.",
+                    msg_type="error",
                 )
                 sys.exit(1)
             else:
@@ -289,12 +283,9 @@ def validate_input_parameters(live_parameters, original_parameters):
     parsed_input_parameters = dict(live_parameters)
     for parameter in parsed_input_parameters.keys():
         if parameter not in original_parameters:
-            click.echo(
-                click.style(
-                    "Given parameter - {0}, is not in reana.yaml".format(parameter),
-                    fg="red",
-                ),
-                err=True,
+            display_message(
+                "Given parameter - {0}, is not in reana.yaml".format(parameter),
+                msg_type="error",
             )
             del live_parameters[parameter]
     return live_parameters
@@ -331,13 +322,10 @@ def parse_secret_from_literal(literal):
     except ValueError as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        click.echo(
-            click.style(
-                'Option "{0}" is invalid: \n'
-                'For literal strings use "SECRET_NAME=VALUE" format'.format(literal),
-                fg="red",
-            ),
-            err=True,
+        display_message(
+            'Option "{0}" is invalid: \n'
+            'For literal strings use "SECRET_NAME=VALUE" format'.format(literal),
+            msg_type="error",
         )
 
 
@@ -361,12 +349,9 @@ def parse_secret_from_path(path):
     except FileNotFoundError as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        click.echo(
-            click.style(
-                "File {0} could not be uploaded: {0} does not exist.".format(path),
-                fg="red",
-            ),
-            err=True,
+        display_message(
+            "File {0} could not be uploaded: {0} does not exist.".format(path),
+            msg_type="error",
         )
 
 
@@ -380,23 +365,16 @@ def get_reana_yaml_file_path():
     """REANA specification file location."""
     matches = [path for path in reana_yaml_valid_file_names if os.path.exists(path)]
     if len(matches) == 0:
-        click.echo(
-            click.style(
-                "==> ERROR: No REANA specification file (reana.yaml) found. "
-                "Exiting.",
-                fg="red",
-            )
+        display_message(
+            "No REANA specification file (reana.yaml) found. Exiting.",
+            msg_type="error",
         )
         sys.exit(1)
     if len(matches) > 1:
-        click.echo(
-            click.style(
-                "==> ERROR: Found {0} REANA specification files ({1}). "
-                "Please use only one. Exiting.".format(
-                    len(matches), ", ".join(matches)
-                ),
-                fg="red",
-            )
+        display_message(
+            "Found {0} REANA specification files ({1}). "
+            "Please use only one. Exiting.".format(len(matches), ", ".join(matches)),
+            msg_type="error",
         )
         sys.exit(1)
     for path in reana_yaml_valid_file_names:
@@ -420,8 +398,8 @@ def run_command(cmd, display=True, return_output=False, stderr_output=False):
     """
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     if display:
-        click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
-        click.secho("{0}".format(cmd), bold=True)
+        display_message("[{0}] ".format(now), msg_type="success")
+        display_message("{0}".format(cmd))
     try:
         if return_output:
             stderr_flag_val = subprocess.STDOUT if stderr_output else None
@@ -431,8 +409,8 @@ def run_command(cmd, display=True, return_output=False, stderr_output=False):
             subprocess.check_call(cmd, shell=True)
     except subprocess.CalledProcessError as err:
         if display:
-            click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
-            click.secho("{0}".format(err), bold=True, fg="red")
+            display_message("[{0}] ".format(now), msg_type="success")
+            display_message("{0}".format(err), msg_type="error")
         if stderr_output:
             sys.exit(err.output.decode())
         sys.exit(err.returncode)
@@ -456,5 +434,5 @@ def _validate_workspace(workspace, access_token):
             "Workflow workspace appears valid.", msg_type="success", indented=True,
         )
     except REANAValidationError as e:
-        click.secho(e.message, err=True, fg="red")
+        display_message(e.message, msg_type="error")
         sys.exit(1)

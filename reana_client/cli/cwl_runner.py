@@ -27,8 +27,6 @@ from reana_client.config import default_user
 from reana_client.utils import load_workflow_spec
 from reana_client.version import __version__
 
-PY3 = sys.version_info > (3,)
-
 
 def findfiles(wo, fn=None):
     """Return a list CWL workflow files."""
@@ -58,7 +56,7 @@ def get_file_dependencies_obj(cwl_obj, basedir):
     # remove filename additions (e.g. 'v1.0/conflict-wf.cwl#collision')
     document = cwl_obj.split("#")[0]
     document_loader, workflow_obj, uri = fetch_document(document)
-    in_memory_buffer = io.StringIO() if PY3 else io.BytesIO()
+    in_memory_buffer = io.StringIO()
     # Get dependencies
     printdeps(
         workflow_obj,

@@ -15,8 +15,13 @@ import sys
 
 import click
 
+from reana_client.config import (
+    ERROR_MESSAGES,
+    RUN_STATUSES,
+    JOB_STATUS_TO_MSG_TYPE,
+)
+from reana_client.printer import display_message
 from reana_client.utils import workflow_uuid_or_name
-from reana_client.config import ERROR_MESSAGES, RUN_STATUSES
 from reana_commons.errors import MissingAPIClientConfiguration
 
 
@@ -59,9 +64,7 @@ def human_readable_or_raw_option(func):
 def access_token_check(ctx, _, access_token):
     """Check if access token is present."""
     if not access_token:
-        click.echo(
-            click.style(ERROR_MESSAGES["missing_access_token"], fg="red"), err=True
-        )
+        display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
         ctx.exit(1)
     else:
         return access_token
@@ -76,10 +79,8 @@ def check_connection(func):
 
         api_url = get_api_url()
         if not api_url:
-            click.secho(
-                "REANA client is not connected to any REANA cluster.",
-                fg="red",
-                err=True,
+            display_message(
+                "REANA client is not connected to any REANA cluster.", msg_type="error",
             )
             sys.exit(1)
         return func(*args, **kwargs)
@@ -140,9 +141,8 @@ def parse_format_parameters(_format):
             parsed_filters.append(filter_item)
         return parsed_filters
     except ValueError as e:
-        click.echo(
-            click.style("Wrong filter format \n{0}".format(e.message), fg="red"),
-            err=True,
+        display_message(
+            "Wrong filter format \n{0}".format(e.message), msg_type="error",
         )
 
 
@@ -160,12 +160,9 @@ def parse_filter_parameters(filters, filter_names):
                     if filter_value in RUN_STATUSES:
                         status_filters.append(filter_value)
                     else:
-                        click.secho(
-                            "==> ERROR: Input status value {} is not valid. ".format(
-                                filter_value
-                            ),
-                            err=True,
-                            fg="red",
+                        display_message(
+                            "Input status value {} is not valid. ".format(filter_value),
+                            msg_type="error",
                         ),
                         sys.exit(1)
                 elif filter_name in filter_names:
@@ -174,10 +171,8 @@ def parse_filter_parameters(filters, filter_names):
                     else:
                         search_filters[filter_name] = [filter_value]
                 else:
-                    click.secho(
-                        "==> ERROR: Filter {} is not valid.".format(filter_name),
-                        err=True,
-                        fg="red",
+                    display_message(
+                        "Filter {} is not valid.".format(filter_name), msg_type="error",
                     ),
                     sys.exit(1)
             else:
@@ -190,9 +185,8 @@ def parse_filter_parameters(filters, filter_names):
             search_filters = json.dumps(search_filters)
         return status_filters, search_filters
     except ValueError as e:
-        click.echo(
-            click.style("Wrong filter format \n{0}".format(e.message), fg="red"),
-            err=True,
+        display_message(
+            "Wrong filter format \n{0}".format(e.message), msg_type="error",
         )
 
 
@@ -234,13 +228,10 @@ def validate_workflow_name(ctx, _, workflow_name):
     if workflow_name:
         for item in not_allowed_characters:
             if item in workflow_name:
-                click.echo(
-                    click.style(
-                        "Workflow name {} contains illegal "
-                        'character "{}"'.format(workflow_name, item),
-                        fg="red",
-                    ),
-                    err=True,
+                display_message(
+                    "Workflow name {} contains illegal "
+                    'character "{}"'.format(workflow_name, item),
+                    msg_type="error",
                 )
                 sys.exit(1)
     return workflow_name
@@ -255,11 +246,10 @@ def key_value_to_dict(ctx, param, value):
     try:
         return dict(op.split("=") for op in value)
     except ValueError:
-        click.secho(
-            '==> ERROR: Input parameter "{0}" is not valid. '
+        display_message(
+            'Input parameter "{0}" is not valid. '
             'It must follow format "param=value".'.format(" ".join(value)),
-            err=True,
-            fg="red",
+            msg_type="error",
         ),
         sys.exit(1)
 
@@ -267,12 +257,9 @@ def key_value_to_dict(ctx, param, value):
 def requires_environments(ctx, param, value):
     """Require passing ``--environments`` flag."""
     if value and not ctx.params.get("environments"):
-        click.secho(
-            "==> ERROR: `{}` flag requires `--environments` flag.".format(
-                param.opts[0]
-            ),
-            err=True,
-            fg="red",
+        display_message(
+            "`{}` flag requires `--environments` flag.".format(param.opts[0]),
+            msg_type="error",
         )
         sys.exit(1)
     return value
@@ -292,15 +279,11 @@ class NotRequiredIf(click.Option):
         argument_present = self.name in opts
         other_argument_present = self.not_required_if in opts
         if not argument_present and not other_argument_present:
-            click.echo(
-                click.style(
-                    "At least one of the options: `{}` or `{}` is required\n".format(
-                        self.name, self.not_required_if
-                    ),
-                    fg="red",
-                )
+            display_message(
+                "At least one of the options: `{}` or `{}` "
+                "is required\n".format(self.name, self.not_required_if)
                 + ctx.get_help(),
-                err=True,
+                msg_type="error",
             )
             sys.exit(1)
 
@@ -314,12 +297,6 @@ def output_user_friendly_logs(workflow_logs, steps):
         are returned from the REST API.
     :param steps: List of steps to show logs for.
     """
-    # Colors matching the status colors of REANA-UI
-    status_to_color_mapping = {
-        "running": "bright_blue",
-        "finished": "green",
-        "failed": "red",
-    }
     key_to_description_mapping = {
         "workflow_uuid": "Workflow ID",
         "compute_backend": "Compute backend",
@@ -330,19 +307,16 @@ def output_user_friendly_logs(workflow_logs, steps):
         "started_at": "Started",
         "finished_at": "Finished",
     }
-    leading_mark = "==>"
 
     # REANA Workflow Engine logs
     if workflow_logs.get("workflow_logs"):
-        click.secho(
-            "{} Workflow engine logs".format(leading_mark), bold=True, fg="yellow"
-        )
-        click.echo(workflow_logs["workflow_logs"])
+        display_message("Workflow engine logs", msg_type="warning")
+        display_message(workflow_logs["workflow_logs"])
 
     if workflow_logs.get("engine_specific"):
-        click.echo("\n")
-        click.secho("{} Engine internal logs".format(leading_mark), fg="yellow")
-        click.secho(workflow_logs["engine_specific"])
+        display_message("\n")
+        display_message("Engine internal logs", msg_type="warning")
+        display_message(workflow_logs["engine_specific"])
 
     returned_step_names = set(
         workflow_logs["job_logs"][item]["job_name"]
@@ -351,25 +325,22 @@ def output_user_friendly_logs(workflow_logs, steps):
     if steps:
         missing_steps = set(steps).difference(returned_step_names)
         if missing_steps:
-            click.echo(
-                click.style(
-                    "The logs of step(s) {} were not found, "
-                    "check for spelling mistakes in the step "
-                    "names.".format(",".join(missing_steps)),
-                    fg="red",
-                )
+            display_message(
+                "The logs of step(s) {} were not found, "
+                "check for spelling mistakes in the step "
+                "names.".format(",".join(missing_steps)),
+                msg_type="error",
             )
     # Job logs
     if workflow_logs["job_logs"]:
-        click.echo("\n")
-        click.secho("{} Job logs".format(leading_mark), bold=True, fg="yellow")
+        display_message("\n")
+        display_message("Job logs", msg_type="warning")
     for job_id, logs_info in workflow_logs["job_logs"].items():
         if logs_info:
             job_name_or_id = logs_info["job_name"] or job_id
-            click.secho(
-                "{0} Step: {1}".format(leading_mark, job_name_or_id),
-                bold=True,
-                fg=status_to_color_mapping.get(logs_info["status"]),
+            display_message(
+                "Step: {0}".format(job_name_or_id),
+                msg_type=JOB_STATUS_TO_MSG_TYPE.get(logs_info["status"]),
             )
             logs_output = logs_info["logs"]
             # extract already used fields
@@ -378,25 +349,17 @@ def output_user_friendly_logs(workflow_logs, steps):
 
             for key, value in logs_info.items():
                 if value:
-                    title = click.style(
-                        "{mark} {description}:".format(
-                            mark=leading_mark,
-                            description=key_to_description_mapping[key],
+                    display_message(
+                        "{description}: {value}".format(
+                            description=key_to_description_mapping[key], value=value,
                         ),
-                        fg=status_to_color_mapping.get(logs_info["status"]),
+                        msg_type=JOB_STATUS_TO_MSG_TYPE.get(logs_info["status"]),
                     )
-                    click.secho("{title} {value}".format(title=title, value=value))
             # show actual log content
             if logs_output:
-                click.secho(
-                    "{mark} Logs:".format(mark=leading_mark),
-                    fg=status_to_color_mapping.get(logs_info["status"]),
+                display_message(
+                    "Logs:", msg_type=JOB_STATUS_TO_MSG_TYPE.get(logs_info["status"]),
                 )
-                click.secho(logs_output)
+                display_message(logs_output)
             else:
-                click.secho(
-                    "{0} Step {1} emitted no logs.".format(
-                        leading_mark, job_name_or_id
-                    ),
-                    bold=True,
-                )
+                display_message("Step {0} emitted no logs.".format(job_name_or_id))

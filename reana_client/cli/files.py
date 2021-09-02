@@ -156,19 +156,19 @@ def get_files(
             for row in data:
                 tablib_data.append(row)
             if output_format == URL:
-                click.echo("\n".join(urls))
+                display_message("\n".join(urls))
             elif _format:
                 tablib_data, filtered_headers = format_data(
                     parsed_format_filters, headers, tablib_data
                 )
                 if output_format == JSON:
-                    click.echo(json.dumps(tablib_data))
+                    display_message(json.dumps(tablib_data))
                 else:
                     tablib_data = [list(item.values()) for item in tablib_data]
                     click_table_printer(filtered_headers, filtered_headers, tablib_data)
             else:
                 if output_format == JSON:
-                    click.echo(tablib_data.export(output_format))
+                    display_message(tablib_data.export(output_format))
                 else:
                     click_table_printer(headers, _format, data)
 
@@ -176,13 +176,10 @@ def get_files(
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
 
-            click.echo(
-                click.style(
-                    "Something went wrong while retrieving file list"
-                    " for workflow {0}:\n{1}".format(workflow, str(e)),
-                    fg="red",
-                ),
-                err=True,
+            display_message(
+                "Something went wrong while retrieving file list"
+                " for workflow {0}:\n{1}".format(workflow, str(e)),
+                msg_type="error",
             )
 
 
@@ -244,28 +241,23 @@ def download_files(
 
                 with open(outputs_file_path, "wb") as f:
                     f.write(binary_file)
-                click.secho(
+                display_message(
                     "File {0} downloaded to {1}.".format(file_name, output_directory),
-                    fg="green",
+                    msg_type="success",
                 )
             except OSError as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
-                click.echo(
-                    click.style(
-                        "File {0} could not be written.".format(file_name), fg="red"
-                    ),
-                    err=True,
+                display_message(
+                    "File {0} could not be written.".format(file_name),
+                    msg_type="error",
                 )
             except Exception as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
-                click.echo(
-                    click.style(
-                        "File {0} could not be downloaded: {1}".format(file_name, e),
-                        fg="red",
-                    ),
-                    err=True,
+                display_message(
+                    "File {0} could not be downloaded: {1}".format(file_name, e),
+                    msg_type="error",
                 )
 
 
@@ -318,59 +310,43 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
                     response = upload_to_server(workflow, filename, access_token)
                     for file_ in response:
                         if file_.startswith("symlink:"):
-                            click.echo(
-                                click.style(
-                                    "Symlink resolved to {}. Uploaded"
-                                    " hard copy.".format(file_[len("symlink:") :]),
-                                    fg="green",
-                                )
+                            display_message(
+                                "Symlink resolved to {}. "
+                                "Uploaded hard copy.".format(file_[len("symlink:") :]),
+                                msg_type="success",
                             )
                         else:
-                            click.echo(
-                                click.style(
-                                    "File {} was successfully "
-                                    "uploaded.".format(file_),
-                                    fg="green",
-                                )
+                            display_message(
+                                "File {} was successfully uploaded.".format(file_),
+                                msg_type="success",
                             )
                 except FileNotFoundError as e:
                     logging.debug(traceback.format_exc())
                     logging.debug(str(e))
-                    click.echo(
-                        click.style(
-                            "File {0} could not be uploaded: {0} does not"
-                            " exist.".format(filename),
-                            fg="red",
-                        ),
-                        err=True,
+                    display_message(
+                        "File {0} could not be uploaded: "
+                        "{0} does not exist.".format(filename),
+                        msg_type="error",
                     )
                     if "invoked_by_subcommand" in ctx.parent.__dict__:
                         sys.exit(1)
                 except FileUploadError as e:
                     logging.debug(traceback.format_exc())
                     logging.debug(str(e))
-                    click.echo(
-                        click.style(
-                            "Something went wrong while uploading {0}.\n{1}".format(
-                                filename, str(e)
-                            ),
-                            fg="red",
-                        ),
-                        err=True,
+                    display_message(
+                        "Something went wrong while uploading {0}.\n"
+                        "{1}".format(filename, str(e)),
+                        msg_type="error",
                     )
                     if "invoked_by_subcommand" in ctx.parent.__dict__:
                         sys.exit(1)
                 except Exception as e:
                     logging.debug(traceback.format_exc())
                     logging.debug(str(e))
-                    click.echo(
-                        click.style(
-                            "Something went wrong while uploading {}: \n{}".format(
-                                filename, str(e)
-                            ),
-                            fg="red",
-                        ),
-                        err=True,
+                    display_message(
+                        "Something went wrong while uploading {}: \n"
+                        "{}".format(filename, str(e)),
+                        msg_type="error",
                     )
                     if "invoked_by_subcommand" in ctx.parent.__dict__:
                         sys.exit(1)
@@ -405,41 +381,30 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
                 freed_space = 0
                 for file_ in response["deleted"]:
                     freed_space += response["deleted"][file_]["size"]
-                    click.echo(
-                        click.style(
-                            "File {} was successfully deleted.".format(file_),
-                            fg="green",
-                        )
+                    display_message(
+                        "File {} was successfully deleted.".format(file_),
+                        msg_type="success",
                     )
                 for file_ in response["failed"]:
-                    click.echo(
-                        click.style(
-                            "Something went wrong while deleting {}.\n{}".format(
-                                file_, response["failed"][file_]["error"]
-                            ),
-                            fg="red",
-                        ),
-                        err=True,
+                    display_message(
+                        "Something went wrong while deleting {}.\n"
+                        "{}".format(file_, response["failed"][file_]["error"]),
+                        msg_type="error",
                     )
                 if freed_space:
-                    click.echo(
-                        click.style(
-                            "{} bytes freed up.".format(freed_space), fg="green"
-                        )
+                    display_message(
+                        "{} bytes freed up.".format(freed_space), msg_type="success",
                     )
             except FileDeletionError as e:
-                click.echo(click.style(str(e), fg="red"), err=True)
+                display_message(str(e), msg_type="error")
                 if "invoked_by_subcommand" in ctx.parent.__dict__:
                     sys.exit(1)
             except Exception as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
-                click.echo(
-                    click.style(
-                        "Something went wrong while deleting {}".format(filename),
-                        fg="red",
-                    ),
-                    err=True,
+                display_message(
+                    "Something went wrong while deleting {}".format(filename),
+                    msg_type="error",
                 )
                 if "invoked_by_subcommand" in ctx.parent.__dict__:
                     sys.exit(1)
@@ -470,38 +435,28 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
         try:
             current_status = get_workflow_status(workflow, access_token).get("status")
             if current_status == "running":
-                click.echo(
-                    click.style(
-                        "File(s) could not be moved for running " "workflow", fg="red"
-                    ),
-                    err=True,
+                display_message(
+                    "File(s) could not be moved for running workflow", msg_type="error",
                 )
                 sys.exit(1)
             files = list_files(workflow, access_token)
             current_files = [file["name"] for file in files]
             if not any(source in item for item in current_files):
-                click.echo(
-                    click.style(
-                        "Source file(s) {} does not exist in "
-                        "workspace {}".format(source, current_files),
-                        fg="red",
-                    ),
-                    err=True,
+                display_message(
+                    "Source file(s) {} does not exist in "
+                    "workspace {}".format(source, current_files),
+                    msg_type="error",
                 )
                 sys.exit(1)
             mv_files(source, target, workflow, access_token)
-            click.echo(
-                click.style(
-                    "{} was successfully moved to {}.".format(source, target),
-                    fg="green",
-                )
+            display_message(
+                "{} was successfully moved to {}.".format(source, target),
+                msg_type="success",
             )
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.echo(
-                click.style("Something went wrong. {}".format(e), fg="red"), err=True
-            )
+            display_message("Something went wrong. {}".format(e), msg_type="error")
 
 
 @files_group.command("du")
@@ -562,9 +517,6 @@ def workflow_disk_usage(
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.echo(
-                click.style(
-                    "Disk usage could not be retrieved: \n{}".format(str(e)), fg="red"
-                ),
-                err=True,
+            display_message(
+                "Disk usage could not be retrieved: \n{}".format(e), msg_type="error",
             )

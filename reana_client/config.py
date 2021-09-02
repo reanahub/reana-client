@@ -77,3 +77,15 @@ PRINTER_COLOUR_ERROR = "red"
 
 PRINTER_COLOUR_INFO = "cyan"
 """Default colour for info messages on terminal."""
+
+HEALTH_TO_MSG_TYPE = {
+    "critical": "error",
+    "healthy": "success",
+    "warning": "warning",
+}
+
+JOB_STATUS_TO_MSG_TYPE = {
+    "failed": "error",
+    "finished": "success",
+    "running": "info",
+}

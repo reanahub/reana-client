@@ -12,6 +12,7 @@ import traceback
 
 import click
 from reana_client.cli.utils import add_access_token_options, check_connection
+from reana_client.printer import display_message
 from reana_client.version import __version__
 
 
@@ -39,34 +40,30 @@ def ping(ctx, access_token):  # noqa: D301
 
         logging.info("Connecting to {0}".format(get_api_url()))
         response = rs_ping(access_token)
-        msg_color = "red" if response.get("error") else "green"
-        click.echo(
-            click.style(
-                "REANA server: {0}\n"
-                "REANA server version: {1}\n"
-                "REANA client version: {2}\n"
-                "Authenticated as: {3} <{4}>\n"
-                "Status: {5}".format(
-                    get_api_url(),
-                    response.get("reana_server_version", ""),
-                    __version__,
-                    response.get("full_name", ""),
-                    response.get("email"),
-                    response.get("status"),
-                ),
-                fg=msg_color,
-            )
+        display_message(
+            "REANA server: {0}\n"
+            "REANA server version: {1}\n"
+            "REANA client version: {2}\n"
+            "Authenticated as: {3} <{4}>\n"
+            "Status: {5}".format(
+                get_api_url(),
+                response.get("reana_server_version", ""),
+                __version__,
+                response.get("full_name", ""),
+                response.get("email"),
+                response.get("status"),
+            ),
         )
         logging.debug("Server response:\n{}".format(response))
 
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        error_msg = (
+        display_message(
             "Could not connect to the selected REANA cluster "
-            "server at {0}:\n{1}".format(get_api_url(), e)
+            "server at {0}:\n{1}".format(get_api_url(), e),
+            msg_type="error",
         )
-        click.echo(click.style(error_msg, fg="red"), err=True)
         ctx.exit(1)
 
 
@@ -80,7 +77,7 @@ def version(ctx):  # noqa: D301
     Examples: \n
     \t $ reana-client version
     """
-    click.echo(__version__)
+    display_message(__version__)
 
 
 @configuration_group.command("workspaces")
@@ -100,19 +97,18 @@ def workspaces(ctx, access_token):  # noqa: D301
         from reana_client.api.client import workspaces
 
         response = workspaces(access_token)
-        click.echo(
-            click.style(
-                "List of available workspaces: {0}\n"
-                "Default workspace: {1}".format(
-                    ", ".join(response.get("workspaces_available")),
-                    response.get("default"),
-                )
+        display_message(
+            "List of available workspaces: {0}\n"
+            "Default workspace: {1}".format(
+                ", ".join(response.get("workspaces_available")),
+                response.get("default"),
             )
         )
 
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        error_msg = "Could not list available workspaces:\n{0}".format(e)
-        click.echo(click.style(error_msg, fg="red"), err=True)
+        display_message(
+            "Could not list available workspaces:\n{0}".format(e), msg_type="error"
+        )
         ctx.exit(1)

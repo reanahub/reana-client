@@ -11,17 +11,16 @@ import sys
 import traceback
 
 import click
+
 from reana_client.cli.utils import (
     add_access_token_options,
     check_connection,
     NotRequiredIf,
 )
-from reana_client.config import ERROR_MESSAGES
-from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
-
-from reana_commons.utils import click_table_printer
-
+from reana_client.printer import display_message
 from reana_client.utils import parse_secret_from_path, parse_secret_from_literal
+from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
+from reana_commons.utils import click_table_printer
 
 
 @click.group(help="Secret management commands")
@@ -78,29 +77,21 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
         add_secrets(secrets_, overwrite, access_token)
     except REANASecretAlreadyExists as e:
         logging.debug(str(e), exc_info=True)
-        click.echo(
-            click.style(
-                "One of the secrets already exists. No secrets were added. "
-                "If you want to overwrite it use --overwrite option.",
-                fg="red",
-            ),
-            err=True,
+        display_message(
+            "One of the secrets already exists. No secrets were added. "
+            "If you want to overwrite it use --overwrite option.",
+            msg_type="error",
         )
         sys.exit(1)
     except Exception as e:
         logging.debug(str(e), exc_info=True)
-        click.echo(
-            click.style("Something went wrong while uploading secrets", fg="red"),
-            err=True,
+        display_message(
+            "Something went wrong while uploading secrets", msg_type="error",
         )
     else:
-        click.echo(
-            click.style(
-                "Secrets {} were successfully uploaded.".format(
-                    ", ".join(secrets_.keys())
-                ),
-                fg="green",
-            )
+        display_message(
+            "Secrets {} were successfully uploaded.".format(", ".join(secrets_.keys())),
+            msg_type="success",
         )
 
 
@@ -120,31 +111,21 @@ def secrets_delete(secrets, access_token):  # noqa: D301
         deleted_secrets = delete_secrets(secrets, access_token)
     except REANASecretDoesNotExist as e:
         logging.debug(str(e), exc_info=True)
-        click.echo(
-            click.style(
-                str(
-                    "Secrets {} do not exist. Nothing was deleted".format(
-                        e.missing_secrets_list
-                    )
-                ),
-                fg="red",
+        display_message(
+            "Secrets {} do not exist. Nothing was deleted".format(
+                e.missing_secrets_list
             ),
-            err=True,
+            msg_type="error",
         )
     except Exception as e:
         logging.debug(str(e), exc_info=True)
-        click.echo(
-            click.style("Something went wrong while deleting secrets", fg="red"),
-            err=True,
+        display_message(
+            "Something went wrong while deleting secrets", msg_type="error",
         )
     else:
-        click.echo(
-            click.style(
-                "Secrets {} were successfully deleted.".format(
-                    ", ".join(deleted_secrets)
-                ),
-                fg="green",
-            )
+        display_message(
+            "Secrets {} were successfully deleted.".format(", ".join(deleted_secrets)),
+            msg_type="success",
         )
 
 
@@ -169,7 +150,6 @@ def secrets_list(access_token):  # noqa: D301
         click_table_printer(headers, headers, data)
     except Exception as e:
         logging.debug(str(e), exc_info=True)
-        click.echo(
-            click.style("Something went wrong while listing secrets", fg="red"),
-            err=True,
+        display_message(
+            "Something went wrong while listing secrets", msg_type="error",
         )

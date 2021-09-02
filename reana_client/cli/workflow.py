@@ -254,24 +254,22 @@ def workflow_workflows(  # noqa: C901
                 parsed_format_filters, headers[type], tablib_data
             )
             if output_format:
-                click.echo(json.dumps(tablib_data))
+                display_message(json.dumps(tablib_data))
             else:
                 tablib_data = [list(item.values()) for item in tablib_data]
                 click_table_printer(filtered_headers, filtered_headers, tablib_data)
         else:
             if output_format:
-                click.echo(tablib_data.export(output_format))
+                display_message(tablib_data.export(output_format))
             else:
                 click_table_printer(headers[type], _format, data)
 
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        click.echo(
-            click.style(
-                "Workflow list could not be retrieved: \n{}".format(str(e)), fg="red"
-            ),
-            err=True,
+        display_message(
+            "Workflow list could not be retrieved: \n{}".format(str(e)),
+            msg_type="error",
         )
 
 
@@ -333,7 +331,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         )
         logging.info("Connecting to {0}".format(get_api_url()))
         response = create_workflow(reana_specification, name, access_token)
-        click.echo(click.style(response["workflow_name"], fg="green"))
+        display_message(response["workflow_name"], msg_type="success")
         # check if command is called from wrapper command
         if "invoked_by_subcommand" in ctx.parent.__dict__:
             ctx.parent.workflow_name = response["workflow_name"]
@@ -421,20 +419,21 @@ def workflow_start(
                     parsed_parameters["input_parameters"], original_parameters
                 )
             except REANAValidationError as e:
-                click.secho(e.message, err=True, fg="red")
+                display_message(e.message, msg_type="error")
                 sys.exit(1)
             except Exception as e:
-                click.secho(
+                display_message(
                     "Could not apply given input parameters: "
                     "{0} \n{1}".format(parameters, str(e)),
-                    err=True,
+                    msg_type="error",
                 )
         try:
             logging.info("Connecting to {0}".format(get_api_url()))
             response = start_workflow(workflow, access_token, parsed_parameters)
             current_status = get_workflow_status(workflow, access_token).get("status")
-            click.secho(
-                get_workflow_status_change_msg(workflow, current_status), fg="green"
+            display_message(
+                get_workflow_status_change_msg(workflow, current_status),
+                msg_type="success",
             )
             if follow:
                 while "running" in current_status:
@@ -442,15 +441,13 @@ def workflow_start(
                     current_status = get_workflow_status(workflow, access_token).get(
                         "status"
                     )
-                    click.secho(
+                    display_message(
                         get_workflow_status_change_msg(workflow, current_status),
-                        fg="green",
+                        msg_type="success",
                     )
                     if "finished" in current_status:
                         if follow:
-                            click.secho(
-                                "[INFO] Listing workflow output " "files...", bold=True
-                            )
+                            display_message("Listing workflow output files...")
                             ctx.invoke(
                                 get_files,
                                 workflow=workflow,
@@ -463,11 +460,9 @@ def workflow_start(
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.echo(
-                click.style(
-                    "Cannot start workflow {}: \n{}".format(workflow, str(e)), fg="red"
-                ),
-                err=True,
+            display_message(
+                "Cannot start workflow {}: \n{}".format(workflow, str(e)),
+                msg_type="error",
             )
             if "invoked_by_subcommand" in ctx.parent.__dict__:
                 sys.exit(1)
@@ -573,30 +568,29 @@ def workflow_restart(
                 )
 
             except REANAValidationError as e:
-                click.secho(e.message, err=True, fg="red")
+                display_message(e.message, msg_type="error")
                 sys.exit(1)
             except Exception as e:
-                click.secho(
+                display_message(
                     "Could not apply given input parameters: "
                     "{0} \n{1}".format(parameters, str(e)),
-                    err=True,
+                    msg_type="error",
                 )
         try:
             logging.info("Connecting to {0}".format(get_api_url()))
             response = start_workflow(workflow, access_token, parsed_parameters)
             workflow = response["workflow_name"] + "." + str(response["run_number"])
             current_status = get_workflow_status(workflow, access_token).get("status")
-            click.secho(
-                get_workflow_status_change_msg(workflow, current_status), fg="green"
+            display_message(
+                get_workflow_status_change_msg(workflow, current_status),
+                msg_type="success",
             )
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.echo(
-                click.style(
-                    "Cannot start workflow {}: \n{}".format(workflow, str(e)), fg="red"
-                ),
-                err=True,
+            display_message(
+                "Cannot start workflow {}: \n{}".format(workflow, str(e)),
+                msg_type="error",
             )
             if "invoked_by_subcommand" in ctx.parent.__dict__:
                 sys.exit(1)
@@ -735,21 +729,17 @@ def workflow_status(  # noqa: C901
                 if _format:
                     tablib_data = tablib_data.subset(rows=None, cols=list(_format))
 
-                click.echo(tablib_data.export(output_format))
+                display_message(tablib_data.export(output_format))
             else:
                 click_table_printer(headers, _format, data)
 
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.echo(
-                click.style(
-                    "Cannot retrieve the status of a workflow {}: \n{}".format(
-                        workflow, str(e)
-                    ),
-                    fg="red",
-                ),
-                err=True,
+            display_message(
+                "Cannot retrieve the status of a workflow {}: \n"
+                "{}".format(workflow, str(e)),
+                msg_type="error",
             )
 
 
@@ -806,14 +796,12 @@ def workflow_logs(
                 for f in filters:
                     key, value = f.split("=")
                     if key not in available_filters:
-                        click.echo(
-                            click.style(
-                                "Error: filter '{}' is not valid.\nAvailable filters are '{}'.".format(
-                                    key, "' '".join(sorted(available_filters.keys())),
-                                ),
-                                fg="red",
+                        display_message(
+                            "Error: filter '{}' is not valid.\n"
+                            "Available filters are '{}'.".format(
+                                key, "' '".join(sorted(available_filters.keys())),
                             ),
-                            err=True,
+                            msg_type="error",
                         )
                         sys.exit(1)
                     elif key == "step":
@@ -826,26 +814,22 @@ def workflow_logs(
                         ):
                             value = REANA_COMPUTE_BACKENDS[value.lower()]
                         elif key == "status" and value not in RUN_STATUSES:
-                            click.secho(
-                                "==> ERROR: Input status value {} is not valid. ".format(
-                                    value
-                                ),
-                                err=True,
-                                fg="red",
+                            display_message(
+                                "Input status value {} is not valid. ".format(value),
+                                msg_type="error",
                             ),
                             sys.exit(1)
                         chosen_filters[key] = value
             except Exception as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
-                click.echo(
-                    click.style(
-                        "Error: please provide complete --filter name=value pairs, for example --filter status=running.\nAvailable filters are '{}'.".format(
-                            "' '".join(sorted(available_filters.keys()))
-                        ),
-                        fg="red",
+                display_message(
+                    "Error: please provide complete --filter name=value pairs, "
+                    "for example --filter status=running.\n"
+                    "Available filters are '{}'.".format(
+                        "' '".join(sorted(available_filters.keys()))
                     ),
-                    err=True,
+                    msg_type="error",
                 )
                 sys.exit(1)
         try:
@@ -868,7 +852,7 @@ def workflow_logs(
                         del workflow_logs["job_logs"][job_id]
 
             if json_format:
-                click.echo(json.dumps(workflow_logs, indent=2))
+                display_message(json.dumps(workflow_logs, indent=2))
                 sys.exit(0)
             else:
                 from reana_client.cli.utils import output_user_friendly_logs
@@ -879,14 +863,10 @@ def workflow_logs(
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.echo(
-                click.style(
-                    "Cannot retrieve the logs of a workflow {}: \n{}".format(
-                        workflow, str(e)
-                    ),
-                    fg="red",
-                ),
-                err=True,
+            display_message(
+                "Cannot retrieve the logs of a workflow {}: \n"
+                "{}".format(workflow, str(e)),
+                msg_type="error",
             )
 
 
@@ -981,11 +961,11 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     from reana_client.api.client import get_workflow_status, stop_workflow
 
     if not force_stop:
-        click.secho(
+        display_message(
             "Graceful stop not implement yet. If you really want to "
             "stop your workflow without waiting for jobs to finish"
             " use: --force option",
-            fg="red",
+            msg_type="error",
         )
         raise click.Abort()
 
@@ -993,14 +973,15 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
         try:
             logging.info("Sending a request to stop workflow {}".format(workflow))
             stop_workflow(workflow, force_stop, access_token)
-            click.secho(get_workflow_status_change_msg(workflow, "stopped"), fg="green")
+            display_message(
+                get_workflow_status_change_msg(workflow, "stopped"), msg_type="success",
+            )
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.secho(
+            display_message(
                 "Cannot stop workflow {}: \n{}".format(workflow, str(e)),
-                fg="red",
-                err=True,
+                msg_type="error",
             )
 
 
@@ -1072,7 +1053,7 @@ def workflow_run(
     # set context parameters for subcommand
     ctx.invoked_by_subcommand = True
     ctx.workflow_name = ""
-    click.secho("[INFO] Creating a workflow...", bold=True)
+    display_message("Creating a workflow...", msg_type="info")
     ctx.invoke(
         workflow_create,
         file=file,
@@ -1080,14 +1061,14 @@ def workflow_run(
         skip_validation=skip_validation,
         access_token=access_token,
     )
-    click.secho("[INFO] Uploading files...", bold=True)
+    display_message("Uploading files...", msg_type="info")
     ctx.invoke(
         upload_files,
         workflow=ctx.workflow_name,
         filenames=None,
         access_token=access_token,
     )
-    click.secho("[INFO] Starting workflow...", bold=True)
+    display_message("Starting workflow...", msg_type="info")
     ctx.invoke(
         workflow_start,
         workflow=ctx.workflow_name,
@@ -1147,16 +1128,14 @@ def workflow_delete(ctx, workflow, all_runs, workspace, access_token):  # noqa: 
                 )
             else:
                 message = get_workflow_status_change_msg(workflow, "deleted")
-            click.secho(message, fg="green")
+            display_message(message, msg_type="success")
 
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.echo(
-                click.style(
-                    "Cannot delete workflow {} \n{}".format(workflow, str(e)), fg="red"
-                ),
-                err=True,
+            display_message(
+                "Cannot delete workflow {} \n{}".format(workflow, str(e)),
+                msg_type="error",
             )
 
 
@@ -1207,16 +1186,15 @@ def workflow_diff(
 
     def print_color_diff(lines):
         for line in lines:
-            line_color = None
+            msg_type = None
             if line[0] == "@":
-                line_color = "cyan"
+                msg_type = "info"
             elif line[0] == "-":
-                line_color = "red"
+                msg_type = "error"
             elif line[0] == "+":
-                line_color = "green"
-            click.secho(line, fg=line_color)
+                msg_type = "success"
+            display_message(line, msg_type=msg_type)
 
-    leading_mark = "==>"
     try:
         response = diff_workflows(
             workflow_a, workflow_b, brief, access_token, str(context_lines)
@@ -1225,41 +1203,30 @@ def workflow_diff(
             specification_diff = json.loads(response["reana_specification"])
             nonempty_sections = {k: v for k, v in specification_diff.items() if v}
             if not nonempty_sections:
-                click.secho(
-                    "{} No differences in REANA specifications.".format(leading_mark),
-                    bold=True,
-                    fg="yellow",
+                display_message(
+                    "No differences in REANA specifications.", msg_type="warning"
                 )
             # Rename section workflow -> specification
             if "workflow" in nonempty_sections:
                 nonempty_sections["specification"] = nonempty_sections.pop("workflow")
             for section, content in nonempty_sections.items():
-                click.secho(
-                    "{} Differences in workflow {}".format(leading_mark, section),
-                    bold=True,
-                    fg="yellow",
+                display_message(
+                    "Differences in workflow {}".format(section), msg_type="warning"
                 )
                 print_color_diff(content)
-        click.echo("")  # Leave 1 line for separation
+        display_message("")  # Leave 1 line for separation
         workspace_diff = json.loads(response.get("workspace_listing"))
         if workspace_diff:
             workspace_diff = workspace_diff.splitlines()
-            click.secho(
-                "{} Differences in workflow workspace".format(leading_mark),
-                bold=True,
-                fg="yellow",
-            )
+            display_message("Differences in workflow workspace", msg_type="warning")
             print_color_diff(workspace_diff)
 
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        click.echo(
-            click.style(
-                "Something went wrong when trying to get diff:\n{}".format(str(e)),
-                fg="red",
-            ),
-            err=True,
+        display_message(
+            "Something went wrong when trying to get diff:\n{}".format(str(e)),
+            msg_type="error",
         )
 
 
@@ -1313,27 +1280,26 @@ def workflow_open_interactive_session(
                 interactive_session_type,
                 interactive_session_configuration,
             )
-            click.secho(
+            display_message(
                 format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
                     path=path,
                     access_token=access_token,
                 ),
-                fg="green",
+                msg_type="success",
             )
-            click.echo(
-                "It could take several minutes to start the " "interactive session."
+            display_message(
+                "It could take several minutes to start the interactive session."
             )
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.secho(
+            display_message(
                 "Interactive session could not be opened: \n{}".format(str(e)),
-                fg="red",
-                err=True,
+                msg_type="error",
             )
     else:
-        click.secho("Cannot find workflow {}".format(workflow), fg="red", err=True)
+        display_message("Cannot find workflow {}".format(workflow), msg_type="error")
 
 
 @interactive_group.command("close")
@@ -1357,17 +1323,16 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
         try:
             logging.info("Closing an interactive session on {}".format(workflow))
             close_interactive_session(workflow, access_token)
-            click.echo(
+            display_message(
                 "Interactive session for workflow {}"
                 " was successfully closed".format(workflow)
             )
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
-            click.secho(
+            display_message(
                 "Interactive session could not be closed: \n{}".format(str(e)),
-                fg="red",
-                err=True,
+                msg_type="error",
             )
     else:
-        click.secho("Cannot find workflow {} ".format(workflow), fg="red", err=True)
+        display_message("Cannot find workflow {} ".format(workflow), msg_type="error")

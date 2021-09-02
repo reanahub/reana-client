@@ -13,7 +13,6 @@ import os
 import re
 import sys
 import traceback
-import urllib
 from time import sleep
 
 import click
@@ -23,7 +22,6 @@ from cwltool.load_tool import fetch_document
 from cwltool.main import printdeps
 
 from reana_client.cli.utils import add_access_token_options
-from reana_client.config import default_user
 from reana_client.utils import load_workflow_spec
 from reana_client.version import __version__
 

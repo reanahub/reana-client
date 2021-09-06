@@ -88,11 +88,6 @@ jobs:
             with:
                 python-version: 3.8
 
-          - name: Install system dependencies
-            run: |
-              sudo apt-get update -y
-              sudo apt-get install python3-dev graphviz libgraphviz-dev
-
           - name: Install Python dependencies
             run: |
                 pip install --upgrade pip setuptools py
@@ -111,11 +106,6 @@ jobs:
             with:
                 python-version: 3.8
 
-          - name: Install system dependencies
-            run: |
-              sudo apt-get update -y
-              sudo apt-get install python3-dev graphviz libgraphviz-dev
-
           - name: Install Python dependencies
             run: |
                 pip install --upgrade pip setuptools py
@@ -133,11 +123,6 @@ jobs:
           uses: actions/setup-python@v2
           with:
             python-version: 3.8
-
-        - name: Install system dependencies
-          run: |
-            sudo apt-get update -y
-            sudo apt-get install python3-dev graphviz libgraphviz-dev
 
         - name: Install Python dependencies
           run: |
@@ -183,11 +168,6 @@ jobs:
             uses: actions/setup-python@v2
             with:
               python-version: ${{ matrix.python }}
-
-          - name: Install system dependencies
-            run: |
-              sudo apt-get update -y
-              sudo apt-get install python3-dev graphviz libgraphviz-dev
 
           - name: Setup requirements builder
             run: |

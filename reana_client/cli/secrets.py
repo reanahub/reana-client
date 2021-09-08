@@ -6,9 +6,9 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client workflow related commands."""
+
 import logging
 import sys
-import traceback
 
 import click
 

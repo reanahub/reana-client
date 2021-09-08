@@ -28,9 +28,8 @@ from reana_client.cli.utils import (
     parse_filter_parameters,
     parse_format_parameters,
 )
-from reana_client.config import ERROR_MESSAGES, JSON, URL
+from reana_client.config import JSON, URL
 from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import get_reana_yaml_file_path, workflow_uuid_or_name
 
 FILES_BLACKLIST = (".git/", "/.git/")
 

@@ -6,6 +6,7 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client utils."""
+
 import base64
 import datetime
 import json
@@ -16,7 +17,6 @@ import sys
 import traceback
 from uuid import UUID
 
-import click
 import yaml
 from jsonschema import ValidationError, validate
 from reana_commons.errors import REANAValidationError
@@ -28,8 +28,6 @@ from reana_commons.utils import get_workflow_status_change_verb
 from reana_commons.workspaces import validate_workspace
 
 from reana_client.config import (
-    DOCKER_REGISTRY_INDEX_URL,
-    ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR,
     reana_yaml_schema_file_path,
     reana_yaml_valid_file_names,
 )

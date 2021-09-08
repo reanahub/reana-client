@@ -37,7 +37,7 @@ from reana_client.cli.utils import (
     validate_workflow_name,
     get_formatted_progress,
 )
-from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
+from reana_client.config import RUN_STATUSES, TIMECHECK
 from reana_client.printer import display_message
 from reana_client.utils import (
     get_reana_yaml_file_path,

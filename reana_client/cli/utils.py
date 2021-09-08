@@ -22,7 +22,6 @@ from reana_client.config import (
 )
 from reana_client.printer import display_message
 from reana_client.utils import workflow_uuid_or_name
-from reana_commons.errors import MissingAPIClientConfiguration
 
 
 def add_access_token_options(func):

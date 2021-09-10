@@ -331,7 +331,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         )
         logging.info("Connecting to {0}".format(get_api_url()))
         response = create_workflow(reana_specification, name, access_token)
-        display_message(response["workflow_name"], msg_type="success")
+        display_message(response["workflow_name"])
         # check if command is called from wrapper command
         if "invoked_by_subcommand" in ctx.parent.__dict__:
             ctx.parent.workflow_name = response["workflow_name"]
@@ -447,7 +447,9 @@ def workflow_start(
                     )
                     if "finished" in current_status:
                         if follow:
-                            display_message("Listing workflow output files...")
+                            display_message(
+                                "Listing workflow output files...", msg_type="info",
+                            )
                             ctx.invoke(
                                 get_files,
                                 workflow=workflow,
@@ -797,7 +799,7 @@ def workflow_logs(
                     key, value = f.split("=")
                     if key not in available_filters:
                         display_message(
-                            "Error: filter '{}' is not valid.\n"
+                            "Filter '{}' is not valid.\n"
                             "Available filters are '{}'.".format(
                                 key, "' '".join(sorted(available_filters.keys())),
                             ),
@@ -824,7 +826,7 @@ def workflow_logs(
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
                 display_message(
-                    "Error: please provide complete --filter name=value pairs, "
+                    "Please provide complete --filter name=value pairs, "
                     "for example --filter status=running.\n"
                     "Available filters are '{}'.".format(
                         "' '".join(sorted(available_filters.keys()))
@@ -1186,14 +1188,14 @@ def workflow_diff(
 
     def print_color_diff(lines):
         for line in lines:
-            msg_type = None
+            line_color = None
             if line[0] == "@":
-                msg_type = "info"
+                line_color = "cyan"
             elif line[0] == "-":
-                msg_type = "error"
+                line_color = "red"
             elif line[0] == "+":
-                msg_type = "success"
-            display_message(line, msg_type=msg_type)
+                line_color = "green"
+            click.secho(line, fg=line_color)
 
     try:
         response = diff_workflows(
@@ -1204,21 +1206,21 @@ def workflow_diff(
             nonempty_sections = {k: v for k, v in specification_diff.items() if v}
             if not nonempty_sections:
                 display_message(
-                    "No differences in REANA specifications.", msg_type="warning"
+                    "No differences in REANA specifications.", msg_type="info"
                 )
             # Rename section workflow -> specification
             if "workflow" in nonempty_sections:
                 nonempty_sections["specification"] = nonempty_sections.pop("workflow")
             for section, content in nonempty_sections.items():
                 display_message(
-                    "Differences in workflow {}".format(section), msg_type="warning"
+                    "Differences in workflow {}".format(section), msg_type="info"
                 )
                 print_color_diff(content)
         display_message("")  # Leave 1 line for separation
         workspace_diff = json.loads(response.get("workspace_listing"))
         if workspace_diff:
             workspace_diff = workspace_diff.splitlines()
-            display_message("Differences in workflow workspace", msg_type="warning")
+            display_message("Differences in workflow workspace", msg_type="info")
             print_color_diff(workspace_diff)
 
     except Exception as e:
@@ -1281,14 +1283,17 @@ def workflow_open_interactive_session(
                 interactive_session_configuration,
             )
             display_message(
+                "Interactive session opened successfully", msg_type="success"
+            )
+            click.secho(
                 format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
                     path=path,
                     access_token=access_token,
                 ),
-                msg_type="success",
+                fg="green",
             )
-            display_message(
+            click.secho(
                 "It could take several minutes to start the interactive session."
             )
         except Exception as e:
@@ -1325,7 +1330,8 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
             close_interactive_session(workflow, access_token)
             display_message(
                 "Interactive session for workflow {}"
-                " was successfully closed".format(workflow)
+                " was successfully closed".format(workflow),
+                msg_type="success",
             )
         except Exception as e:
             logging.debug(traceback.format_exc())

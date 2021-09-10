@@ -17,6 +17,7 @@ import sys
 import traceback
 from uuid import UUID
 
+import click
 import yaml
 from jsonschema import ValidationError, validate
 from reana_commons.errors import REANAValidationError
@@ -396,8 +397,8 @@ def run_command(cmd, display=True, return_output=False, stderr_output=False):
     """
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     if display:
-        display_message("[{0}] ".format(now), msg_type="success")
-        display_message("{0}".format(cmd))
+        click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
+        click.secho("{0}".format(cmd), bold=True)
     try:
         if return_output:
             stderr_flag_val = subprocess.STDOUT if stderr_output else None
@@ -407,8 +408,8 @@ def run_command(cmd, display=True, return_output=False, stderr_output=False):
             subprocess.check_call(cmd, shell=True)
     except subprocess.CalledProcessError as err:
         if display:
-            display_message("[{0}] ".format(now), msg_type="success")
-            display_message("{0}".format(err), msg_type="error")
+            click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
+            click.secho("{0}".format(err), bold=True, fg="red")
         if stderr_output:
             sys.exit(err.output.decode())
         sys.exit(err.returncode)

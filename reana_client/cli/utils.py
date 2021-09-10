@@ -18,7 +18,7 @@ import click
 from reana_client.config import (
     ERROR_MESSAGES,
     RUN_STATUSES,
-    JOB_STATUS_TO_MSG_TYPE,
+    JOB_STATUS_TO_MSG_COLOR,
 )
 from reana_client.printer import display_message
 from reana_client.utils import workflow_uuid_or_name
@@ -309,12 +309,12 @@ def output_user_friendly_logs(workflow_logs, steps):
 
     # REANA Workflow Engine logs
     if workflow_logs.get("workflow_logs"):
-        display_message("Workflow engine logs", msg_type="warning")
+        display_message("Workflow engine logs", msg_type="info")
         display_message(workflow_logs["workflow_logs"])
 
     if workflow_logs.get("engine_specific"):
         display_message("\n")
-        display_message("Engine internal logs", msg_type="warning")
+        display_message("Engine internal logs", msg_type="info")
         display_message(workflow_logs["engine_specific"])
 
     returned_step_names = set(
@@ -333,13 +333,13 @@ def output_user_friendly_logs(workflow_logs, steps):
     # Job logs
     if workflow_logs["job_logs"]:
         display_message("\n")
-        display_message("Job logs", msg_type="warning")
+        display_message("Job logs", msg_type="info")
     for job_id, logs_info in workflow_logs["job_logs"].items():
         if logs_info:
             job_name_or_id = logs_info["job_name"] or job_id
-            display_message(
+            click.secho(
                 "Step: {0}".format(job_name_or_id),
-                msg_type=JOB_STATUS_TO_MSG_TYPE.get(logs_info["status"]),
+                fg=JOB_STATUS_TO_MSG_COLOR.get(logs_info["status"]),
             )
             logs_output = logs_info["logs"]
             # extract already used fields
@@ -348,17 +348,17 @@ def output_user_friendly_logs(workflow_logs, steps):
 
             for key, value in logs_info.items():
                 if value:
-                    display_message(
+                    click.secho(
                         "{description}: {value}".format(
                             description=key_to_description_mapping[key], value=value,
                         ),
-                        msg_type=JOB_STATUS_TO_MSG_TYPE.get(logs_info["status"]),
+                        fg=JOB_STATUS_TO_MSG_COLOR.get(logs_info["status"]),
                     )
             # show actual log content
             if logs_output:
-                display_message(
-                    "Logs:", msg_type=JOB_STATUS_TO_MSG_TYPE.get(logs_info["status"]),
+                click.secho(
+                    "Logs:", fg=JOB_STATUS_TO_MSG_COLOR.get(logs_info["status"]),
                 )
-                display_message(logs_output)
+                click.secho(logs_output)
             else:
-                display_message("Step {0} emitted no logs.".format(job_name_or_id))
+                click.secho("Step {0} emitted no logs.".format(job_name_or_id))

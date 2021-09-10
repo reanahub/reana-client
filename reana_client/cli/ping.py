@@ -40,7 +40,8 @@ def ping(ctx, access_token):  # noqa: D301
 
         logging.info("Connecting to {0}".format(get_api_url()))
         response = rs_ping(access_token)
-        display_message(
+        msg_color = "red" if response.get("error") else "green"
+        click.secho(
             "REANA server: {0}\n"
             "REANA server version: {1}\n"
             "REANA client version: {2}\n"
@@ -53,6 +54,7 @@ def ping(ctx, access_token):  # noqa: D301
                 response.get("email"),
                 response.get("status"),
             ),
+            fg=msg_color,
         )
         logging.debug("Server response:\n{}".format(response))
 

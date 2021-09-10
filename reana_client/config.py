@@ -84,8 +84,8 @@ HEALTH_TO_MSG_TYPE = {
     "warning": "warning",
 }
 
-JOB_STATUS_TO_MSG_TYPE = {
-    "failed": "error",
-    "finished": "success",
-    "running": "info",
+JOB_STATUS_TO_MSG_COLOR = {
+    "failed": "red",
+    "finished": "green",
+    "running": "bright_blue",
 }

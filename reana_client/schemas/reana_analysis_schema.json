@@ -151,7 +151,8 @@
           "id": "/properties/workflow/properties/type",
           "type": "string",
           "title": "Workflow engine.",
-          "description": "Name which represents a supported workflow engine to be used to reproduce the analysis."
+          "description": "Name which represents a supported workflow engine to be used to reproduce the analysis.",
+          "enum": ["cwl","serial","yadage","snakemake"]
         },
         "resources": {
           "id": "/properties/workflow/properties/resources",

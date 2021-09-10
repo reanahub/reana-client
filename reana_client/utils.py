@@ -79,9 +79,12 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
         "serial": serial_load,
         "snakemake": snakemake_load,
     }
-    """Dictionary to extend with new workflow specification loaders."""
 
-    return workflow_load[workflow_type](workflow_file, **kwargs)
+    """Dictionary to extend with new workflow specification loaders."""
+    load_function = workflow_load.get(workflow_type)
+    if load_function:
+        return load_function(workflow_file, **kwargs)
+    return {}
 
 
 def load_reana_spec(

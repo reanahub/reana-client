@@ -453,7 +453,7 @@ def _validate_workspace(workspace, access_token):
     try:
         workspace = validate_workspace(workspace, available_workspaces)
         display_message(
-            "REANA workspace appear valid.", msg_type="success", indented=True,
+            "Workflow workspace appears valid.", msg_type="success", indented=True,
         )
     except REANAValidationError as e:
         click.secho(e.message, err=True, fg="red")

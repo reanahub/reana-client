@@ -603,11 +603,14 @@ def test_workflows_validate(create_yaml_workflow_schema):
     """Test validation of REANA specifications file."""
     message = "Valid REANA specification file"
     env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
         with open("reana.yaml", "w") as f:
             f.write(create_yaml_workflow_schema)
-        result = runner.invoke(cli, ["validate", "--file", "reana.yaml"],)
+        result = runner.invoke(
+            cli, ["validate", "-t", reana_token, "--file", "reana.yaml"],
+        )
         assert result.exit_code == 0
         assert message in result.output
 
@@ -800,10 +803,11 @@ def test_yml_ext_specification(create_yaml_workflow_schema):
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     message = "Valid REANA specification file"
+    reana_token = "000000"
     with runner.isolated_filesystem():
         with open("reana.yml", "w") as reana_schema:
             reana_schema.write(create_yaml_workflow_schema)
-        result = runner.invoke(cli, ["validate"])
+        result = runner.invoke(cli, ["validate", "-t", reana_token])
         assert result.exit_code == 0
         assert message in result.output
 
@@ -811,6 +815,6 @@ def test_yml_ext_specification(create_yaml_workflow_schema):
     with runner.isolated_filesystem():
         with open("reana.json", "w") as reana_schema:
             reana_schema.write(create_yaml_workflow_schema)
-        result = runner.invoke(cli, ["validate"])
+        result = runner.invoke(cli, ["validate", "-t", reana_token])
         assert result.exit_code != 0
         assert message in result.output

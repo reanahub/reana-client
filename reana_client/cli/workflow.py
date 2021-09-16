@@ -331,7 +331,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         )
         logging.info("Connecting to {0}".format(get_api_url()))
         response = create_workflow(reana_specification, name, access_token)
-        display_message(response["workflow_name"])
+        click.echo(click.style(response["workflow_name"], fg="green"))
         # check if command is called from wrapper command
         if "invoked_by_subcommand" in ctx.parent.__dict__:
             ctx.parent.workflow_name = response["workflow_name"]
@@ -1197,6 +1197,7 @@ def workflow_diff(
                 line_color = "green"
             click.secho(line, fg=line_color)
 
+    leading_mark = "==>"
     try:
         response = diff_workflows(
             workflow_a, workflow_b, brief, access_token, str(context_lines)
@@ -1205,22 +1206,30 @@ def workflow_diff(
             specification_diff = json.loads(response["reana_specification"])
             nonempty_sections = {k: v for k, v in specification_diff.items() if v}
             if not nonempty_sections:
-                display_message(
-                    "No differences in REANA specifications.", msg_type="info"
+                click.secho(
+                    "{} No differences in REANA specifications.".format(leading_mark),
+                    bold=True,
+                    fg="yellow",
                 )
             # Rename section workflow -> specification
             if "workflow" in nonempty_sections:
                 nonempty_sections["specification"] = nonempty_sections.pop("workflow")
             for section, content in nonempty_sections.items():
-                display_message(
-                    "Differences in workflow {}".format(section), msg_type="info"
+                click.secho(
+                    "{} Differences in workflow {}".format(leading_mark, section),
+                    bold=True,
+                    fg="yellow",
                 )
                 print_color_diff(content)
         display_message("")  # Leave 1 line for separation
         workspace_diff = json.loads(response.get("workspace_listing"))
         if workspace_diff:
             workspace_diff = workspace_diff.splitlines()
-            display_message("Differences in workflow workspace", msg_type="info")
+            click.secho(
+                "{} Differences in workflow workspace".format(leading_mark),
+                bold=True,
+                fg="yellow",
+            )
             print_color_diff(workspace_diff)
 
     except Exception as e:
@@ -1293,7 +1302,7 @@ def workflow_open_interactive_session(
                 ),
                 fg="green",
             )
-            click.secho(
+            display_message(
                 "It could take several minutes to start the interactive session."
             )
         except Exception as e:

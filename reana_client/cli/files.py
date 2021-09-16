@@ -309,15 +309,15 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
                     response = upload_to_server(workflow, filename, access_token)
                     for file_ in response:
                         if file_.startswith("symlink:"):
-                            click.secho(
+                            display_message(
                                 "Symlink resolved to {}. "
                                 "Uploaded hard copy.".format(file_[len("symlink:") :]),
-                                fg="green",
+                                msg_type="success",
                             )
                         else:
-                            click.secho(
+                            display_message(
                                 "File {} was successfully uploaded.".format(file_),
-                                fg="green",
+                                msg_type="success",
                             )
                 except FileNotFoundError as e:
                     logging.debug(traceback.format_exc())
@@ -380,7 +380,9 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
                 freed_space = 0
                 for file_ in response["deleted"]:
                     freed_space += response["deleted"][file_]["size"]
-                    display_message("File {} was successfully deleted.".format(file_))
+                    display_message(
+                        f"File {file_} was successfully deleted.", msg_type="success"
+                    )
                 for file_ in response["failed"]:
                     display_message(
                         "Something went wrong while deleting {}.\n"
@@ -388,7 +390,9 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
                         msg_type="error",
                     )
                 if freed_space:
-                    display_message("{} bytes freed up.".format(freed_space))
+                    display_message(
+                        f"{freed_space} bytes freed up.", msg_type="success"
+                    )
             except FileDeletionError as e:
                 display_message(str(e), msg_type="error")
                 if "invoked_by_subcommand" in ctx.parent.__dict__:

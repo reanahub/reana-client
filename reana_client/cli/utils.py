@@ -306,16 +306,17 @@ def output_user_friendly_logs(workflow_logs, steps):
         "started_at": "Started",
         "finished_at": "Finished",
     }
+    leading_mark = "==>"
 
     # REANA Workflow Engine logs
     if workflow_logs.get("workflow_logs"):
-        display_message("Workflow engine logs", msg_type="info")
-        display_message(workflow_logs["workflow_logs"])
+        click.secho(f"{leading_mark} Workflow engine logs", bold=True, fg="yellow")
+        click.echo(workflow_logs["workflow_logs"])
 
     if workflow_logs.get("engine_specific"):
-        display_message("\n")
-        display_message("Engine internal logs", msg_type="info")
-        display_message(workflow_logs["engine_specific"])
+        click.echo("\n")
+        click.secho(f"{leading_mark} Engine internal logs", fg="yellow")
+        click.secho(workflow_logs["engine_specific"])
 
     returned_step_names = set(
         workflow_logs["job_logs"][item]["job_name"]
@@ -332,13 +333,15 @@ def output_user_friendly_logs(workflow_logs, steps):
             )
     # Job logs
     if workflow_logs["job_logs"]:
-        display_message("\n")
-        display_message("Job logs", msg_type="info")
+        click.echo("\n")
+        click.secho("{} Job logs".format(leading_mark), bold=True, fg="yellow")
     for job_id, logs_info in workflow_logs["job_logs"].items():
         if logs_info:
             job_name_or_id = logs_info["job_name"] or job_id
+
             click.secho(
-                "Step: {0}".format(job_name_or_id),
+                f"{leading_mark} Step: {job_name_or_id}",
+                bold=True,
                 fg=JOB_STATUS_TO_MSG_COLOR.get(logs_info["status"]),
             )
             logs_output = logs_info["logs"]
@@ -348,17 +351,19 @@ def output_user_friendly_logs(workflow_logs, steps):
 
             for key, value in logs_info.items():
                 if value:
-                    click.secho(
-                        "{description}: {value}".format(
-                            description=key_to_description_mapping[key], value=value,
-                        ),
+                    title = click.style(
+                        f"{leading_mark} {key_to_description_mapping[key]}:",
                         fg=JOB_STATUS_TO_MSG_COLOR.get(logs_info["status"]),
                     )
+                    click.echo(f"{title} {value}")
             # show actual log content
             if logs_output:
                 click.secho(
-                    "Logs:", fg=JOB_STATUS_TO_MSG_COLOR.get(logs_info["status"]),
+                    f"{leading_mark} Logs:",
+                    fg=JOB_STATUS_TO_MSG_COLOR.get(logs_info["status"]),
                 )
                 click.secho(logs_output)
             else:
-                click.secho("Step {0} emitted no logs.".format(job_name_or_id))
+                display_message(
+                    f"Step {job_name_or_id} emitted no logs.", msg_type="info",
+                )

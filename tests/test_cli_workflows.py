@@ -782,7 +782,7 @@ def test_close_interactive_session():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(cli, ["close", "-t", reana_token, "-w", workflow])
-            assert expected_message == result.output
+            assert expected_message in result.output
 
 
 def test_multiple_specifications(create_yaml_workflow_schema):

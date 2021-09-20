@@ -96,6 +96,7 @@ def get_workflows(
     search=None,
     include_progress=None,
     include_workspace_size=None,
+    workflow=None,
 ):
     """List all existing workflows."""
     try:
@@ -109,6 +110,7 @@ def get_workflows(
             search=search,
             include_progress=include_progress,
             include_workspace_size=include_workspace_size,
+            workflow_id_or_name=workflow,
         ).result()
         if http_response.status_code == 200:
             return response.get("items")

@@ -8,6 +8,8 @@ Version 0.8.0 (UNRELEASED)
 - Adds possibility to filter by workflow status and search by workflow name to ``list`` command.
 - Adds job start and finish times to ``logs`` command output.
 - Adds possibility to filter by file name, size and last modified values to ``ls`` command.
+- Adds new command ``workspaces``.
+- Adds the possibility to filter and display all the runs of a given workflow to the ``list`` command.
 - Changes ``delete`` to prevent workflow hard deletion.
 - Changes ``list`` to display interactive session status.
 - Changes ``list`` command to stop including workflow progress and workspace size by default. Adds

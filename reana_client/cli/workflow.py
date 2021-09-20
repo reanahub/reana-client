@@ -66,6 +66,9 @@ def workflow_execution_group(ctx):
 
 @workflow_management_group.command("list")
 @click.option(
+    "-w", "--workflow", default=None, help="List all runs of the given workflow.",
+)
+@click.option(
     "-s", "--sessions", is_flag=True, help="List all open interactive sessions."
 )
 @click.option(
@@ -132,6 +135,7 @@ def workflow_execution_group(ctx):
 @click.pass_context
 def workflow_workflows(  # noqa: C901
     ctx,
+    workflow,
     sessions,
     _format,
     output_format,
@@ -184,6 +188,7 @@ def workflow_workflows(  # noqa: C901
             search=search_filter,
             include_progress=include_progress,
             include_workspace_size=include_workspace_size,
+            workflow=workflow,
         )
         verbose_headers = ["id", "user"]
         workspace_size_header = ["size"]

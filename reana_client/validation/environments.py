@@ -13,7 +13,12 @@ import logging
 
 import requests
 
-from reana_commons.config import WORKFLOW_RUNTIME_USER_GID, WORKFLOW_RUNTIME_USER_UID
+from reana_commons.config import (
+    REANA_DEFAULT_SNAKEMAKE_ENV_IMAGE,
+    WORKFLOW_RUNTIME_USER_GID,
+    WORKFLOW_RUNTIME_USER_UID,
+)
+
 
 from reana_client.errors import EnvironmentValidationError
 from reana_client.config import (
@@ -476,5 +481,13 @@ class SnakemakeEnvironmentValidator(EnvironmentValidatorBase):
         """Validate environments in REANA Snakemake workflow."""
         for step in self.workflow_steps:
             image = step["environment"]
+            if not image:
+                self.messages.append(
+                    {
+                        "type": "warning",
+                        "message": f"Environment image not specified, using {REANA_DEFAULT_SNAKEMAKE_ENV_IMAGE}.",
+                    }
+                )
+                image = REANA_DEFAULT_SNAKEMAKE_ENV_IMAGE
             kubernetes_uid = step.get("kubernetes_uid")
             self._validate_environment_image(image, kubernetes_uid=kubernetes_uid)

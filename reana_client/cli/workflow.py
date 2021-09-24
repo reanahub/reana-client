@@ -933,6 +933,7 @@ def workflow_validate(ctx, file, environments, pull, access_token):  # noqa: D30
             ),
             msg_type="error",
         )
+        sys.exit(1)
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -940,6 +941,7 @@ def workflow_validate(ctx, file, environments, pull, access_token):  # noqa: D30
             "Something went wrong when trying to validate {}".format(file),
             msg_type="error",
         )
+        sys.exit(1)
 
 
 @workflow_execution_group.command("stop")

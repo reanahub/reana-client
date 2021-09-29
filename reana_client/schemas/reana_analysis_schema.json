@@ -6,91 +6,19 @@
   "title": "REANA analysis specification",
   "description": "Full analysis specification including data, sofware, environment and workflow enabling reproducibility on a REANA cluster.",
   "required": ["workflow"],
+  "additionalProperties": false,
   "properties": {
-    "environments": {
-      "id": "/properties/environments",
-      "type": "array",
-      "title": "Set of analysis' environments.",
-      "description": "All container images needed to reproduce the analysis.",
-      "items": {
-        "id": "/properties/environments/items",
-        "type": "object",
-        "optional": true,
-        "title": "Analysis environments.",
-        "description": "Analysis environments represented by container technology and image name.",
-        "properties": {
-          "image": {
-            "id": "/properties/environments/items/properties/image",
-            "type": "string",
-            "title": "Environment image id.",
-            "description": "String which represents an image used as environment for one or more steps of an analysis.",
-            "default": "busybox"
-          },
-          "type": {
-            "id": "/properties/environments/items/properties/type",
-            "type": "string",
-            "title": "Container technology.",
-            "description": "Name which represents a supported container technology to provide as a REANA environment.",
-            "default": "docker"
-          }
-        }
-      }
-    },
-    "metadata": {
-      "id": "/properties/metadata",
-      "type": "object",
-      "title": "Analysis metadata.",
-      "properties": {
-        "author": {
-          "id": "/properties/metadata/properties/author",
-          "type": "string",
-          "title": "Analysis author.",
-          "description": "User or group who created the analysis.",
-          "default": "@reanahub/developers"
-        },
-        "title": {
-          "id": "/properties/metadata/properties/title",
-          "type": "string",
-          "title": "Analysis title",
-          "default": "REANA analysis example"
-        }
-      }
-    },
-    "outputs": {
-      "id": "/properties/outputs",
-      "type": "object",
-      "title": "Analysis outputs.",
-      "properties": {
-        "files": {
-          "id": "/properties/outputs/properties/files",
-          "type": "array",
-          "title": "Analysis result files.",
-          "description": "Expected output from analysis represented by a set of files.",
-          "optional": true,
-          "items": {
-            "id": "/properties/outputs/properties/files/items",
-            "type": "string",
-            "title": "Relative path to the file."
-          }
-        },
-        "directories": {
-          "id": "/properties/outputs/properties/directories",
-          "type": "array",
-          "title": "Analysis result directories.",
-          "description": "Expected output from analysis represented by a set of directories.",
-          "optional": true,
-          "items": {
-            "id": "/properties/outputs/properties/directories/items",
-            "type": "string",
-            "title": "Relative path to the directory."
-          }
-        }
-      }
+    "version":  {
+      "id": "/properties/version",
+      "type": "string",
+      "title": "REANA version.",
+      "description": "REANA platform version to which the analysis was written for."
     },
     "inputs": {
       "id": "/properties/inputs",
       "type": "object",
       "title": "Analysis inputs.",
+      "additionalProperties": false,
       "properties": {
         "files": {
           "id": "/properties/inputs/properties/files",
@@ -136,6 +64,7 @@
       "type": "object",
       "title": "Analysis workflow.",
       "description": "Workflow which represents the steps that need to be run to reproduce an analysis.",
+      "additionalProperties": false,
       "properties": {
         "specification": {
           "id": "/properties/workflow/properties/specification",
@@ -171,7 +100,60 @@
           }
         }
       },
-      "required": ["type"]
+      "oneOf": [
+        {
+            "required": ["type","file"]
+        },
+        {
+            "required": ["type","specification"]
+        }
+      ]
+    },
+    "outputs": {
+      "id": "/properties/outputs",
+      "type": "object",
+      "title": "Analysis outputs.",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "id": "/properties/outputs/properties/files",
+          "type": "array",
+          "title": "Analysis result files.",
+          "description": "Expected output from analysis represented by a set of files.",
+          "optional": true,
+          "items": {
+            "id": "/properties/outputs/properties/files/items",
+            "type": "string",
+            "title": "Relative path to the file."
+          }
+        },
+        "directories": {
+          "id": "/properties/outputs/properties/directories",
+          "type": "array",
+          "title": "Analysis result directories.",
+          "description": "Expected output from analysis represented by a set of directories.",
+          "optional": true,
+          "items": {
+            "id": "/properties/outputs/properties/directories/items",
+            "type": "string",
+            "title": "Relative path to the directory."
+          }
+        }
+      }
+    },
+    "workspace":  {
+      "id": "/properties/workspace",
+      "type": "object",
+      "title": "Workflow workspace.",
+      "description": "Full workspace path in which the workflow will run.",
+      "additionalProperties": false,
+      "properties": {
+        "root_path": {
+          "id": "/properties/workspace/properties/root_path",
+          "type": "string",
+          "title": "Workspace root path."
+        }
+      }
     }
   }
 }

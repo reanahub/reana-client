@@ -123,7 +123,14 @@ def load_reana_spec(
     try:
         with open(filepath) as f:
             reana_yaml = yaml.load(f.read(), Loader=yaml.FullLoader)
-
+        if not skip_validation:
+            display_message(
+                "Verifying REANA specification file... {filepath}".format(
+                    filepath=filepath
+                ),
+                msg_type="info",
+            )
+            _validate_reana_yaml(reana_yaml)
         workflow_type = reana_yaml["workflow"]["type"]
         reana_yaml["workflow"]["specification"] = load_workflow_spec(
             workflow_type,
@@ -140,13 +147,6 @@ def load_reana_spec(
                 )
 
         if not skip_validation:
-            display_message(
-                "Verifying REANA specification file... {filepath}".format(
-                    filepath=filepath
-                ),
-                msg_type="info",
-            )
-            _validate_reana_yaml(reana_yaml)
             validate_parameters(workflow_type, reana_yaml)
 
         if not skip_validate_environments:
@@ -191,12 +191,10 @@ def _validate_reana_yaml(reana_yaml):
     try:
         with open(reana_yaml_schema_file_path, "r") as f:
             reana_yaml_schema = json.loads(f.read())
-
             validate(reana_yaml, reana_yaml_schema)
         display_message(
             "Valid REANA specification file.", msg_type="success", indented=True,
         )
-
     except IOError as e:
         logging.info(
             "Something went wrong when reading REANA validation schema from "

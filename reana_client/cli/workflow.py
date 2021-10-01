@@ -332,7 +332,9 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         display_message("Workflow name cannot be a valid UUIDv4", msg_type="error")
     try:
         reana_specification = load_reana_spec(
-            click.format_filename(file), skip_validation
+            click.format_filename(file),
+            access_token=access_token,
+            skip_validation=skip_validation,
         )
         logging.info("Connecting to {0}".format(get_api_url()))
         response = create_workflow(reana_specification, name, access_token)
@@ -967,7 +969,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     Example: \n
     \t $ reana-client stop -w myanalysis.42 --force
     """
-    from reana_client.api.client import get_workflow_status, stop_workflow
+    from reana_client.api.client import stop_workflow
 
     if not force_stop:
         display_message(
@@ -1120,7 +1122,7 @@ def workflow_delete(ctx, workflow, all_runs, workspace, access_token):  # noqa: 
     \t $ reana-client delete -w myanalysis.42 --include-all-runs \n
     \t $ reana-client delete -w myanalysis.42 --include-workspace
     """
-    from reana_client.api.client import delete_workflow, get_workflow_status
+    from reana_client.api.client import delete_workflow
     from reana_client.utils import get_api_url
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))

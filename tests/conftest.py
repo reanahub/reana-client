@@ -14,7 +14,7 @@ import pytest
 
 
 @pytest.fixture()
-def create_yaml_workflow_schema():
+def create_yaml_workflow_schema() -> str:
     """Return dummy yaml workflow schema."""
     reana_yaml_schema = """
         version: 0.7.2
@@ -38,6 +38,17 @@ def create_yaml_workflow_schema():
                 commands:
                   - python "${helloworld}" --sleeptime ${sleeptime} \
                   --inputfile "${inputfile}" --outputfile "${outputfile}"
+        """
+    return reana_yaml_schema
+
+
+@pytest.fixture()
+def create_yaml_workflow_schema_with_workspace(create_yaml_workflow_schema: str) -> str:
+    """Return dummy yaml workflow schema."""
+    reana_yaml_schema = f"""
+        {create_yaml_workflow_schema}
+        workspace:
+          root_path: /var/reana
         """
     return reana_yaml_schema
 

@@ -12,6 +12,7 @@ import json
 import os
 import shlex
 import sys
+from typing import Callable, NoReturn, Optional, Union
 
 import click
 
@@ -24,14 +25,16 @@ from reana_client.printer import display_message
 from reana_client.utils import workflow_uuid_or_name
 
 
-def add_access_token_options(func):
+def _access_token_option_decorator(func: Callable, required: bool) -> Callable:
     """Add access token related options to click commands."""
 
     @click.option(
         "-t",
         "--access-token",
-        default=os.getenv("REANA_ACCESS_TOKEN", None),
-        callback=access_token_check,
+        default=os.getenv("REANA_ACCESS_TOKEN"),
+        callback=lambda ctx, _, access_token: access_token_check(
+            ctx, _, access_token, required
+        ),
         help="Access token of the current user.",
     )
     @functools.wraps(func)
@@ -39,6 +42,14 @@ def add_access_token_options(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+add_access_token_options = functools.partial(
+    _access_token_option_decorator, required=True
+)
+add_access_token_options_not_required = functools.partial(
+    _access_token_option_decorator, required=False
+)
 
 
 def human_readable_or_raw_option(func):
@@ -60,9 +71,14 @@ def human_readable_or_raw_option(func):
     return wrapper
 
 
-def access_token_check(ctx, _, access_token):
+def access_token_check(
+    ctx: click.core.Context,
+    _: click.core.Option,
+    access_token: Optional[str],
+    required: bool,
+) -> Union[str, NoReturn]:
     """Check if access token is present."""
-    if not access_token:
+    if not access_token and required:
         display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
         ctx.exit(1)
     else:

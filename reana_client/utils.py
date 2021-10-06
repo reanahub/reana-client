@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 import traceback
+from typing import NoReturn
 from uuid import UUID
 
 import click
@@ -86,10 +87,11 @@ def load_workflow_spec(workflow_type, workflow_file, **kwargs):
 
 def load_reana_spec(
     filepath,
-    access_token,
+    access_token=None,
     skip_validation=False,
     skip_validate_environments=True,
     pull_environment_image=False,
+    workspaces=False,
 ):
     """Load and validate reana specification file.
 
@@ -156,11 +158,12 @@ def load_reana_spec(
             )
             validate_environment(reana_yaml, pull=pull_environment_image)
 
-        if reana_yaml.get("workspace", {}).get("root_path"):
+        if workspaces:
+            root_path = reana_yaml.get("workspace", {}).get("root_path")
             display_message(
                 "Verifying workspace in REANA specification file...", msg_type="info",
             )
-            _validate_workspace(reana_yaml["workspace"]["root_path"], access_token)
+            _validate_workspace(root_path, access_token)
 
         if workflow_type == "yadage":
             # We don't send the loaded Yadage workflow spec to the cluster as
@@ -354,7 +357,7 @@ def parse_secret_from_path(path):
 
 def get_api_url():
     """Obtain REANA server API URL."""
-    server_url = os.getenv("REANA_SERVER_URL", None)
+    server_url = os.getenv("REANA_SERVER_URL")
     return server_url.strip(" \t\n\r/") if server_url else None
 
 
@@ -413,10 +416,10 @@ def run_command(cmd, display=True, return_output=False, stderr_output=False):
         sys.exit(err.returncode)
 
 
-def _validate_workspace(workspace, access_token):
+def _validate_workspace(root_path: str, access_token: str) -> NoReturn:
     """Validate workspace in REANA specification file.
 
-    :param workspace: workspace path to be validated.
+    :param root_path: workspace root path to be validated.
     :param access_token: access token of the current user.
 
     :raises ValidationError: Given workspace in REANA spec file does not validate against
@@ -424,12 +427,19 @@ def _validate_workspace(workspace, access_token):
     """
     from reana_client.api.client import workspaces
 
-    available_workspaces = workspaces(access_token).get("workspaces_available", [])
-    try:
-        workspace = validate_workspace(workspace, available_workspaces)
+    if not root_path:
         display_message(
-            "Workflow workspace appears valid.", msg_type="success", indented=True,
+            "Workspace not found in REANA specification file. Validation skipped.",
+            msg_type="warning",
+            indented=True,
         )
-    except REANAValidationError as e:
-        display_message(e.message, msg_type="error")
-        sys.exit(1)
+    else:
+        available_workspaces = workspaces(access_token).get("workspaces_available", [])
+        try:
+            validate_workspace(root_path, available_workspaces)
+            display_message(
+                "Workflow workspace appears valid.", msg_type="success", indented=True,
+            )
+        except REANAValidationError as e:
+            display_message(e.message, msg_type="error")
+            sys.exit(1)

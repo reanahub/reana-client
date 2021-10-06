@@ -24,20 +24,21 @@ from reana_commons.utils import click_table_printer
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (
     add_access_token_options,
+    add_access_token_options_not_required,
     add_pagination_options,
     add_workflow_option,
     check_connection,
     format_data,
     format_session_uri,
+    get_formatted_progress,
     human_readable_or_raw_option,
     key_value_to_dict,
     parse_filter_parameters,
     parse_format_parameters,
     requires_environments,
     validate_workflow_name,
-    get_formatted_progress,
 )
-from reana_client.config import RUN_STATUSES, TIMECHECK
+from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
 from reana_client.printer import display_message
 from reana_client.utils import (
     get_reana_yaml_file_path,
@@ -903,10 +904,18 @@ def workflow_logs(
     help="If set, try to pull remote environment image from registry to perform "
     "validation locally. Requires ``--environments`` flag. [default=False]",
 )
-@add_access_token_options
-@check_connection
+@click.option(
+    "--workspaces",
+    is_flag=True,
+    default=False,
+    help="If set, check the workspace specified in the REANA specification "
+    "file. [default=False]",
+)
+@add_access_token_options_not_required
 @click.pass_context
-def workflow_validate(ctx, file, environments, pull, access_token):  # noqa: D301
+def workflow_validate(
+    ctx, file, environments, pull, workspaces, access_token
+):  # noqa: D301
     """Validate workflow specification file.
 
     The `validate` command allows to check syntax and validate the reana.yaml
@@ -915,15 +924,22 @@ def workflow_validate(ctx, file, environments, pull, access_token):  # noqa: D30
     Examples: \n
     \t $ reana-client validate -f reana.yaml
     """
+    if workspaces:
+        if access_token:
+            check_connection(lambda: None)()
+        else:
+            display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
+            ctx.exit(1)
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     try:
         load_reana_spec(
             click.format_filename(file),
-            access_token,
+            access_token=access_token,
             skip_validate_environments=not environments,
             pull_environment_image=pull,
+            workspaces=workspaces,
         )
 
     except (ValidationError, REANAValidationError) as e:

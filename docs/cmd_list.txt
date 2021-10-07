@@ -11,9 +11,9 @@ Quota commands:
   quota-show  Show user quota.
 
 Configuration commands:
+  info     List cluster general information.
   ping     Check connection to REANA server.
   version  Show version.
-  workspaces List available workspaces.
 
 Workflow management commands:
   create  Create a new workflow.

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018 CERN.
+# Copyright (C) 2017-2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
-"""REANA client debugging commands."""
+"""REANA client configuration commands."""
 
 import logging
 import traceback
@@ -82,35 +82,29 @@ def version(ctx):  # noqa: D301
     display_message(__version__)
 
 
-@configuration_group.command("workspaces")
+@configuration_group.command("info")
 @click.pass_context
 @add_access_token_options
 @check_connection
-def workspaces(ctx, access_token):  # noqa: D301
-    """List available workspaces.
+def info(ctx, access_token):  # noqa: D301
+    """List cluster general information.
 
-    The `workspaces` command lists all the available workspaces.
-    It also returns the default workspace defined by the admin.
+    The ``info`` command lists general information about the cluster.
+    - Lists all the available workspaces. It also returns the default workspace
+    defined by the admin.
 
     Examples: \n
-    \t $ reana-client workspaces
+    \t $ reana-client info
     """
     try:
-        from reana_client.api.client import workspaces
+        from reana_client.api.client import info
 
-        response = workspaces(access_token)
-        display_message(
-            "List of available workspaces: {0}\n"
-            "Default workspace: {1}".format(
-                ", ".join(response.get("workspaces_available")),
-                response.get("default"),
-            )
-        )
+        response = info(access_token)
+        for item in response.values():
+            display_message(f"{item.get('title')}: {item.get('value')}")
 
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
-        display_message(
-            "Could not list available workspaces:\n{0}".format(e), msg_type="error"
-        )
+        display_message("Could not list cluster info:\n{0}".format(e), msg_type="error")
         ctx.exit(1)

@@ -425,7 +425,7 @@ def _validate_workspace(root_path: str, access_token: str) -> NoReturn:
     :raises ValidationError: Given workspace in REANA spec file does not validate against
         allowed workspaces.
     """
-    from reana_client.api.client import workspaces
+    from reana_client.api.client import info
 
     if not root_path:
         display_message(
@@ -434,7 +434,9 @@ def _validate_workspace(root_path: str, access_token: str) -> NoReturn:
             indented=True,
         )
     else:
-        available_workspaces = workspaces(access_token).get("workspaces_available", [])
+        available_workspaces = (
+            info(access_token).get("workspaces_available", {}).get("value")
+        )
         try:
             validate_workspace(root_path, available_workspaces)
             display_message(

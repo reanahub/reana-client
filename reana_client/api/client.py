@@ -1018,14 +1018,16 @@ def list_secrets(access_token):
         raise e
 
 
-def workspaces(access_token):
-    """List available workspaces.
+def info(access_token):
+    """List general information about the cluster.
 
     :param access_token: access token of the current user.
 
     """
     try:
-        (response, http_response) = current_rs_api_client.api.workspaces().result()
+        (response, http_response) = current_rs_api_client.api.info(
+            access_token=access_token
+        ).result()
         if http_response.status_code == 200:
             return response
         else:

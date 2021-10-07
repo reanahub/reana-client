@@ -72,8 +72,8 @@ def test_validate_workspaces(
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = 200
     mock_response = {
-        "default": available_workspaces[0],
-        "workspaces_available": available_workspaces,
+        "default_workspace": {"value": available_workspaces[0]},
+        "workspaces_available": {"value": available_workspaces},
     }
     with runner.isolation():
         with runner.isolated_filesystem():

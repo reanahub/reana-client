@@ -19,7 +19,7 @@ readme = open("README.rst").read()
 history = open("CHANGES.rst").read()
 
 tests_require = [
-    "pytest-reana>=0.8.0a5,<0.9.0",
+    "pytest-reana>=0.8.0a7,<0.9.0",
 ]
 
 extras_require = {
@@ -42,7 +42,7 @@ install_requires = [
     "cwltool==3.1.20210628163208",
     "jsonpointer>=2.0",
     "PyYAML>=5.1",
-    "reana-commons[yadage,snakemake]>=0.8.0a28,<0.9.0",
+    "reana-commons[yadage,snakemake]>=0.8.0a30,<0.9.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1",
 ]

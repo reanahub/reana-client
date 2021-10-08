@@ -91,7 +91,7 @@ def load_reana_spec(
     skip_validation=False,
     skip_validate_environments=True,
     pull_environment_image=False,
-    workspaces=False,
+    server_capabilities=False,
 ):
     """Load and validate reana specification file.
 
@@ -158,7 +158,7 @@ def load_reana_spec(
             )
             validate_environment(reana_yaml, pull=pull_environment_image)
 
-        if workspaces:
+        if server_capabilities:
             root_path = reana_yaml.get("workspace", {}).get("root_path")
             display_message(
                 "Verifying workspace in REANA specification file...", msg_type="info",

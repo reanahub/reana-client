@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017-2021 CERN.
+# Copyright (C) 2017, 2018, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -101,7 +101,9 @@ def info(ctx, access_token):  # noqa: D301
 
         response = info(access_token)
         for item in response.values():
-            display_message(f"{item.get('title')}: {item.get('value')}")
+            value = item.get("value")
+            value = ", ".join(value) if isinstance(value, list) else value
+            display_message(f"{item.get('title')}: {value}")
 
     except Exception as e:
         logging.debug(traceback.format_exc())

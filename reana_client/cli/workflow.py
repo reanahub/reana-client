@@ -905,16 +905,16 @@ def workflow_logs(
     "validation locally. Requires ``--environments`` flag. [default=False]",
 )
 @click.option(
-    "--workspaces",
+    "--server-capabilities",
     is_flag=True,
     default=False,
-    help="If set, check the workspace specified in the REANA specification "
-    "file. [default=False]",
+    help="If set, check the server capabilities such as workspace validation. "
+    "[default=False]",
 )
 @add_access_token_options_not_required
 @click.pass_context
 def workflow_validate(
-    ctx, file, environments, pull, workspaces, access_token
+    ctx, file, environments, pull, server_capabilities, access_token
 ):  # noqa: D301
     """Validate workflow specification file.
 
@@ -924,7 +924,7 @@ def workflow_validate(
     Examples: \n
     \t $ reana-client validate -f reana.yaml
     """
-    if workspaces:
+    if server_capabilities:
         if access_token:
             check_connection(lambda: None)()
         else:
@@ -939,7 +939,7 @@ def workflow_validate(
             access_token=access_token,
             skip_validate_environments=not environments,
             pull_environment_image=pull,
-            workspaces=workspaces,
+            server_capabilities=server_capabilities,
         )
 
     except (ValidationError, REANAValidationError) as e:

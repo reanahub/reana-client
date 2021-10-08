@@ -6,7 +6,7 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
-"""REANA client validate workspace tests."""
+"""REANA client validate server capabilities tests."""
 
 import pytest
 from click.testing import CliRunner
@@ -29,28 +29,28 @@ from reana_client.config import ERROR_MESSAGES
         ),
         (
             False,
-            ["validate", "--workspaces"],
+            ["validate", "--server-capabilities"],
             ERROR_MESSAGES["missing_access_token"],
             1,
             ["/var/reana", "/myexternaldisk/reana"],
         ),
         (
             False,
-            ["validate", "-t", "00000", "--workspaces"],
+            ["validate", "-t", "00000", "--server-capabilities"],
             "WARNING: Workspace not found in REANA specification",
             0,
             ["/var/reana", "/myexternaldisk/reana"],
         ),
         (
             True,
-            ["validate", "-t", "00000", "--workspaces"],
+            ["validate", "-t", "00000", "--server-capabilities"],
             "Workflow workspace appears valid.",
             0,
             ["/var/reana", "/myexternaldisk/reana"],
         ),
         (
             True,
-            ["validate", "-t", "00000", "--workspaces"],
+            ["validate", "-t", "00000", "--server-capabilities"],
             'Desired workspace "/var/reana" not valid.',
             1,
             ["/foo/reana", "/bar/reana"],

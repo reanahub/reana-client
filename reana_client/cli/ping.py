@@ -7,11 +7,13 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client configuration commands."""
 
+import json
 import logging
 import traceback
 
 import click
 from reana_client.cli.utils import add_access_token_options, check_connection
+from reana_client.config import JSON
 from reana_client.printer import display_message
 from reana_client.version import __version__
 
@@ -83,10 +85,17 @@ def version(ctx):  # noqa: D301
 
 
 @configuration_group.command("info")
+@click.option(
+    "--json",
+    "output_format",
+    flag_value="json",
+    default=None,
+    help="Get output in JSON format.",
+)
 @click.pass_context
 @add_access_token_options
 @check_connection
-def info(ctx, access_token):  # noqa: D301
+def info(ctx, access_token: str, output_format: str):  # noqa: D301
     """List cluster general information.
 
     The ``info`` command lists general information about the cluster.
@@ -100,10 +109,13 @@ def info(ctx, access_token):  # noqa: D301
         from reana_client.api.client import info
 
         response = info(access_token)
-        for item in response.values():
-            value = item.get("value")
-            value = ", ".join(value) if isinstance(value, list) else value
-            display_message(f"{item.get('title')}: {value}")
+        if output_format == JSON:
+            display_message(json.dumps(response))
+        else:
+            for item in response.values():
+                value = item.get("value")
+                value = ", ".join(value) if isinstance(value, list) else value
+                display_message(f"{item.get('title')}: {value}")
 
     except Exception as e:
         logging.debug(traceback.format_exc())

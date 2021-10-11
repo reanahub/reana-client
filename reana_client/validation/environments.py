@@ -46,8 +46,8 @@ def validate_environment(reana_yaml, pull=False):
             workflow_steps = workflow["specification"]["stages"]
             return YadageEnvironmentValidator(workflow_steps=workflow_steps, pull=pull)
         if workflow_type == "cwl":
-            workflow_file = workflow.get("file")
-            return CWLEnvironmentValidator(workflow_file=workflow_file, pull=pull)
+            workflow_steps = workflow.get("specification", {}).get("$graph", workflow)
+            return CWLEnvironmentValidator(workflow_steps=workflow_steps, pull=pull)
         if workflow_type == "snakemake":
             workflow_steps = workflow["specification"]["steps"]
             return SnakemakeEnvironmentValidator(
@@ -63,15 +63,13 @@ def validate_environment(reana_yaml, pull=False):
 class EnvironmentValidatorBase:
     """REANA workflow environments validation base class."""
 
-    def __init__(self, workflow_steps=None, workflow_file=None, pull=False):
+    def __init__(self, workflow_steps=None, pull=False):
         """Validate environments in REANA workflow.
 
         :param workflow_steps: List of dictionaries which represents different steps involved in workflow.
-        :param workflow_file: Path to workflow specification.
         :param pull: If true, attempt to pull remote environment image to perform GID/UID validation.
         """
         self.workflow_steps = workflow_steps
-        self.workflow_file = workflow_file
         self.pull = pull
         self.validated_images = set()
         self.messages = []
@@ -465,13 +463,21 @@ class CWLEnvironmentValidator(EnvironmentValidatorBase):
 
     def validate_environment(self):
         """Validate environments in REANA CWL workflow."""
-        import cwl_utils.parser_v1_0 as cwl_parser
-        from cwl_utils.docker_extract import traverse
 
-        top = cwl_parser.load_document(self.workflow_file)
+        def _validate_workflow_environment(workflow_steps):
+            """Validate environments in REANA CWL workflow steps."""
+            requirements = workflow_steps.get("requirements", [])
+            images = list(filter(lambda req: "dockerPull" in req, requirements))
 
-        for image in traverse(top):
-            self._validate_environment_image(image)
+            for image in images:
+                self._validate_environment_image(image["dockerPull"])
+
+        workflow = self.workflow_steps
+        if isinstance(workflow, dict):
+            _validate_workflow_environment(workflow)
+        elif isinstance(workflow, list):
+            for wf in workflow:
+                _validate_workflow_environment(wf)
 
 
 class SnakemakeEnvironmentValidator(EnvironmentValidatorBase):

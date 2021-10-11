@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -42,7 +42,7 @@ install_requires = [
     "cwltool==3.1.20210628163208",
     "jsonpointer>=2.0",
     "PyYAML>=5.1",
-    "reana-commons[yadage,snakemake]>=0.8.0a30,<0.9.0",
+    "reana-commons[yadage,snakemake]>=0.8.0a31,<0.9.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1",
 ]

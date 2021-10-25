@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -12,13 +12,14 @@ import sys
 
 import click
 
+from reana_commons.config import REANA_RESOURCE_HEALTH_COLORS
+
 from reana_client.cli.utils import (
     NotRequiredIf,
     add_access_token_options,
     check_connection,
     human_readable_or_raw_option,
 )
-from reana_client.config import HEALTH_TO_MSG_TYPE
 from reana_client.printer import display_message
 
 
@@ -97,25 +98,21 @@ def quota_show(
             )
             sys.exit(1)
         if not report:
-            human_readable_or_raw = (
-                "human_readable"  # when no report always show human readable
-            )
             usage = quota[resource].get("usage")
             limit = quota[resource].get("limit")
             limit_str = ""
             percentage = ""
-            msg_type = None
+            kwargs = dict()
             if limit and limit.get("raw", 0) > 0:
                 health = quota[resource].get("health")
                 percentage = usage_percentage(usage.get("raw"), limit.get("raw"))
-                limit_str = "out of {} used".format(limit.get(human_readable_or_raw))
-                msg_type = HEALTH_TO_MSG_TYPE.get(health)
+                limit_str = f"out of {limit.get(human_readable_or_raw)} used"
+                kwargs = dict(fg=REANA_RESOURCE_HEALTH_COLORS.get(health))
             else:
                 limit_str = "used"
 
-            return display_message(
-                "{} {} {}".format(usage[human_readable_or_raw], limit_str, percentage),
-                msg_type=msg_type,
+            return click.secho(
+                f"{usage[human_readable_or_raw]} {limit_str} {percentage}", **kwargs
             )
 
         result = (

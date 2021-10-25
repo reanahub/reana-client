@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client configuration."""
 
-import os
 
 import pkg_resources
 
@@ -77,12 +76,6 @@ PRINTER_COLOUR_ERROR = "red"
 
 PRINTER_COLOUR_INFO = "cyan"
 """Default colour for info messages on terminal."""
-
-HEALTH_TO_MSG_TYPE = {
-    "critical": "error",
-    "healthy": "success",
-    "warning": "warning",
-}
 
 JOB_STATUS_TO_MSG_COLOR = {
     "failed": "red",

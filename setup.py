@@ -41,7 +41,7 @@ install_requires = [
     "click>=7",
     "cwltool==3.1.20210628163208",
     "jsonpointer>=2.0",
-    "reana-commons[yadage,snakemake]>=0.8.0a34,<0.9.0",
+    "reana-commons[yadage,snakemake]>=0.8.0a37,<0.9.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1",
 ]

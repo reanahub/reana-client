@@ -1,26 +1,25 @@
 Changes
 =======
 
-Version 0.8.0 (UNRELEASED)
+Version 0.8.0 (2021-11-24)
 --------------------------
 
-- Adds new command ``quota-show``.
-- Adds possibility to filter by workflow status and search by workflow name to ``list`` command.
-- Adds job start and finish times to ``logs`` command output.
-- Adds possibility to filter by file name, size and last modified values to ``ls`` command.
-- Adds new command ``info`` that retrieves general information about the cluster.
-- Adds new ``--server-capabilities`` flag to ``validate`` command.
-- Adds the possibility to filter and display all the runs of a given workflow to the ``list`` command.
-- Changes ``delete`` to prevent workflow hard deletion.
-- Changes ``list`` to display interactive session status.
-- Changes ``list`` command to stop including workflow progress and workspace size by default. Adds
-  ``--include-progress`` and ``--include-workspace-size`` options to add them to the output.
+- Adds support for running and validating Snakemake workflows.
+- Adds support for ``outputs.directories`` in ``reana.yaml`` allowing to easily download output directories.
+- Adds new command ``quota-show`` to retrieve information about total CPU and Disk usage and quota limits.
+- Adds new command ``info`` that retrieves general information about the cluster, such as available workspace path settings.
+- Changes ``validate`` command to add the possibility to check the workflow against server capabilities such as desired workspace path via `--server-capabilities` option.
+- Changes ``list`` command to add the possibility to filter by workflow status and search by workflow name via ``--filter`` option.
+- Changes ``list`` command to add the possibility to filter and display all the runs of a given workflow via ``-w`` option.
+- Changes ``list`` command to stop including workflow progress and workspace size by default. Please use new options `--include-progress` and `--include-workspace-size` to show this information.
+- Changes ``list --sessions`` command to display the status of interactive sessions.
+- Changes ``logs`` command to display also the start and finish times of individual jobs.
+- Changes ``ls`` command to add the possibility to filter by file name, size and last-modified values via ``--filter`` option.
+- Changes ``du`` command to add the possibility filter by file name and size via ``--filter`` option.
+- Changes ``delete`` command to prevent hard-deletion of workflows.
 - Changes Yadage workflow specification loading to be done in ``reana-commons``.
-- Removes support for Python 2.
-
-Version 0.7.6 (UNRELEASED)
---------------------------
-- Adds support for ``outputs.directories`` in ``reana.yaml``
+- Changes CWL workflow engine to ``cwltool`` version ``3.1.20210628163208``.
+- Removes support for Python 2.7. Please use Python 3.6 or higher from now on.
 
 Version 0.7.5 (2021-07-05)
 --------------------------

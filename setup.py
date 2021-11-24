@@ -72,6 +72,7 @@ setup(
             "reana-cwl-runner = reana_client.cli.cwl_runner:cwl_runner",
         ],
     },
+    python_requires=">=3.6",
     extras_require=extras_require,
     install_requires=install_requires,
     setup_requires=setup_requires,

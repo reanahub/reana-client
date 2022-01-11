@@ -22,4 +22,5 @@ recursive-include docs *.rst
 recursive-include reana_client *.json
 recursive-include reana_client *.py
 recursive-include scripts *.py
+recursive-include scripts *.sh
 recursive-include tests *.py

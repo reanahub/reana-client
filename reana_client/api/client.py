@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -20,6 +20,7 @@ from bravado.exception import HTTPError
 from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import _validate_reana_yaml, is_uuid_v4
+from reana_commons.validation import validate_workflow_name
 from reana_commons.api_client import get_current_api_client
 from reana_commons.config import REANA_WORKFLOW_ENGINES
 from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
@@ -225,6 +226,7 @@ def create_workflow_from_json(
             parameters={'files': ['file.txt'], 'parameters': {'key': 'value'}},
             workflow_engine='serial')
     """
+    validate_workflow_name(name)
     if is_uuid_v4(name):
         raise ValueError("Workflow name cannot be a valid UUIDv4")
     if not access_token:

@@ -5,6 +5,7 @@ Version 0.8.1 (UNRELEASED)
 --------------------------
 
 - Adds support for Python 3.10.
+- Adds workflow name validation for ``create_workflow_from_json()`` Python API function.
 
 Version 0.8.0 (2021-11-24)
 --------------------------

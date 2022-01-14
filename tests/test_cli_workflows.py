@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -482,7 +482,7 @@ def test_create_workflow_from_json(create_yaml_workflow_schema):
     response = {
         "message": "The workflow has been successfully created.",
         "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac",
-        "workflow_name": "mytest.1",
+        "workflow_name": "mytest",
     }
     env = {"REANA_SERVER_URL": "localhost"}
     reana_token = "000000"

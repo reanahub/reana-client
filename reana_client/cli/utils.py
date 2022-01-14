@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -15,6 +15,7 @@ import sys
 from typing import Callable, NoReturn, Optional, Union
 
 import click
+from reana_commons.validation import validate_workflow_name
 
 from reana_client.config import (
     ERROR_MESSAGES,
@@ -237,19 +238,15 @@ def get_formatted_progress(progress):
     return "{0}/{1}".format(finished_jobs, total_jobs)
 
 
-def validate_workflow_name(ctx, _, workflow_name):
-    """Validate workflow name."""
-    not_allowed_characters = ["."]
-    if workflow_name:
-        for item in not_allowed_characters:
-            if item in workflow_name:
-                display_message(
-                    "Workflow name {} contains illegal "
-                    'character "{}"'.format(workflow_name, item),
-                    msg_type="error",
-                )
-                sys.exit(1)
-    return workflow_name
+def validate_workflow_name_parameter(
+    ctx: click.core.Context, _: click.core.Option, workflow_name: str
+) -> Union[str, NoReturn]:
+    """Validate workflow name parameter."""
+    try:
+        return validate_workflow_name(workflow_name)
+    except ValueError as e:
+        display_message(str(e), msg_type="error")
+        sys.exit(1)
 
 
 def key_value_to_dict(ctx, param, value):

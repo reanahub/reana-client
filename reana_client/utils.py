@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -27,7 +27,7 @@ from reana_commons.serial import serial_load
 from reana_commons.snakemake import snakemake_load
 from reana_commons.yadage import yadage_load
 from reana_commons.utils import get_workflow_status_change_verb
-from reana_commons.workspaces import validate_workspace
+from reana_commons.validation import validate_workspace
 
 from reana_client.config import (
     reana_yaml_schema_file_path,
@@ -137,7 +137,7 @@ def load_reana_spec(
         reana_yaml["workflow"]["specification"] = load_workflow_spec(
             workflow_type,
             reana_yaml["workflow"].get("file"),
-            **_prepare_kwargs(reana_yaml)
+            **_prepare_kwargs(reana_yaml),
         )
 
         if (

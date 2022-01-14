@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -36,7 +36,7 @@ from reana_client.cli.utils import (
     parse_filter_parameters,
     parse_format_parameters,
     requires_environments,
-    validate_workflow_name,
+    validate_workflow_name_parameter,
 )
 from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
 from reana_client.printer import display_message
@@ -294,7 +294,7 @@ def workflow_workflows(  # noqa: C901
     "-w",
     "--workflow",
     default="",
-    callback=validate_workflow_name,
+    callback=validate_workflow_name_parameter,
     help='Optional name of the workflow. [default is "workflow"]',
 )
 @click.option(
@@ -1027,7 +1027,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     "-w",
     "--workflow",
     default="",
-    callback=validate_workflow_name,
+    callback=validate_workflow_name_parameter,
     help='Optional name of the workflow. [default is "workflow"]',
 )
 @click.option(

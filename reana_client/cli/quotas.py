@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -67,7 +67,7 @@ def quota_show(
 ):  # noqa: D301
     """Show user quota.
 
-    The `quota-show` command displays quota usage for the user.
+    The ``quota-show`` command displays quota usage for the user.
 
     Examples: \n
     \t $ reana-client quota-show --resource disk --report limit\n

@@ -26,7 +26,7 @@ REANA-Client
 About
 =====
 
-REANA-Client is a component of the `REANA <http://www.reana.io/>`_ reusable and
+REANA-Client is a component of the `REANA <https://www.reana.io/>`_ reusable and
 reproducible research data analysis platform. It provides a command-line tool
 that allows researchers to submit, run, and manage their computational
 workflows.

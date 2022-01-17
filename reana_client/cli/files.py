@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -74,7 +74,7 @@ def files_group(ctx):
     help="Filter results to show only files that match certain filtering "
     "criteria such as file name, size or modification date."
     "Use `--filter <columm_name>=<column_value>` pairs. "
-    "Available filters are `name`, `size` and `last-modified`.",
+    "Available filters are ``name``, ``size`` and ``last-modified``.",
 )
 @click.argument("filename", metavar="SOURCE", nargs=1, required=False)
 @human_readable_or_raw_option
@@ -95,9 +95,9 @@ def get_files(
 ):  # noqa: D301
     """List workspace files.
 
-    The `ls` command lists workspace files of a workflow specified by the
+    The ``ls`` command lists workspace files of a workflow specified by the
     environment variable REANA_WORKON or provided as a command-line flag
-    `--workflow` or `-w`. The SOURCE argument is optional and specifies a
+    ``--workflow`` or ``-w``. The SOURCE argument is optional and specifies a
     pattern matching files and directories.
 
     Examples: \n
@@ -199,7 +199,7 @@ def download_files(
 ):  # noqa: D301
     """Download workspace files.
 
-    The `download` command allows to download workspace files and directories.
+    The ``download`` command allows to download workspace files and directories.
     By default, the files specified in the workflow specification as outputs
     are downloaded. You can also specify the individual files you would like
     to download, see examples below.
@@ -274,7 +274,7 @@ def download_files(
 def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
     """Upload files and directories to workspace.
 
-    The `upload` command allows to upload workflow input files and
+    The ``upload`` command allows to upload workflow input files and
     directories. The SOURCES argument can be repeated and specifies which files
     and directories are to be uploaded, see examples below. The default
     behaviour is to upload all input files and directories specified in the
@@ -360,7 +360,7 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
 def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
     """Delete files from workspace.
 
-    The `rm` command allow to delete files and directories from workspace.
+    The ``rm`` command allow to delete files and directories from workspace.
     Note that you can use glob to remove similar files.
 
     Examples:\n
@@ -418,7 +418,7 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
 def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
     """Move files within workspace.
 
-    The `mv` command allow to move the files within workspace.
+    The ``mv`` command allow to move the files within workspace.
 
     Examples:\n
     \t $ reana-client mv data/input.txt input/input.txt
@@ -469,7 +469,7 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
     help="Filter results to show only files that match certain filtering "
     "criteria such as file name or size."
     "Use `--filter <columm_name>=<column_value>` pairs. "
-    "Available filters are `name` and `size`.",
+    "Available filters are ``name`` and ``size``.",
 )
 @human_readable_or_raw_option
 @click.pass_context
@@ -478,7 +478,7 @@ def workflow_disk_usage(
 ):  # noqa: D301
     """Get workspace disk usage.
 
-    The `du` command allows to chech the disk usage of given workspace.
+    The ``du`` command allows to chech the disk usage of given workspace.
 
     Examples: \n
     \t $ reana-client du -w myanalysis.42 -s \n

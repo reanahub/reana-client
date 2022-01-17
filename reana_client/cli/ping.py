@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -31,7 +31,7 @@ def configuration_group():
 def ping(ctx, access_token):  # noqa: D301
     """Check connection to REANA server.
 
-    The `ping` command allows to test connection to REANA server.
+    The ``ping`` command allows to test connection to REANA server.
 
     Examples: \n
     \t $ reana-client ping
@@ -76,7 +76,7 @@ def ping(ctx, access_token):  # noqa: D301
 def version(ctx):  # noqa: D301
     """Show version.
 
-    The `version` command shows REANA client version.
+    The ``version`` command shows REANA client version.
 
     Examples: \n
     \t $ reana-client version
@@ -99,7 +99,8 @@ def info(ctx, access_token: str, output_format: str):  # noqa: D301
     """List cluster general information.
 
     The ``info`` command lists general information about the cluster.
-    - Lists all the available workspaces. It also returns the default workspace
+
+    Lists all the available workspaces. It also returns the default workspace
     defined by the admin.
 
     Examples: \n

@@ -736,8 +736,8 @@ def diff_workflows(workflow_id_a, workflow_id_b, brief, access_token, context_li
     :param context_lines: Optional parameter to set the number of
                           context lines shown in the diff output.
     :param access_token: API token of user requesting diff.
-    :returns: A list of dictionaries composed by `asset`, `type`, `lines`,
-        `a` and `b`. Asset refers to the workflow asset where a
+    :returns: A list of dictionaries composed by ``asset``, ``type``, ``lines``,
+        ``a`` and ``b``. Asset refers to the workflow asset where a
         difference was found, type refers to the asset type, lines refer
         to the lines of the file where the differences are and a, b fields
         are the actual lines that differ.

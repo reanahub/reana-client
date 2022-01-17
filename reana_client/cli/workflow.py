@@ -114,7 +114,7 @@ def workflow_execution_group(ctx):
     multiple=True,
     help="Filter workflow that contains certain filtering criteria. "
     "Use `--filter <columm_name>=<column_value>` pairs. "
-    "Available filters are `name` and `status`.",
+    "Available filters are ``name`` and ``status``.",
 )
 @click.option(
     "--include-progress",
@@ -153,9 +153,9 @@ def workflow_workflows(  # noqa: C901
 ):  # noqa: D301
     """List all workflows and sessions.
 
-    The `list` command lists workflows and sessions. By default, the list of
+    The ``list`` command lists workflows and sessions. By default, the list of
     workflows is returned. If you would like to see the list of your open
-    interactive sessions, you need to pass the `--sessions` command-line
+    interactive sessions, you need to pass the ``--sessions`` command-line
     option.
 
     Example: \n
@@ -309,7 +309,7 @@ def workflow_workflows(  # noqa: C901
 def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D301
     """Create a new workflow.
 
-    The `create` command allows to create a new workflow from reana.yaml
+    The ``create`` command allows to create a new workflow from reana.yaml
     specifications file. The file is expected to be located in the current
     working directory, or supplied via command-line -f option, see examples
     below.
@@ -390,12 +390,12 @@ def workflow_start(
 ):  # noqa: D301
     """Start previously created workflow.
 
-    The `start` command allows to start previously created workflow. The
+    The ``start`` command allows to start previously created workflow. The
     workflow execution can be further influenced by passing input prameters
-    using `-p` or `--parameters` flag and by setting additional operational
-    options using `-o` or `--options`.  The input parameters and operational
+    using ``-p`` or ``--parameters`` flag and by setting additional operational
+    options using ``-o`` or ``--options``.  The input parameters and operational
     options can be repetitive. For example, to disable caching for the Serial
-    workflow engine, you can set `-o CACHE=off`.
+    workflow engine, you can set ``-o CACHE=off``.
 
     Examples: \n
     \t $ reana-client start -w myanalysis.42 -p sleeptime=10 -p myparam=4 \n
@@ -515,16 +515,16 @@ def workflow_restart(
 ):  # noqa: D301
     """Restart previously run workflow.
 
-    The `restart` command allows to restart a previous workflow on the same
+    The ``restart`` command allows to restart a previous workflow on the same
     workspace.
 
     Note that workflow restarting can be used in a combination with operational
     options ``FROM`` and ``TARGET``. You can also pass a modified workflow
-    specification with ``-f`` or `--file`` flag.
+    specification with ``-f`` or ``--file`` flag.
 
-    You can furthermore use modified input prameters using `-p` or
-    `--parameters` flag and by setting additional operational options using
-    `-o` or `--options`.  The input parameters and operational options can be
+    You can furthermore use modified input prameters using ``-p`` or
+    ``--parameters`` flag and by setting additional operational options using
+    ``-o`` or ``--options``.  The input parameters and operational options can be
     repetitive.
 
     Examples: \n
@@ -631,7 +631,7 @@ def workflow_status(  # noqa: C901
 ):  # noqa: D301
     """Get status of a workflow.
 
-    The `status` command allow to retrieve status of a workflow. The status can
+    The ``status`` command allow to retrieve status of a workflow. The status can
     be created, queued, running, failed, etc. You can increase verbosity or
     filter retrieved information by passing appropriate command-line options.
 
@@ -776,9 +776,9 @@ def workflow_logs(
     page=None,
     size=None,
 ):  # noqa: D301
-    """Get  workflow logs.
+    """Get workflow logs.
 
-    The `logs` command allows to retrieve logs of running workflow. Note that
+    The ``logs`` command allows to retrieve logs of running workflow. Note that
     only finished steps of the workflow are returned, the logs of the currently
     processed step is not returned until it is finished.
 
@@ -918,7 +918,7 @@ def workflow_validate(
 ):  # noqa: D301
     """Validate workflow specification file.
 
-    The `validate` command allows to check syntax and validate the reana.yaml
+    The ``validate`` command allows to check syntax and validate the reana.yaml
     workflow specification file.
 
     Examples: \n
@@ -977,7 +977,7 @@ def workflow_validate(
 def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     """Stop a running workflow.
 
-    The `stop` command allows to hard-stop the running workflow process. Note
+    The ``stop`` command allows to hard-stop the running workflow process. Note
     that soft-stopping of the workflow is currently not supported. This command
     should be therefore used with care, only if you are absolutely sure that
     there is no point in continuing the running the workflow.
@@ -1070,7 +1070,7 @@ def workflow_run(
 ):  # noqa: D301
     """Shortcut to create, upload, start a new workflow.
 
-    The `run` command allows to create a new workflow, upload its input files
+    The ``run`` command allows to create a new workflow, upload its input files
     and start it in one command.
 
     Examples: \n
@@ -1126,12 +1126,12 @@ def workflow_run(
 def workflow_delete(ctx, workflow, all_runs, workspace, access_token):  # noqa: D301
     """Delete a workflow.
 
-    The `delete` command allows to remove workflow runs from the database and
+    The ``delete`` command allows to remove workflow runs from the database and
     the workspace. By default, the command removes the workflow and all its
     cached information and hides the workflow from the workflow list. Note that
     workflow workspace will still be accessible until you use
-    `--include-workspace` flag. Note also that you can remove all past runs of
-    a workflow by specifying `--include-all-runs` flag.
+    ``--include-workspace`` flag. Note also that you can remove all past runs of
+    a workflow by specifying ``--include-all-runs`` flag.
 
     Example: \n
     \t $ reana-client delete -w myanalysis.42 \n
@@ -1197,7 +1197,7 @@ def workflow_diff(
 ):  # noqa: D301
     """Show diff between two workflows.
 
-    The `diff` command allows to compare two workflows, the workflow_a and
+    The ``diff`` command allows to compare two workflows, the workflow_a and
     workflow_b, which must be provided as arguments. The output will show the
     difference in workflow run parameters, the generated files, the logs, etc.
 
@@ -1294,7 +1294,7 @@ def workflow_open_interactive_session(
 ):  # noqa: D301
     """Open an interactive session inside the workspace.
 
-    The `open` command allows to open interactive session processes on top of
+    The ``open`` command allows to open interactive session processes on top of
     the workflow workspace, such as Jupyter notebooks. This is useful to
     quickly inspect and analyse the produced files while the workflow is stlil
     running.
@@ -1348,7 +1348,7 @@ def workflow_open_interactive_session(
 def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
     """Close an interactive session.
 
-    The `close` command allows to shut down any interactive sessions that you
+    The ``close`` command allows to shut down any interactive sessions that you
     may have running. You would typically use this command after you finished
     exploring data in the Jupyter notebook and after you have transferred any
     code created in your interactive session.

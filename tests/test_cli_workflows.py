@@ -600,7 +600,7 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
 
 
 def test_workflows_validate(create_yaml_workflow_schema):
-    """Test validation of REANA specifications file."""
+    """Test validation of REANA specification file."""
     message = "Valid REANA specification file"
     env = {"REANA_SERVER_URL": "localhost"}
     reana_token = "000000"

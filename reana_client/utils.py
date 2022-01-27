@@ -15,7 +15,7 @@ import os
 import subprocess
 import sys
 import traceback
-from typing import NoReturn
+from typing import Dict
 from uuid import UUID
 
 import click
@@ -27,7 +27,6 @@ from reana_commons.serial import serial_load
 from reana_commons.snakemake import snakemake_load
 from reana_commons.yadage import yadage_load
 from reana_commons.utils import get_workflow_status_change_verb
-from reana_commons.validation import validate_workspace
 
 from reana_client.config import (
     reana_yaml_schema_file_path,
@@ -36,6 +35,8 @@ from reana_client.config import (
 from reana_client.printer import display_message
 from reana_client.validation.environments import validate_environment
 from reana_client.validation.parameters import validate_parameters
+from reana_client.validation.compute_backends import validate_compute_backends
+from reana_client.validation.workspace import _validate_workspace
 
 
 def workflow_uuid_or_name(ctx, param, value):
@@ -151,19 +152,15 @@ def load_reana_spec(
         if not skip_validation:
             validate_parameters(workflow_type, reana_yaml)
 
+            if server_capabilities:
+                _validate_server_capabilities(reana_yaml, access_token)
+
         if not skip_validate_environments:
             display_message(
                 "Verifying environments in REANA specification file...",
                 msg_type="info",
             )
             validate_environment(reana_yaml, pull=pull_environment_image)
-
-        if server_capabilities:
-            root_path = reana_yaml.get("workspace", {}).get("root_path")
-            display_message(
-                "Verifying workspace in REANA specification file...", msg_type="info",
-            )
-            _validate_workspace(root_path, access_token)
 
         if workflow_type == "yadage":
             # We don't send the loaded Yadage workflow spec to the cluster as
@@ -187,7 +184,7 @@ def load_reana_spec(
 def _validate_reana_yaml(reana_yaml):
     """Validate REANA specification file according to jsonschema.
 
-    :param reana_yaml: Dictionary which represents REANA specifications file.
+    :param reana_yaml: Dictionary which represents REANA specification file.
     :raises ValidationError: Given REANA spec file does not validate against
         REANA specification schema.
     """
@@ -416,32 +413,22 @@ def run_command(cmd, display=True, return_output=False, stderr_output=False):
         sys.exit(err.returncode)
 
 
-def _validate_workspace(root_path: str, access_token: str) -> NoReturn:
-    """Validate workspace in REANA specification file.
+def _validate_server_capabilities(reana_yaml: Dict, access_token: str) -> None:
+    """Validate server capabilities in REANA specification file.
 
-    :param root_path: workspace root path to be validated.
+    :param reana_yaml: dictionary which represents REANA specification file.
     :param access_token: access token of the current user.
-
-    :raises ValidationError: Given workspace in REANA spec file does not validate against
-        allowed workspaces.
     """
     from reana_client.api.client import info
 
-    if not root_path:
-        display_message(
-            "Workspace not found in REANA specification file. Validation skipped.",
-            msg_type="warning",
-            indented=True,
-        )
-    else:
-        available_workspaces = (
-            info(access_token).get("workspaces_available", {}).get("value")
-        )
-        try:
-            validate_workspace(root_path, available_workspaces)
-            display_message(
-                "Workflow workspace appears valid.", msg_type="success", indented=True,
-            )
-        except REANAValidationError as e:
-            display_message(e.message, msg_type="error")
-            sys.exit(1)
+    info_response = info(access_token)
+
+    display_message(
+        "Verifying compute backends in REANA specification file...", msg_type="info",
+    )
+    supported_backends = info_response.get("compute_backends", {}).get("value")
+    validate_compute_backends(reana_yaml, supported_backends)
+
+    root_path = reana_yaml.get("workspace", {}).get("root_path")
+    available_workspaces = info_response.get("workspaces_available", {}).get("value")
+    _validate_workspace(root_path, available_workspaces)

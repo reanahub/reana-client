@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2020, 2021 CERN.
+# Copyright (C) 2017, 2018, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -147,4 +147,69 @@ def cwl_workflow_spec_wrong_input_param():
             outputBinding:
               glob: $(inputs.outputfile)
         """
+    return cwl_workflow_spec
+
+
+@pytest.fixture()
+def cwl_workflow_spec_loaded():
+    """Return dummy CWL workflow loaded spec."""
+    cwl_workflow_spec = {
+        "workflow": {
+            "type": "cwl",
+            "specification": {
+                "$graph": [
+                    {
+                        "class": "Workflow",
+                        "inputs": [
+                            {
+                                "type": "string",
+                                "inputBinding": {"prefix": "--outputfile"},
+                                "id": "#main/outputfile",
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "type": "File",
+                                "outputSource": "#main/first/result",
+                                "id": "#main/result",
+                            }
+                        ],
+                        "steps": [
+                            {
+                                "run": "#test.tool",
+                                "in": [
+                                    {
+                                        "source": "#main/outputfile",
+                                        "id": "#main/first/outputfile",
+                                    }
+                                ],
+                                "out": ["#main/first/result"],
+                                "id": "#main/first",
+                            }
+                        ],
+                        "id": "#main",
+                    },
+                    {
+                        "class": "CommandLineTool",
+                        "baseCommand": "python",
+                        "inputs": [
+                            {
+                                "type": "string",
+                                "inputBinding": {"prefix": "--outputfile"},
+                                "id": "#test.tool/outputfile",
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "type": "File",
+                                "outputBinding": {"glob": "$(inputs.outputfile)"},
+                                "id": "#test.tool/result",
+                            }
+                        ],
+                        "id": "#test.tool",
+                    },
+                ]
+            },
+        }
+    }
     return cwl_workflow_spec

@@ -336,6 +336,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
             click.format_filename(file),
             access_token=access_token,
             skip_validation=skip_validation,
+            server_capabilities=True,
         )
         logging.info("Connecting to {0}".format(get_api_url()))
         response = create_workflow(reana_specification, name, access_token)

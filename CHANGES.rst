@@ -7,6 +7,7 @@ Version 0.8.1 (UNRELEASED)
 - Adds support for creating reana-client standalone AppImage executables.
 - Adds support for Python 3.10.
 - Adds workflow name validation for ``create_workflow_from_json()`` Python API function.
+- Fixes formatting of error messages and sets appropriate exit status codes.
 
 Version 0.8.0 (2021-11-24)
 --------------------------

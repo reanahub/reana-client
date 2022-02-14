@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2019, 2020, 2021 CERN.
+# Copyright (C) 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -88,6 +88,7 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
         display_message(
             "Something went wrong while uploading secrets", msg_type="error",
         )
+        sys.exit(1)
     else:
         display_message(
             "Secrets {} were successfully uploaded.".format(", ".join(secrets_.keys())),
@@ -117,11 +118,13 @@ def secrets_delete(secrets, access_token):  # noqa: D301
             ),
             msg_type="error",
         )
+        sys.exit(1)
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         display_message(
             "Something went wrong while deleting secrets", msg_type="error",
         )
+        sys.exit(1)
     else:
         display_message(
             "Secrets {} were successfully deleted.".format(", ".join(deleted_secrets)),
@@ -153,3 +156,4 @@ def secrets_list(access_token):  # noqa: D301
         display_message(
             "Something went wrong while listing secrets", msg_type="error",
         )
+        sys.exit(1)

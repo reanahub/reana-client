@@ -129,3 +129,4 @@ def quota_show(
             "Something went wrong while retrieving quota related data",
             msg_type="error",
         )
+        sys.exit(1)

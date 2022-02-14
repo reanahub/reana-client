@@ -146,6 +146,7 @@ def test_workflows_sessions():
                 "size": {"raw": 0, "human_readable": "0 Bytes"},
                 "status": "created",
                 "user": "00000000-0000-0000-0000-000000000000",
+                "session_status": "created",
             }
         ]
     }
@@ -178,6 +179,7 @@ def test_workflows_valid_json():
                 "name": "mytest.1",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
                 "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "progress": {},
             }
         ]
     }
@@ -586,6 +588,13 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
     mock_api_client.api.get_workflow_status.return_value = Mock(
         result=mock_get_workflow_status_result
     )
+
+    # Also need to mock API calls made by get_files
+    get_files_response = {"items": []}
+    mock_get_files_result = Mock(return_value=(get_files_response, mock_http_response))
+    mock_api_client.api.get_files.return_value = Mock(result=mock_get_files_result)
+    mock_api_client.swagger_spec.spec_dict = {"paths": {}}
+
     reana_token = "000000"
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)

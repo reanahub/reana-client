@@ -180,6 +180,7 @@ def get_files(
                 " for workflow {0}:\n{1}".format(workflow, str(e)),
                 msg_type="error",
             )
+            sys.exit(1)
 
 
 @files_group.command("download")
@@ -215,13 +216,25 @@ def download_files(
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
 
     if not filenames:
-        reana_spec = get_workflow_specification(workflow, access_token)["specification"]
+        try:
+            reana_spec = get_workflow_specification(workflow, access_token)[
+                "specification"
+            ]
+        except Exception as e:
+            logging.debug(str(e), exc_info=True)
+            display_message(
+                "Workflow {} could not be retrieved: {}".format(workflow, e),
+                msg_type="error",
+            )
+            sys.exit(1)
+
         if "outputs" in reana_spec:
             filenames = []
             filenames += reana_spec["outputs"].get("files", [])
             filenames += reana_spec["outputs"].get("directories", [])
 
     if workflow:
+        download_failed = False
         for file_name in filenames:
             try:
                 binary_file, file_name = download_file(
@@ -251,6 +264,7 @@ def download_files(
                     "File {0} could not be written.".format(file_name),
                     msg_type="error",
                 )
+                download_failed = True
             except Exception as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
@@ -258,6 +272,9 @@ def download_files(
                     "File {0} could not be downloaded: {1}".format(file_name, e),
                     msg_type="error",
                 )
+                download_failed = True
+        if download_failed:
+            sys.exit(1)
 
 
 @files_group.command("upload")
@@ -290,7 +307,18 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     if not filenames:
-        reana_spec = get_workflow_specification(workflow, access_token)["specification"]
+        try:
+            reana_spec = get_workflow_specification(workflow, access_token)[
+                "specification"
+            ]
+        except Exception as e:
+            logging.debug(str(e), exc_info=True)
+            display_message(
+                "Workflow {} could not be retrieved: {}".format(workflow, e),
+                msg_type="error",
+            )
+            sys.exit(1)
+
         if "inputs" in reana_spec:
             filenames = []
             filenames += [
@@ -304,6 +332,7 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
 
     if workflow:
         if filenames:
+            upload_failed = False
             for filename in filenames:
                 try:
                     response = upload_to_server(workflow, filename, access_token)
@@ -327,18 +356,7 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
                         "{0} does not exist.".format(filename),
                         msg_type="error",
                     )
-                    if "invoked_by_subcommand" in ctx.parent.__dict__:
-                        sys.exit(1)
-                except FileUploadError as e:
-                    logging.debug(traceback.format_exc())
-                    logging.debug(str(e))
-                    display_message(
-                        "Something went wrong while uploading {0}.\n"
-                        "{1}".format(filename, str(e)),
-                        msg_type="error",
-                    )
-                    if "invoked_by_subcommand" in ctx.parent.__dict__:
-                        sys.exit(1)
+                    upload_failed = True
                 except Exception as e:
                     logging.debug(traceback.format_exc())
                     logging.debug(str(e))
@@ -347,8 +365,9 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
                         "{}".format(filename, str(e)),
                         msg_type="error",
                     )
-                    if "invoked_by_subcommand" in ctx.parent.__dict__:
-                        sys.exit(1)
+                    upload_failed = True
+            if upload_failed:
+                sys.exit(1)
 
 
 @files_group.command("rm")
@@ -374,6 +393,7 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
 
     if workflow:
+        delete_failed = False
         for filename in filenames:
             try:
                 response = delete_file(workflow, filename, access_token)
@@ -389,14 +409,14 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
                         "{}".format(file_, response["failed"][file_]["error"]),
                         msg_type="error",
                     )
+                    delete_failed = True
                 if freed_space:
                     display_message(
                         f"{freed_space} bytes freed up.", msg_type="success"
                     )
             except FileDeletionError as e:
                 display_message(str(e), msg_type="error")
-                if "invoked_by_subcommand" in ctx.parent.__dict__:
-                    sys.exit(1)
+                delete_failed = True
             except Exception as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
@@ -404,8 +424,9 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
                     "Something went wrong while deleting {}".format(filename),
                     msg_type="error",
                 )
-                if "invoked_by_subcommand" in ctx.parent.__dict__:
-                    sys.exit(1)
+                delete_failed = True
+        if delete_failed:
+            sys.exit(1)
 
 
 @files_group.command("mv")
@@ -455,6 +476,7 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
             display_message("Something went wrong. {}".format(e), msg_type="error")
+            sys.exit(1)
 
 
 @files_group.command("du")
@@ -518,3 +540,4 @@ def workflow_disk_usage(
             display_message(
                 "Disk usage could not be retrieved: \n{}".format(e), msg_type="error",
             )
+            sys.exit(1)

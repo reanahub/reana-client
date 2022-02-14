@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -24,7 +24,7 @@ def test_list_files_server_not_reachable():
     reana_token = "000000"
     message = "REANA client is not connected to any REANA cluster."
     runner = CliRunner()
-    result = runner.invoke(cli, ["ls", "-t", reana_token])
+    result = runner.invoke(cli, ["ls", "-t", reana_token, "-w", "workflow.1"])
     assert result.exit_code == 1
     assert message in result.output
 
@@ -34,7 +34,7 @@ def test_list_files_server_no_token():
     message = "Please provide your access token"
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    result = runner.invoke(cli, ["ls"])
+    result = runner.invoke(cli, ["ls", "-w", "workflow.1"])
     assert result.exit_code == 1
     assert message in result.output
 
@@ -185,7 +185,7 @@ def test_delete_file():
                 result = runner.invoke(
                     cli, ["rm", "-t", reana_token, "--workflow", "mytest.1", filename1]
                 )
-                assert result.exit_code == 0
+                assert result.exit_code == 1
                 assert message1 in result.output
                 assert filename2_error_message in result.output
 
@@ -212,7 +212,7 @@ def test_delete_non_existing_file():
                 result = runner.invoke(
                     cli, ["rm", "-t", reana_token, "--workflow", "mytest.1", filename]
                 )
-                assert result.exit_code == 0
+                assert result.exit_code == 1
                 assert message in result.output
 
 

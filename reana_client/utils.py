@@ -48,6 +48,7 @@ def workflow_uuid_or_name(ctx, param, value):
             "environment variable",
             msg_type="error",
         )
+        sys.exit(1)
     else:
         return value
 
@@ -324,6 +325,7 @@ def parse_secret_from_literal(literal):
             'For literal strings use "SECRET_NAME=VALUE" format'.format(literal),
             msg_type="error",
         )
+        sys.exit(1)
 
 
 def parse_secret_from_path(path):
@@ -350,6 +352,7 @@ def parse_secret_from_path(path):
             "File {0} could not be uploaded: {0} does not exist.".format(path),
             msg_type="error",
         )
+        sys.exit(1)
 
 
 def get_api_url():

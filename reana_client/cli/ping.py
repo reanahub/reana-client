@@ -9,6 +9,7 @@
 
 import json
 import logging
+import sys
 import traceback
 
 import click
@@ -42,7 +43,8 @@ def ping(ctx, access_token):  # noqa: D301
 
         logging.info("Connecting to {0}".format(get_api_url()))
         response = rs_ping(access_token)
-        msg_color = "red" if response.get("error") else "green"
+        error = response.get("error")
+        msg_color = "red" if error else "green"
         click.secho(
             "REANA server: {0}\n"
             "REANA server version: {1}\n"
@@ -59,7 +61,8 @@ def ping(ctx, access_token):  # noqa: D301
             fg=msg_color,
         )
         logging.debug("Server response:\n{}".format(response))
-
+        if error:
+            sys.exit(1)
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))

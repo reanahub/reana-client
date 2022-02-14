@@ -13,6 +13,7 @@ The list of contributors in alphabetical order:
 - `Harri Hirvonsalo <https://orcid.org/0000-0002-5503-510X>`_
 - `Jan Okraska <https://orcid.org/0000-0002-1416-3244>`_
 - `Leticia Wanderley <https://orcid.org/0000-0003-4649-6630>`_
+- `Marco Donadoni <https://orcid.org/0000-0003-2922-5505>`_
 - `Marco Vidal <https://orcid.org/0000-0002-9363-4971>`_
 - `Matthew Feickert <https://orcid.org/0000-0003-4124-7862>`_
 - `Rokas Maciulaitis <https://orcid.org/0000-0003-1064-6967>`_

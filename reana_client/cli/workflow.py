@@ -277,6 +277,7 @@ def workflow_workflows(  # noqa: C901
             "Workflow list could not be retrieved: \n{}".format(str(e)),
             msg_type="error",
         )
+        sys.exit(1)
 
 
 @workflow_management_group.command("create")
@@ -331,6 +332,8 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
     # could be made between the name and actual UUID of workflow.
     if is_uuid_v4(name):
         display_message("Workflow name cannot be a valid UUIDv4", msg_type="error")
+        sys.exit(1)
+
     try:
         reana_specification = load_reana_spec(
             click.format_filename(file),
@@ -350,8 +353,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         display_message(
             "Cannot create workflow {}: \n{}".format(name, str(e)), msg_type="error"
         )
-        if "invoked_by_subcommand" in ctx.parent.__dict__:
-            sys.exit(1)
+        sys.exit(1)
 
 
 @workflow_execution_group.command("start")
@@ -436,6 +438,7 @@ def workflow_start(
                     "{0} \n{1}".format(parameters, str(e)),
                     msg_type="error",
                 )
+                sys.exit(1)
         try:
             logging.info("Connecting to {0}".format(get_api_url()))
             response = start_workflow(workflow, access_token, parsed_parameters)
@@ -475,8 +478,7 @@ def workflow_start(
                 "Cannot start workflow {}: \n{}".format(workflow, str(e)),
                 msg_type="error",
             )
-            if "invoked_by_subcommand" in ctx.parent.__dict__:
-                sys.exit(1)
+            sys.exit(1)
 
 
 @workflow_execution_group.command("restart")
@@ -587,6 +589,7 @@ def workflow_restart(
                     "{0} \n{1}".format(parameters, str(e)),
                     msg_type="error",
                 )
+                sys.exit(1)
         try:
             logging.info("Connecting to {0}".format(get_api_url()))
             response = start_workflow(workflow, access_token, parsed_parameters)
@@ -603,8 +606,7 @@ def workflow_restart(
                 "Cannot start workflow {}: \n{}".format(workflow, str(e)),
                 msg_type="error",
             )
-            if "invoked_by_subcommand" in ctx.parent.__dict__:
-                sys.exit(1)
+            sys.exit(1)
 
 
 @workflow_execution_group.command("status")
@@ -752,6 +754,7 @@ def workflow_status(  # noqa: C901
                 "{}".format(workflow, str(e)),
                 msg_type="error",
             )
+            sys.exit(1)
 
 
 @workflow_execution_group.command("logs")
@@ -879,6 +882,7 @@ def workflow_logs(
                 "{}".format(workflow, str(e)),
                 msg_type="error",
             )
+            sys.exit(1)
 
 
 @workflow_execution_group.command("validate")
@@ -1011,6 +1015,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
                 "Cannot stop workflow {}: \n{}".format(workflow, str(e)),
                 msg_type="error",
             )
+            sys.exit(1)
 
 
 @workflow_execution_group.command("run")
@@ -1165,6 +1170,7 @@ def workflow_delete(ctx, workflow, all_runs, workspace, access_token):  # noqa: 
                 "Cannot delete workflow {} \n{}".format(workflow, str(e)),
                 msg_type="error",
             )
+            sys.exit(1)
 
 
 @workflow_management_group.command("diff")
@@ -1265,6 +1271,7 @@ def workflow_diff(
             "Something went wrong when trying to get diff:\n{}".format(str(e)),
             msg_type="error",
         )
+        sys.exit(1)
 
 
 @click.group(help="Workspace interactive commands")
@@ -1338,6 +1345,7 @@ def workflow_open_interactive_session(
                 "Interactive session could not be opened: \n{}".format(str(e)),
                 msg_type="error",
             )
+            sys.exit(1)
     else:
         display_message("Cannot find workflow {}".format(workflow), msg_type="error")
 
@@ -1375,5 +1383,6 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
                 "Interactive session could not be closed: \n{}".format(str(e)),
                 msg_type="error",
             )
+            sys.exit(1)
     else:
         display_message("Cannot find workflow {} ".format(workflow), msg_type="error")

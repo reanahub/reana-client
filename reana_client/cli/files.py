@@ -7,11 +7,13 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client output related commands."""
 
+import io
 import json
 import logging
 import os
 import sys
 import traceback
+import zipfile
 
 import click
 from reana_commons.utils import click_table_printer
@@ -28,7 +30,7 @@ from reana_client.cli.utils import (
     parse_filter_parameters,
     parse_format_parameters,
 )
-from reana_client.config import JSON, URL
+from reana_client.config import JSON, STD_OUTPUT_CHAR, URL
 from reana_client.errors import FileDeletionError, FileUploadError
 
 FILES_BLACKLIST = (".git/", "/.git/")
@@ -191,7 +193,8 @@ def get_files(
     "-o",
     "--output-directory",
     default=os.getcwd(),
-    help="Path to the directory where files will be downloaded.",
+    help="Path to the directory where files will be downloaded. "
+    "If ``-`` is specified as path, the files will be written to the standard output.",
 )
 @add_access_token_options
 @click.pass_context
@@ -207,9 +210,25 @@ def download_files(
 
     Examples: \n
     \t $ reana-client download # download all output files \n
-    \t $ reana-client download mydata.tmp outputs/myplot.png
+    \t $ reana-client download mydata.tmp outputs/myplot.png \n
+    \t $ reana-client download -o - data.txt # write data.txt to stdout
     """
     from reana_client.api.client import download_file, get_workflow_specification
+
+    def display_files_content(binary_file: bytes, multiple_files_zipped: bool) -> None:
+        """Write file(s) content to the standard output.
+
+        :param binary_file: The file(s) to print to the standard output.
+        :param multiple_files_zipped: Flag to determine if ``binary_file`` is a single
+            file or a zip archive containing multiple files.
+        """
+        if multiple_files_zipped:
+            with zipfile.ZipFile(io.BytesIO(binary_file)) as zip_file:
+                for entry in zip_file.infolist():
+                    if not entry.is_dir():
+                        click.echo(zip_file.read(entry), nl=False)
+        else:
+            click.echo(binary_file, nl=False)
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -237,7 +256,7 @@ def download_files(
         download_failed = False
         for file_name in filenames:
             try:
-                binary_file, file_name = download_file(
+                binary_file, file_name, multiple_files_zipped = download_file(
                     workflow, file_name, access_token
                 )
 
@@ -247,16 +266,19 @@ def download_files(
                     )
                 )
 
-                outputs_file_path = os.path.join(output_directory, file_name)
-                if not os.path.exists(os.path.dirname(outputs_file_path)):
-                    os.makedirs(os.path.dirname(outputs_file_path))
+                if output_directory == STD_OUTPUT_CHAR:
+                    display_files_content(binary_file, multiple_files_zipped)
+                else:
+                    outputs_file_path = os.path.join(output_directory, file_name)
+                    if not os.path.exists(os.path.dirname(outputs_file_path)):
+                        os.makedirs(os.path.dirname(outputs_file_path))
 
-                with open(outputs_file_path, "wb") as f:
-                    f.write(binary_file)
-                display_message(
-                    "File {0} downloaded to {1}.".format(file_name, output_directory),
-                    msg_type="success",
-                )
+                    with open(outputs_file_path, "wb") as f:
+                        f.write(binary_file)
+                    display_message(
+                        f"File {file_name} downloaded to {output_directory}.",
+                        msg_type="success",
+                    )
             except OSError as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))

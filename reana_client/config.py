@@ -82,3 +82,6 @@ JOB_STATUS_TO_MSG_COLOR = {
     "finished": "green",
     "running": "bright_blue",
 }
+
+STD_OUTPUT_CHAR = "-"
+"""Character used to refer to the standard output."""

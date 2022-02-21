@@ -9,8 +9,10 @@
 """REANA client files tests."""
 
 import hashlib
+import io
 import json
 import os
+import zipfile
 
 from click.testing import CliRunner
 from mock import Mock, patch
@@ -114,7 +116,8 @@ def test_download_file():
     mock_http_response.status_code = status_code
     mock_http_response.content = str(response).encode()
     mock_http_response.headers = {
-        "Content-Disposition": "attachment; filename={}".format(file)
+        "Content-Disposition": "attachment; filename={}".format(file),
+        "Content-Type": "multipart/form-data",
     }
     mock_requests = Mock()
     mock_requests.get = Mock(return_value=mock_http_response)
@@ -134,6 +137,86 @@ def test_download_file():
             assert file_md5 == response_md5
             assert message in result.output
             os.remove(file)
+
+
+def test_download_file_stdout():
+    """Test writing a single file to stdout."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    filename = "dummy_file.txt"
+    file_content = "Content of file to download"
+    mock_http_response = Mock()
+    mock_http_response.status_code = 200
+    mock_http_response.content = file_content.encode()
+    mock_http_response.headers = {
+        "Content-Disposition": "attachment; filename={}".format(filename),
+        "Content-Type": "multipart/form-data",
+    }
+    mock_requests = Mock()
+    mock_requests.get = Mock(return_value=mock_http_response)
+
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch("reana_client.api.client.requests", mock_requests):
+            result = runner.invoke(
+                cli,
+                [
+                    "download",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "mytest.1",
+                    filename,
+                    "-o",
+                    "-",
+                ],
+            )
+            assert result.exit_code == 0
+            assert result.output == file_content
+
+
+def test_download_multiple_files_stdout():
+    """Test writing multiple files to stdout."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    files = [
+        ("dir1/dummy1.txt", "Content of dummy1.txt"),
+        ("dir1/dummy2.txt", "Content of dummy2.txt"),
+    ]
+    # Create zip file
+    return_file = io.BytesIO()
+    with zipfile.ZipFile(return_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for filename, content in files:
+            zip_file.writestr(filename, content)
+
+    mock_http_response = Mock()
+    mock_http_response.status_code = 200
+    mock_http_response.content = return_file.getvalue()
+    mock_http_response.headers = {
+        "Content-Disposition": "attachment; filename=files.zip",
+        "Content-Type": "application/zip",
+    }
+    mock_requests = Mock()
+    mock_requests.get = Mock(return_value=mock_http_response)
+
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch("reana_client.api.client.requests", mock_requests):
+            result = runner.invoke(
+                cli,
+                [
+                    "download",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "mytest.1",
+                    "-o",
+                    "-",
+                    "dir1",
+                ],
+            )
+            assert result.exit_code == 0
+            assert result.output == "".join([content for _, content in files])
 
 
 def test_upload_file(create_yaml_workflow_schema):

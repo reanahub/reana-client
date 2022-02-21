@@ -402,7 +402,8 @@ def download_file(workflow, file_name, access_token):
     :param workflow: name or id which identifies the workflow.
     :param file_name: file name or path to the file requested.
     :param access_token: access token of the current user.
-    :return: Tuple containing file binary content and filename.
+    :return: Tuple containing file binary content, filename and whether
+        the returned file is a zip archive containing multiple files.
     """
     try:
         from reana_client.utils import get_api_url
@@ -421,8 +422,13 @@ def download_file(workflow, file_name, access_token):
             value, params = cgi.parse_header(content_disposition)
             file_name = params.get("filename", "downloaded_file")
 
+        # A zip archive is downloaded if multiple files are requested
+        multiple_files_zipped = (
+            http_response.headers.get("Content-Type") == "application/zip"
+        )
+
         if http_response.status_code == 200:
-            return http_response.content, file_name
+            return http_response.content, file_name, multiple_files_zipped
         else:
             raise Exception(
                 "Error {status_code} {reason} {message}".format(

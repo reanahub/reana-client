@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -21,8 +21,9 @@ from bravado.exception import HTTPServerError
 from cwltool.load_tool import fetch_document
 from cwltool.main import printdeps
 
+from reana_commons.specification import load_workflow_spec
+
 from reana_client.cli.utils import add_access_token_options
-from reana_client.utils import load_workflow_spec
 from reana_client.version import __version__
 
 

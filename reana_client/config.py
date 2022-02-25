@@ -1,22 +1,15 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client configuration."""
 
 
-import pkg_resources
-
 reana_yaml_valid_file_names = ["reana.yaml", "reana.yml"]
 """REANA specification valid file names."""
-
-reana_yaml_schema_file_path = pkg_resources.resource_filename(
-    __name__, "schemas/reana_analysis_schema.json"
-)
-"""REANA specification schema location."""
 
 default_user = "00000000-0000-0000-0000-000000000000"
 """Default user to use when submitting workflows to REANA Server."""
@@ -61,9 +54,6 @@ GITLAB_CERN_REGISTRY_INDEX_URL = (
 
 GITLAB_CERN_REGISTRY_PREFIX = "gitlab-registry.cern.ch"
 """Prefix for GitLab image registry at CERN."""
-
-COMMAND_DANGEROUS_OPERATIONS = ["sudo ", "cd /"]
-"""Operations in workflow commands considered dangerous."""
 
 PRINTER_COLOUR_SUCCESS = "green"
 """Default colour for success messages on terminal."""

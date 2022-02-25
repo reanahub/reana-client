@@ -18,7 +18,7 @@ import click
 from jsonschema.exceptions import ValidationError
 from reana_commons.config import INTERACTIVE_SESSION_TYPES, REANA_COMPUTE_BACKENDS
 from reana_commons.errors import REANAValidationError
-from reana_commons.operational_options import validate_operational_options
+from reana_commons.validation.operational_options import validate_operational_options
 from reana_commons.utils import click_table_printer
 
 from reana_client.cli.files import get_files, upload_files
@@ -36,7 +36,6 @@ from reana_client.cli.utils import (
     parse_filter_parameters,
     parse_format_parameters,
     requires_environments,
-    validate_workflow_name_parameter,
 )
 from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
 from reana_client.printer import display_message
@@ -45,9 +44,12 @@ from reana_client.utils import (
     get_workflow_name_and_run_number,
     get_workflow_status_change_msg,
     is_uuid_v4,
-    load_reana_spec,
-    validate_input_parameters,
+    load_validate_reana_spec,
     workflow_uuid_or_name,
+)
+from reana_client.validation.utils import (
+    validate_input_parameters,
+    validate_workflow_name_parameter,
 )
 
 
@@ -335,7 +337,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         sys.exit(1)
 
     try:
-        reana_specification = load_reana_spec(
+        reana_specification = load_validate_reana_spec(
             click.format_filename(file),
             access_token=access_token,
             skip_validation=skip_validation,
@@ -553,7 +555,7 @@ def workflow_restart(
         "restart": True,
     }
     if file:
-        parsed_parameters["reana_specification"] = load_reana_spec(
+        parsed_parameters["reana_specification"] = load_validate_reana_spec(
             click.format_filename(file)
         )
     if workflow:
@@ -939,7 +941,7 @@ def workflow_validate(
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     try:
-        load_reana_spec(
+        load_validate_reana_spec(
             click.format_filename(file),
             access_token=access_token,
             skip_validate_environments=not environments,

@@ -51,7 +51,7 @@ from reana_client.config import ERROR_MESSAGES
         (
             True,
             ["validate", "-t", "00000", "--server-capabilities"],
-            'Desired workspace "/var/reana" not valid.',
+            'Desired workspace "/var/reana" is not valid.',
             1,
             ["/foo/reana", "/bar/reana"],
         ),

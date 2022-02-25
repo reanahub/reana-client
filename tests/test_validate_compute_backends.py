@@ -11,13 +11,15 @@
 import pytest
 import yaml
 
-from reana_client.validation.compute_backends import (
-    SerialComputeBackendValidator,
-    YadageComputeBackendValidator,
-    SnakemakeComputeBackendValidator,
-    CWLComputeBackendValidator,
-    validate_compute_backends,
+from reana_commons.errors import REANAValidationError
+from reana_commons.validation.compute_backends import (
+    ComputeBackendValidatorSerial,
+    ComputeBackendValidatorYadage,
+    ComputeBackendValidatorSnakemake,
+    ComputeBackendValidatorCWL,
 )
+
+from reana_client.validation.compute_backends import validate_compute_backends
 
 
 @pytest.mark.parametrize(
@@ -43,13 +45,12 @@ def test_validate_compute_backends_serial(
         captured = capsys.readouterr()
         assert "SUCCESS: Workflow compute backends appear to be valid." in captured.out
     else:
-        validator = SerialComputeBackendValidator(
+        validator = ComputeBackendValidatorSerial(
             workflow_steps=workflow_steps, supported_backends=supported_backends
         )
-        with pytest.raises(SystemExit):
+        with pytest.raises(REANAValidationError) as e:
             validator.validate()
-        captured = capsys.readouterr()
-        assert "is not supported." in captured.err
+        assert "is not supported." in e.value.message
 
 
 @pytest.mark.parametrize(
@@ -77,13 +78,12 @@ def test_validate_compute_backends_yadage(
         captured = capsys.readouterr()
         assert "SUCCESS: Workflow compute backends appear to be valid." in captured.out
     else:
-        validator = YadageComputeBackendValidator(
+        validator = ComputeBackendValidatorYadage(
             workflow_steps=workflow_steps, supported_backends=supported_backends
         )
-        with pytest.raises(SystemExit):
+        with pytest.raises(REANAValidationError) as e:
             validator.validate()
-        captured = capsys.readouterr()
-        assert "is not supported." in captured.err
+        assert "is not supported." in e.value.message
 
 
 @pytest.mark.parametrize(
@@ -109,13 +109,12 @@ def test_validate_compute_backends_snakemake(
         captured = capsys.readouterr()
         assert "SUCCESS: Workflow compute backends appear to be valid." in captured.out
     else:
-        validator = SnakemakeComputeBackendValidator(
+        validator = ComputeBackendValidatorSnakemake(
             workflow_steps=workflow_steps, supported_backends=supported_backends
         )
-        with pytest.raises(SystemExit):
+        with pytest.raises(REANAValidationError) as e:
             validator.validate()
-        captured = capsys.readouterr()
-        assert "is not supported." in captured.err
+        assert "is not supported." in e.value.message
 
 
 @pytest.mark.parametrize(
@@ -141,10 +140,9 @@ def test_validate_compute_backends_cwl(
         captured = capsys.readouterr()
         assert "SUCCESS: Workflow compute backends appear to be valid." in captured.out
     else:
-        validator = CWLComputeBackendValidator(
+        validator = ComputeBackendValidatorCWL(
             workflow_steps=workflow_steps, supported_backends=supported_backends
         )
-        with pytest.raises(SystemExit):
+        with pytest.raises(REANAValidationError) as e:
             validator.validate()
-        captured = capsys.readouterr()
-        assert "is not supported." in captured.err
+        assert "is not supported." in e.value.message

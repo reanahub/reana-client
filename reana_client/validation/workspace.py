@@ -12,7 +12,7 @@ import sys
 from typing import List, Optional
 
 from reana_commons.errors import REANAValidationError
-from reana_commons.validation import validate_workspace
+from reana_commons.validation.utils import validate_workspace
 
 from reana_client.printer import display_message
 

@@ -8,35 +8,18 @@
 """REANA client utils."""
 
 import base64
-import datetime
-import json
 import logging
 import os
-import subprocess
 import sys
 import traceback
-from typing import Dict
 from uuid import UUID
 
-import click
-import yaml
-from jsonschema import ValidationError, validate
-from reana_commons.errors import REANAValidationError
-from reana_commons.operational_options import validate_operational_options
-from reana_commons.serial import serial_load
-from reana_commons.snakemake import snakemake_load
-from reana_commons.yadage import yadage_load
 from reana_commons.utils import get_workflow_status_change_verb
+from reana_commons.specification import load_reana_spec
 
-from reana_client.config import (
-    reana_yaml_schema_file_path,
-    reana_yaml_valid_file_names,
-)
+from reana_client.config import reana_yaml_valid_file_names
 from reana_client.printer import display_message
-from reana_client.validation.environments import validate_environment
-from reana_client.validation.parameters import validate_parameters
-from reana_client.validation.compute_backends import validate_compute_backends
-from reana_client.validation.workspace import _validate_workspace
+from reana_client.validation.utils import validate_reana_spec
 
 
 def workflow_uuid_or_name(ctx, param, value):
@@ -53,41 +36,7 @@ def workflow_uuid_or_name(ctx, param, value):
         return value
 
 
-def cwl_load(workflow_file, **kwargs):
-    """Validate and return cwl workflow specification.
-
-    :param workflow_file: A specification file compliant with
-        `cwl` workflow specification.
-    :returns: A dictionary which represents the valid `cwl` workflow.
-    """
-    result = subprocess.check_output(["cwltool", "--pack", "--quiet", workflow_file])
-    value = result.decode("utf-8")
-    return json.loads(value)
-
-
-def load_workflow_spec(workflow_type, workflow_file, **kwargs):
-    """Validate and return machine readable workflow specifications.
-
-    :param workflow_type: A supported workflow specification type.
-    :param workflow_file: A workflow file compliant with `workflow_type`
-        specification.
-    :returns: A dictionary which represents the valid workflow specification.
-    """
-    workflow_load = {
-        "yadage": yadage_load,
-        "cwl": cwl_load,
-        "serial": serial_load,
-        "snakemake": snakemake_load,
-    }
-
-    """Dictionary to extend with new workflow specification loaders."""
-    load_function = workflow_load.get(workflow_type)
-    if load_function:
-        return load_function(workflow_file, **kwargs)
-    return {}
-
-
-def load_reana_spec(
+def load_validate_reana_spec(
     filepath,
     access_token=None,
     skip_validation=False,
@@ -102,68 +51,19 @@ def load_reana_spec(
         REANA specification.
     """
 
-    def _prepare_kwargs(reana_yaml):
-        kwargs = {}
-        workflow_type = reana_yaml["workflow"]["type"]
-        if workflow_type == "serial":
-            kwargs["specification"] = reana_yaml["workflow"].get("specification")
-            kwargs["parameters"] = reana_yaml.get("inputs", {}).get("parameters", {})
-            kwargs["original"] = True
-        if "options" in reana_yaml.get("inputs", {}):
-            try:
-                reana_yaml["inputs"]["options"] = validate_operational_options(
-                    workflow_type, reana_yaml["inputs"]["options"]
-                )
-            except REANAValidationError as e:
-                display_message(e.message, msg_type="error")
-                sys.exit(1)
-            kwargs.update(reana_yaml["inputs"]["options"])
-        if workflow_type == "snakemake":
-            kwargs["input"] = (
-                reana_yaml.get("inputs", {}).get("parameters", {}).get("input")
-            )
-        return kwargs
-
     try:
-        with open(filepath) as f:
-            reana_yaml = yaml.load(f.read(), Loader=yaml.FullLoader)
-        if not skip_validation:
-            display_message(
-                "Verifying REANA specification file... {filepath}".format(
-                    filepath=filepath
-                ),
-                msg_type="info",
-            )
-            _validate_reana_yaml(reana_yaml)
-        workflow_type = reana_yaml["workflow"]["type"]
-        reana_yaml["workflow"]["specification"] = load_workflow_spec(
-            workflow_type,
-            reana_yaml["workflow"].get("file"),
-            **_prepare_kwargs(reana_yaml),
+        reana_yaml = load_reana_spec(filepath)
+        validate_reana_spec(
+            reana_yaml,
+            filepath,
+            access_token=access_token,
+            skip_validation=skip_validation,
+            skip_validate_environments=skip_validate_environments,
+            pull_environment_image=pull_environment_image,
+            server_capabilities=server_capabilities,
         )
 
-        if (
-            workflow_type == "cwl" or workflow_type == "snakemake"
-        ) and "inputs" in reana_yaml:
-            with open(reana_yaml["inputs"]["parameters"]["input"]) as f:
-                reana_yaml["inputs"]["parameters"] = yaml.load(
-                    f, Loader=yaml.FullLoader
-                )
-
-        if not skip_validation:
-            validate_parameters(workflow_type, reana_yaml)
-
-            if server_capabilities:
-                _validate_server_capabilities(reana_yaml, access_token)
-
-        if not skip_validate_environments:
-            display_message(
-                "Verifying environments in REANA specification file...",
-                msg_type="info",
-            )
-            validate_environment(reana_yaml, pull=pull_environment_image)
-
-        if workflow_type == "yadage":
+        if reana_yaml["workflow"]["type"] == "yadage":
             # We don't send the loaded Yadage workflow spec to the cluster as
             # it may result in inconsistencies between what's displayed in the
             # UI and the actual spec loaded at the workflow engine level.
@@ -171,40 +71,7 @@ def load_reana_spec(
             reana_yaml["workflow"]["specification"] = None
 
         return reana_yaml
-    except IOError as e:
-        logging.info(
-            "Something went wrong when reading specifications file from "
-            "{filepath} : \n"
-            "{error}".format(filepath=filepath, error=e.strerror)
-        )
-        raise e
     except Exception as e:
-        raise e
-
-
-def _validate_reana_yaml(reana_yaml):
-    """Validate REANA specification file according to jsonschema.
-
-    :param reana_yaml: Dictionary which represents REANA specification file.
-    :raises ValidationError: Given REANA spec file does not validate against
-        REANA specification schema.
-    """
-    try:
-        with open(reana_yaml_schema_file_path, "r") as f:
-            reana_yaml_schema = json.loads(f.read())
-            validate(reana_yaml, reana_yaml_schema)
-        display_message(
-            "Valid REANA specification file.", msg_type="success", indented=True,
-        )
-    except IOError as e:
-        logging.info(
-            "Something went wrong when reading REANA validation schema from "
-            "{filepath} : \n"
-            "{error}".format(filepath=reana_yaml_schema_file_path, error=e.strerror)
-        )
-        raise e
-    except ValidationError as e:
-        logging.info("Invalid REANA specification: {error}".format(error=e.message))
         raise e
 
 
@@ -274,19 +141,6 @@ def get_workflow_root():
                 workflow_root = parent_dir
     workflow_root += "/"
     return workflow_root
-
-
-def validate_input_parameters(live_parameters, original_parameters):
-    """Return validated input parameters."""
-    parsed_input_parameters = dict(live_parameters)
-    for parameter in parsed_input_parameters.keys():
-        if parameter not in original_parameters:
-            display_message(
-                "Given parameter - {0}, is not in reana.yaml".format(parameter),
-                msg_type="error",
-            )
-            del live_parameters[parameter]
-    return live_parameters
 
 
 def get_workflow_status_change_msg(workflow, status):
@@ -382,56 +236,3 @@ def get_reana_yaml_file_path():
             return path
     # If none of the valid paths exists, fall back to reana.yaml.
     return "reana.yaml"
-
-
-def run_command(cmd, display=True, return_output=False, stderr_output=False):
-    """Run given command on shell in the current directory.
-
-    Exit in case of troubles.
-
-    :param cmd: shell command to run
-    :param display: should we display command to run?
-    :param return_output: shall the output of the command be returned?
-    :type cmd: str
-    :type display: bool
-    :type return_output: bool
-    """
-    now = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    if display:
-        click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
-        click.secho("{0}".format(cmd), bold=True)
-    try:
-        if return_output:
-            stderr_flag_val = subprocess.STDOUT if stderr_output else None
-            result = subprocess.check_output(cmd, stderr=stderr_flag_val, shell=True)
-            return result.decode().rstrip("\r\n")
-        else:
-            subprocess.check_call(cmd, shell=True)
-    except subprocess.CalledProcessError as err:
-        if display:
-            click.secho("[{0}] ".format(now), bold=True, nl=False, fg="green")
-            click.secho("{0}".format(err), bold=True, fg="red")
-        if stderr_output:
-            sys.exit(err.output.decode())
-        sys.exit(err.returncode)
-
-
-def _validate_server_capabilities(reana_yaml: Dict, access_token: str) -> None:
-    """Validate server capabilities in REANA specification file.
-
-    :param reana_yaml: dictionary which represents REANA specification file.
-    :param access_token: access token of the current user.
-    """
-    from reana_client.api.client import info
-
-    info_response = info(access_token)
-
-    display_message(
-        "Verifying compute backends in REANA specification file...", msg_type="info",
-    )
-    supported_backends = info_response.get("compute_backends", {}).get("value")
-    validate_compute_backends(reana_yaml, supported_backends)
-
-    root_path = reana_yaml.get("workspace", {}).get("root_path")
-    available_workspaces = info_response.get("workspaces_available", {}).get("value")
-    _validate_workspace(root_path, available_workspaces)

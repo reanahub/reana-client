@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2021 CERN.
+# Copyright (C) 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -11,7 +11,7 @@
 import pytest
 
 from reana_client.errors import EnvironmentValidationError
-from reana_client.validation.environments import SerialEnvironmentValidator
+from reana_client.validation.environments import EnvironmentValidatorSerial
 
 
 @pytest.mark.parametrize(
@@ -29,7 +29,7 @@ from reana_client.validation.environments import SerialEnvironmentValidator
 )
 def test_validate_environment_image_tag(image, output, exit_):
     """Validate workflow environment image tags."""
-    validator = SerialEnvironmentValidator()
+    validator = EnvironmentValidatorSerial()
     if exit_:
         with pytest.raises(EnvironmentValidationError) as e:
             validator._validate_image_tag(image)
@@ -49,5 +49,5 @@ def test_validate_environment_image_tag(image, output, exit_):
     ],
 )
 def test_get_full_image_name(image, tag, full_image_name):
-    validator = SerialEnvironmentValidator()
+    validator = EnvironmentValidatorSerial()
     assert validator._get_full_image_name(image, tag) == full_image_name

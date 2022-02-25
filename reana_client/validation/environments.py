@@ -41,16 +41,16 @@ def validate_environment(reana_yaml, pull=False):
         workflow_type = workflow["type"]
         if workflow_type == "serial":
             workflow_steps = workflow["specification"]["steps"]
-            return SerialEnvironmentValidator(workflow_steps=workflow_steps, pull=pull)
+            return EnvironmentValidatorSerial(workflow_steps=workflow_steps, pull=pull)
         if workflow_type == "yadage":
             workflow_steps = workflow["specification"]["stages"]
-            return YadageEnvironmentValidator(workflow_steps=workflow_steps, pull=pull)
+            return EnvironmentValidatorYadage(workflow_steps=workflow_steps, pull=pull)
         if workflow_type == "cwl":
             workflow_steps = workflow.get("specification", {}).get("$graph", workflow)
-            return CWLEnvironmentValidator(workflow_steps=workflow_steps, pull=pull)
+            return EnvironmentValidatorCWL(workflow_steps=workflow_steps, pull=pull)
         if workflow_type == "snakemake":
             workflow_steps = workflow["specification"]["steps"]
-            return SnakemakeEnvironmentValidator(
+            return EnvironmentValidatorSnakemake(
                 workflow_steps=workflow_steps, pull=pull
             )
 
@@ -360,7 +360,7 @@ class EnvironmentValidatorBase:
 
         :returns: A tuple with UID and GIDs.
         """
-        from reana_client.utils import run_command
+        from reana_commons.utils import run_command
 
         # Check if docker is installed.
         run_command("docker version", display=False, return_output=True)
@@ -385,7 +385,7 @@ class EnvironmentValidatorBase:
 
     def _get_local_docker_images(self):
         """Return a list with local docker images."""
-        from reana_client.utils import run_command
+        from reana_commons.utils import run_command
 
         # Check if docker is installed.
         run_command("docker version", display=False, return_output=True)
@@ -397,7 +397,7 @@ class EnvironmentValidatorBase:
         return docker_images.splitlines()
 
 
-class SerialEnvironmentValidator(EnvironmentValidatorBase):
+class EnvironmentValidatorSerial(EnvironmentValidatorBase):
     """REANA serial workflow environments validation."""
 
     def validate_environment(self):
@@ -408,7 +408,7 @@ class SerialEnvironmentValidator(EnvironmentValidatorBase):
             self._validate_environment_image(image, kubernetes_uid=kubernetes_uid)
 
 
-class YadageEnvironmentValidator(EnvironmentValidatorBase):
+class EnvironmentValidatorYadage(EnvironmentValidatorBase):
     """REANA yadage workflow environments validation."""
 
     def _extract_steps_environments(self):
@@ -458,7 +458,7 @@ class YadageEnvironmentValidator(EnvironmentValidatorBase):
                 _check_environment(environment)
 
 
-class CWLEnvironmentValidator(EnvironmentValidatorBase):
+class EnvironmentValidatorCWL(EnvironmentValidatorBase):
     """REANA CWL workflow environments validation."""
 
     def validate_environment(self):
@@ -480,7 +480,7 @@ class CWLEnvironmentValidator(EnvironmentValidatorBase):
                 _validate_workflow_environment(wf)
 
 
-class SnakemakeEnvironmentValidator(EnvironmentValidatorBase):
+class EnvironmentValidatorSnakemake(EnvironmentValidatorBase):
     """REANA Snakemake workflow environments validation."""
 
     def validate_environment(self):

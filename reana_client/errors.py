@@ -19,7 +19,3 @@ class FileDeletionError(Exception):
 
 class EnvironmentValidationError(Exception):
     """REANA workflow environment validation didn't succeed."""
-
-
-class ParameterValidationError(Exception):
-    """REANA workflow parameter validation didn't succeed."""

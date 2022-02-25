@@ -17,14 +17,15 @@ from urllib.parse import urljoin
 
 import requests
 from bravado.exception import HTTPError
-from reana_client.config import ERROR_MESSAGES
-from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import _validate_reana_yaml, is_uuid_v4
-from reana_commons.validation import validate_workflow_name
+from reana_commons.validation.utils import validate_reana_yaml, validate_workflow_name
 from reana_commons.api_client import get_current_api_client
 from reana_commons.config import REANA_WORKFLOW_ENGINES
 from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
 from werkzeug.local import LocalProxy
+
+from reana_client.config import ERROR_MESSAGES
+from reana_client.errors import FileDeletionError, FileUploadError
+from reana_client.utils import is_uuid_v4
 
 current_rs_api_client = LocalProxy(
     partial(get_current_api_client, component="reana-server")
@@ -250,7 +251,7 @@ def create_workflow_from_json(
             reana_yaml["inputs"] = parameters
         if outputs:
             reana_yaml["outputs"] = outputs
-        _validate_reana_yaml(reana_yaml)
+        validate_reana_yaml(reana_yaml)
         reana_specification = reana_yaml
         (response, http_response) = current_rs_api_client.api.create_workflow(
             reana_specification=json.loads(

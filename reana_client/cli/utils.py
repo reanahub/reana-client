@@ -15,7 +15,6 @@ import sys
 from typing import Callable, NoReturn, Optional, Union
 
 import click
-from reana_commons.validation import validate_workflow_name
 
 from reana_client.config import (
     ERROR_MESSAGES,
@@ -236,17 +235,6 @@ def get_formatted_progress(progress):
     total_jobs = progress.get("total", {}).get("total") or "-"
     finished_jobs = progress.get("finished", {}).get("total") or "-"
     return "{0}/{1}".format(finished_jobs, total_jobs)
-
-
-def validate_workflow_name_parameter(
-    ctx: click.core.Context, _: click.core.Option, workflow_name: str
-) -> Union[str, NoReturn]:
-    """Validate workflow name parameter."""
-    try:
-        return validate_workflow_name(workflow_name)
-    except ValueError as e:
-        display_message(str(e), msg_type="error")
-        sys.exit(1)
 
 
 def key_value_to_dict(ctx, param, value):

@@ -5,6 +5,7 @@ Version 0.8.2 (UNRELEASED)
 --------------------------
 
 - Changes ``download`` command to add the possibility to write files to the standard output via ``-o -`` option.
+- Fixes ``start`` and ``run`` commands to correctly follow the execution of the workflow until termination.
 
 Version 0.8.1 (2022-02-15)
 --------------------------

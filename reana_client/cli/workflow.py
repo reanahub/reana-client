@@ -448,7 +448,7 @@ def workflow_start(
                 msg_type="success",
             )
             if follow:
-                while "running" in current_status:
+                while current_status in ["pending", "queued", "running"]:
                     time.sleep(TIMECHECK)
                     current_status = get_workflow_status(workflow, access_token).get(
                         "status"
@@ -457,7 +457,7 @@ def workflow_start(
                         get_workflow_status_change_msg(workflow, current_status),
                         msg_type="success",
                     )
-                    if "finished" in current_status:
+                    if current_status == "finished":
                         if follow:
                             display_message(
                                 "Listing workflow output files...", msg_type="info",
@@ -467,9 +467,10 @@ def workflow_start(
                                 workflow=workflow,
                                 access_token=access_token,
                                 output_format="url",
+                                human_readable_or_raw="raw",
                             )
                         sys.exit(0)
-                    elif "failed" in current_status or "stopped" in current_status:
+                    elif current_status in ["deleted", "failed", "stopped"]:
                         sys.exit(1)
         except Exception as e:
             logging.debug(traceback.format_exc())

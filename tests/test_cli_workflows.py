@@ -544,8 +544,15 @@ def test_workflow_start_successful(status):
 
 @pytest.mark.parametrize(
     "initial_status, final_status, exit_code",
-    [("running", "finished", 0), ("running", "failed", 1), ("running", "stopped", 1)],
+    [
+        ("running", "finished", 0),
+        ("running", "failed", 1),
+        ("running", "stopped", 1),
+        ("queued", "finished", 0),
+        ("pending", "deleted", 1),
+    ],
 )
+@patch("reana_client.cli.workflow.TIMECHECK", 0)
 def test_workflow_start_follow(initial_status, final_status, exit_code):
     """Test start workflow with follow flag."""
     workflow_name = "mytest.1"
@@ -606,6 +613,8 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
             assert result.exit_code == exit_code
             assert initial_expected_message in result.output
             assert final_Expected_message in result.output
+            if final_status == "finished":
+                assert "Listing workflow output files..." in result.output
 
 
 def test_workflows_validate(create_yaml_workflow_schema):

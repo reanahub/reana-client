@@ -19,11 +19,15 @@ readme = open("README.rst").read()
 history = open("CHANGES.rst").read()
 
 tests_require = [
-    "pytest-reana>=0.9.0a2,<0.10.0",
+    "pytest-reana>=0.9.0a3,<0.10.0",
 ]
 
 extras_require = {
-    "docs": ["Sphinx>=1.5.1", "sphinx-rtd-theme>=0.1.9", "sphinx-click>=1.0.4",],
+    "docs": [
+        "Sphinx>=1.5.1",
+        "sphinx-rtd-theme>=0.1.9",
+        "sphinx-click>=1.0.4",
+    ],
     "tests": tests_require,
 }
 
@@ -40,7 +44,7 @@ setup_requires = [
 install_requires = [
     "click>=7",
     "jsonpointer>=2.0",
-    "reana-commons[yadage,snakemake,cwl]>=0.9.0a5,<0.10.0",
+    "reana-commons[yadage,snakemake,cwl]>=0.9.0a6,<0.10.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",
@@ -63,7 +67,9 @@ setup(
     author="REANA",
     author_email="info@reana.io",
     url="https://github.com/reanahub/reana-client",
-    packages=["reana_client",],
+    packages=[
+        "reana_client",
+    ],
     zip_safe=False,
     include_package_data=True,
     entry_points={

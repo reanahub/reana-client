@@ -31,7 +31,9 @@ def validate_compute_backends(
         validator.validate()
     except REANAValidationError as e:
         display_message(
-            str(e), msg_type="error", indented=True,
+            str(e),
+            msg_type="error",
+            indented=True,
         )
         sys.exit(1)
     display_message(

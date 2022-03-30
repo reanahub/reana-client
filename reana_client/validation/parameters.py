@@ -30,7 +30,9 @@ def validate_parameters(reana_yaml: Dict) -> None:
     except REANAValidationError as e:
         display_messages(validator)
         display_message(
-            str(e), msg_type="error", indented=True,
+            str(e),
+            msg_type="error",
+            indented=True,
         )
         sys.exit(1)
 

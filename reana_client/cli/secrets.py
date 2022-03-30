@@ -86,7 +86,8 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         display_message(
-            "Something went wrong while uploading secrets", msg_type="error",
+            "Something went wrong while uploading secrets",
+            msg_type="error",
         )
         sys.exit(1)
     else:
@@ -122,7 +123,8 @@ def secrets_delete(secrets, access_token):  # noqa: D301
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         display_message(
-            "Something went wrong while deleting secrets", msg_type="error",
+            "Something went wrong while deleting secrets",
+            msg_type="error",
         )
         sys.exit(1)
     else:
@@ -154,6 +156,7 @@ def secrets_list(access_token):  # noqa: D301
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         display_message(
-            "Something went wrong while listing secrets", msg_type="error",
+            "Something went wrong while listing secrets",
+            msg_type="error",
         )
         sys.exit(1)

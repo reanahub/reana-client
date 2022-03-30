@@ -95,7 +95,8 @@ def check_connection(func):
         api_url = get_api_url()
         if not api_url:
             display_message(
-                "REANA client is not connected to any REANA cluster.", msg_type="error",
+                "REANA client is not connected to any REANA cluster.",
+                msg_type="error",
             )
             sys.exit(1)
         return func(*args, **kwargs)
@@ -131,7 +132,9 @@ def add_pagination_options(func):
         help="Results page number (to be used with --size).",
     )
     @click.option(
-        "--size", type=int, help="Size of results per page (to be used with --page).",
+        "--size",
+        type=int,
+        help="Size of results per page (to be used with --page).",
     )
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -157,7 +160,8 @@ def parse_format_parameters(_format):
         return parsed_filters
     except ValueError as e:
         display_message(
-            "Wrong filter format \n{0}".format(e.message), msg_type="error",
+            "Wrong filter format \n{0}".format(e.message),
+            msg_type="error",
         )
 
 
@@ -187,7 +191,8 @@ def parse_filter_parameters(filters, filter_names):
                         search_filters[filter_name] = [filter_value]
                 else:
                     display_message(
-                        "Filter {} is not valid.".format(filter_name), msg_type="error",
+                        "Filter {} is not valid.".format(filter_name),
+                        msg_type="error",
                     ),
                     sys.exit(1)
             else:
@@ -201,7 +206,8 @@ def parse_filter_parameters(filters, filter_names):
         return status_filters, search_filters
     except ValueError as e:
         display_message(
-            "Wrong filter format \n{0}".format(e.message), msg_type="error",
+            "Wrong filter format \n{0}".format(e.message),
+            msg_type="error",
         )
 
 
@@ -366,5 +372,6 @@ def output_user_friendly_logs(workflow_logs, steps):
                 click.secho(logs_output)
             else:
                 display_message(
-                    f"Step {job_name_or_id} emitted no logs.", msg_type="info",
+                    f"Step {job_name_or_id} emitted no logs.",
+                    msg_type="info",
                 )

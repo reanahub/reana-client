@@ -91,7 +91,9 @@ class EnvironmentValidatorBase:
         """Display messages in console."""
         for msg in self.messages:
             display_message(
-                msg["message"], msg_type=msg["type"], indented=True,
+                msg["message"],
+                msg_type=msg["type"],
+                indented=True,
             )
 
     def _validate_environment_image(self, image, kubernetes_uid=None):
@@ -339,7 +341,9 @@ class EnvironmentValidatorBase:
                     {
                         "type": "warning",
                         "message": "==> WARNING: Existence of environment image {} in Docker Hub could not be verified. Status code: {} {}".format(
-                            full_image, response.status_code, response.reason,
+                            full_image,
+                            response.status_code,
+                            response.reason,
                         ),
                     }
                 )

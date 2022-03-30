@@ -88,7 +88,10 @@ def upload_files(files, basedir, workflow_id, access_token):
                 for next_path in files + dirs:
                     location = os.path.join(root, next_path).replace(basedir + "/", "")
                     upload_files(
-                        [{"location": location}], basedir, workflow_id, access_token,
+                        [{"location": location}],
+                        basedir,
+                        workflow_id,
+                        access_token,
                     )
         else:
             with open(abs_file_path, "r") as f:

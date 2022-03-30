@@ -477,7 +477,8 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
             current_status = get_workflow_status(workflow, access_token).get("status")
             if current_status == "running":
                 display_message(
-                    "File(s) could not be moved for running workflow", msg_type="error",
+                    "File(s) could not be moved for running workflow",
+                    msg_type="error",
                 )
                 sys.exit(1)
             files = list_files(workflow, access_token)
@@ -560,6 +561,7 @@ def workflow_disk_usage(
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
             display_message(
-                "Disk usage could not be retrieved: \n{}".format(e), msg_type="error",
+                "Disk usage could not be retrieved: \n{}".format(e),
+                msg_type="error",
             )
             sys.exit(1)

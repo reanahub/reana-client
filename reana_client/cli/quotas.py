@@ -92,7 +92,8 @@ def quota_show(
             display_message(
                 "Error: resource '{}' is not valid.\n"
                 "Available resources are: '{}'.".format(
-                    resource, "', '".join(sorted(quota.keys())),
+                    resource,
+                    "', '".join(sorted(quota.keys())),
                 ),
                 msg_type="error",
             )

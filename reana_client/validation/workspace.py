@@ -30,12 +30,15 @@ def _validate_workspace(
     """
     if root_path:
         display_message(
-            "Verifying workspace in REANA specification file...", msg_type="info",
+            "Verifying workspace in REANA specification file...",
+            msg_type="info",
         )
         try:
             validate_workspace(root_path, available_workspaces)
             display_message(
-                "Workflow workspace appears valid.", msg_type="success", indented=True,
+                "Workflow workspace appears valid.",
+                msg_type="success",
+                indented=True,
             )
         except REANAValidationError as e:
             display_message(e.message, msg_type="error")

@@ -69,7 +69,10 @@ def workflow_execution_group(ctx):
 
 @workflow_management_group.command("list")
 @click.option(
-    "-w", "--workflow", default=None, help="List all runs of the given workflow.",
+    "-w",
+    "--workflow",
+    default=None,
+    help="List all runs of the given workflow.",
 )
 @click.option(
     "-s", "--sessions", is_flag=True, help="List all open interactive sessions."
@@ -462,7 +465,8 @@ def workflow_start(
                     if current_status == "finished":
                         if follow:
                             display_message(
-                                "Listing workflow output files...", msg_type="info",
+                                "Listing workflow output files...",
+                                msg_type="info",
                             )
                             ctx.invoke(
                                 get_files,
@@ -816,7 +820,8 @@ def workflow_logs(
                         display_message(
                             "Filter '{}' is not valid.\n"
                             "Available filters are '{}'.".format(
-                                key, "' '".join(sorted(available_filters.keys())),
+                                key,
+                                "' '".join(sorted(available_filters.keys())),
                             ),
                             msg_type="error",
                         )
@@ -1009,7 +1014,8 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
             logging.info("Sending a request to stop workflow {}".format(workflow))
             stop_workflow(workflow, force_stop, access_token)
             display_message(
-                get_workflow_status_change_msg(workflow, "stopped"), msg_type="success",
+                get_workflow_status_change_msg(workflow, "stopped"),
+                msg_type="success",
             )
         except Exception as e:
             logging.debug(traceback.format_exc())

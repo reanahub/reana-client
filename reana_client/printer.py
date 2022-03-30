@@ -39,7 +39,10 @@ def display_message(msg, msg_type=None, indented=False):
     if msg_type == "info":
         if indented:
             click.secho(
-                "  -> {}: ".format(msg_type.upper()), bold=True, nl=False, fg=msg_color,
+                "  -> {}: ".format(msg_type.upper()),
+                bold=True,
+                nl=False,
+                fg=msg_color,
             )
             click.secho("{}".format(msg), nl=True)
         else:

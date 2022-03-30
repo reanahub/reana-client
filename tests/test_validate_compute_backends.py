@@ -128,7 +128,11 @@ def test_validate_compute_backends_snakemake(
     ],
 )
 def test_validate_compute_backends_cwl(
-    compute_backend, supported_backends, valid, cwl_workflow_spec_loaded, capsys,
+    compute_backend,
+    supported_backends,
+    valid,
+    cwl_workflow_spec_loaded,
+    capsys,
 ):
     """Validate compute backends for CWL workflows."""
     reana_yaml = cwl_workflow_spec_loaded

@@ -830,7 +830,8 @@ def close_interactive_session(workflow, access_token):
     """
     try:
         (response, http_response) = current_rs_api_client.api.close_interactive_session(
-            workflow_id_or_name=workflow, access_token=access_token,
+            workflow_id_or_name=workflow,
+            access_token=access_token,
         ).result()
         if http_response.status_code == 200:
             return response

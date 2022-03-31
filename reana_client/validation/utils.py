@@ -48,11 +48,14 @@ def validate_reana_spec(
 
     if not skip_validation:
         display_message(
-            f"Verifying REANA specification file... {filepath}", msg_type="info",
+            f"Verifying REANA specification file... {filepath}",
+            msg_type="info",
         )
         validate_reana_yaml(reana_yaml)
         display_message(
-            "Valid REANA specification file.", msg_type="success", indented=True,
+            "Valid REANA specification file.",
+            msg_type="success",
+            indented=True,
         )
 
         validate_parameters(reana_yaml)
@@ -62,7 +65,8 @@ def validate_reana_spec(
 
     if not skip_validate_environments:
         display_message(
-            "Verifying environments in REANA specification file...", msg_type="info",
+            "Verifying environments in REANA specification file...",
+            msg_type="info",
         )
         validate_environment(reana_yaml, pull=pull_environment_image)
 
@@ -78,7 +82,8 @@ def _validate_server_capabilities(reana_yaml: Dict, access_token: str) -> None:
     info_response = info(access_token)
 
     display_message(
-        "Verifying compute backends in REANA specification file...", msg_type="info",
+        "Verifying compute backends in REANA specification file...",
+        msg_type="info",
     )
     supported_backends = info_response.get("compute_backends", {}).get("value")
     validate_compute_backends(reana_yaml, supported_backends)

@@ -7,6 +7,8 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client CLI API docs generation."""
 
+from inspect import cleandoc
+
 import click
 
 from reana_client.cli import cli
@@ -32,7 +34,7 @@ def generate_cli_docs():
         print("\n## {}".format(cmd_group.help))
         for cmd_obj in cmd_group.commands.values():
             print("\n### {}\n".format(cmd_obj.name))
-            print(cmd_obj.help)
+            print(cleandoc(cmd_obj.help))
 
 
 if __name__ == "__main__":

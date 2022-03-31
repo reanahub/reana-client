@@ -137,7 +137,9 @@ def test_validate_compute_backends_cwl(
     """Validate compute backends for CWL workflows."""
     reana_yaml = cwl_workflow_spec_loaded
     workflow_steps = reana_yaml["workflow"]["specification"]["$graph"]
-    workflow_steps[0]["steps"][0]["hints"] = [{"compute_backend": compute_backend}]
+    workflow_steps[0]["steps"][0]["hints"] = [
+        {"class": "reana", "compute_backend": compute_backend}
+    ]
 
     if valid:
         validate_compute_backends(reana_yaml, supported_backends)

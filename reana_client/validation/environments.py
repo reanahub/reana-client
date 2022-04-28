@@ -326,7 +326,7 @@ class EnvironmentValidatorBase:
 
         if not response.ok:
             if response.status_code == 404:
-                msg = response.text
+                msg = response.json().get("message")
                 self.messages.append(
                     {
                         "type": "warning",

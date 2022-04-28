@@ -370,9 +370,7 @@ class EnvironmentValidatorBase:
         run_command("docker version", display=False, return_output=True)
         # Run ``id``` command inside the container.
         uid_gid_output = run_command(
-            'docker run -i -t --rm {} sh -c "/usr/bin/id -u && /usr/bin/id -G"'.format(
-                self._get_full_image_name(image, tag)
-            ),
+            f'docker run -i -t --rm --entrypoint /bin/sh {self._get_full_image_name(image, tag)} -c "/usr/bin/id -u && /usr/bin/id -G"',
             display=False,
             return_output=True,
         )

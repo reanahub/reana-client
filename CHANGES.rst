@@ -5,6 +5,7 @@ Version 0.9.0 (UNRELEASED)
 --------------------------
 
 - Changes REANA specification loading and validation functionality by porting some of the logic to ``reana-commons``.
+- Fixes ``validate --environment`` command to detect illegal white space characters in image names.
 
 Version 0.8.2 (UNRELEASED)
 --------------------------

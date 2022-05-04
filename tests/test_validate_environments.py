@@ -25,6 +25,7 @@ from reana_client.validation.environments import EnvironmentValidatorSerial
         ("foo:master", "tag is not recommended", False),
         ("foo:bar:baz", "has invalid tag", True),
         ("foo:bar:", "has invalid tag", True),
+        ("foo:bar ", "contains illegal characters", True),
     ],
 )
 def test_validate_environment_image_tag(image, output, exit_):

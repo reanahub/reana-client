@@ -186,6 +186,10 @@ class EnvironmentValidatorBase:
             "type": "success",
             "message": "Environment image {} has the correct format.".format(image),
         }
+        if " " in image:
+            raise EnvironmentValidationError(
+                f"Environment image '{image}' contains illegal characters."
+            )
         if ":" in image:
             environment = image.split(":", 1)
             image_name, image_tag = environment[0], environment[-1]

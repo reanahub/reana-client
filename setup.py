@@ -43,6 +43,7 @@ setup_requires = [
 
 install_requires = [
     "click>=7",
+    "pathspec==0.9.0",
     "jsonpointer>=2.0",
     "reana-commons[yadage,snakemake,cwl]>=0.9.0a7,<0.10.0",
     "tablib>=0.12.1,<0.13",

@@ -11,6 +11,7 @@
 from __future__ import absolute_import, print_function
 
 import pytest
+from typing import Dict
 
 
 @pytest.fixture()
@@ -51,6 +52,26 @@ def create_yaml_workflow_schema_with_workspace(create_yaml_workflow_schema: str)
           root_path: /var/reana
         """
     return reana_yaml_schema
+
+
+@pytest.fixture()
+def get_workflow_specification_with_directory() -> Dict:
+    """Return dummy workflow specification with "data" directory listed in inputs."""
+    reana_yaml_schema = {
+        "inputs": {
+            "directories": ["data"],
+        },
+        "version": "0.3.0",
+        "workflow": {
+            "specification": {
+                "steps": [
+                    {"commands": ["echo hello"], "environment": "python:2.7-slim"}
+                ]
+            },
+            "type": "serial",
+        },
+    }
+    return {"specification": reana_yaml_schema}
 
 
 @pytest.fixture()

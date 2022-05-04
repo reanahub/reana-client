@@ -14,8 +14,11 @@ import os
 import sys
 import traceback
 import zipfile
+from typing import List, Tuple
 
 import click
+import pathspec
+
 from reana_commons.utils import click_table_printer
 
 from reana_client.printer import display_message
@@ -31,7 +34,7 @@ from reana_client.cli.utils import (
     parse_format_parameters,
 )
 from reana_client.config import JSON, STD_OUTPUT_CHAR, URL
-from reana_client.errors import FileDeletionError, FileUploadError
+from reana_client.errors import FileDeletionError
 
 FILES_BLACKLIST = (".git/", "/.git/")
 
@@ -310,7 +313,9 @@ def download_files(
 @check_connection
 @add_access_token_options
 @click.pass_context
-def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
+def upload_files(  # noqa: C901
+    ctx, workflow: str, filenames: Tuple[str], access_token: str
+):  # noqa: D301
     """Upload files and directories to workspace.
 
     The ``upload`` command allows to upload workflow input files and
@@ -328,6 +333,28 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+
+    def _filter_files_by_gitignore(directories: List[str]) -> List[str]:
+        try:
+            with open(".gitignore") as f:
+                gitignore_spec = pathspec.PathSpec.from_lines("gitwildmatch", f)
+            display_message(
+                "Detected .gitignore file. Some files might get ignored.",
+                msg_type="success",
+            )
+        except FileNotFoundError:
+            return directories
+        else:
+            filtered_filenames = []
+            for directory_path in directories:
+                for root, dirs, files in os.walk(directory_path):
+                    if not gitignore_spec.match_file(root):
+                        for file_name in files:
+                            filename_full_path = os.path.join(root, file_name)
+                            if not gitignore_spec.match_file(filename_full_path):
+                                filtered_filenames.append(filename_full_path)
+            return filtered_filenames
+
     if not filenames:
         try:
             reana_spec = get_workflow_specification(workflow, access_token)[
@@ -343,53 +370,54 @@ def upload_files(ctx, workflow, filenames, access_token):  # noqa: D301
 
         if "inputs" in reana_spec:
             filenames = []
+
             filenames += [
                 os.path.join(os.getcwd(), f)
                 for f in reana_spec["inputs"].get("files") or []
             ]
-            filenames += [
+
+            directories_full_path = [
                 os.path.join(os.getcwd(), d)
                 for d in reana_spec["inputs"].get("directories") or []
             ]
+            filenames += _filter_files_by_gitignore(directories_full_path)
 
-    if workflow:
-        if filenames:
-            upload_failed = False
-            for filename in filenames:
-                try:
-                    response = upload_to_server(workflow, filename, access_token)
-                    for file_ in response:
-                        if file_.startswith("symlink:"):
-                            display_message(
-                                "Symlink resolved to {}. "
-                                "Uploaded hard copy.".format(file_[len("symlink:") :]),
-                                msg_type="success",
-                            )
-                        else:
-                            display_message(
-                                "File {} was successfully uploaded.".format(file_),
-                                msg_type="success",
-                            )
-                except FileNotFoundError as e:
-                    logging.debug(traceback.format_exc())
-                    logging.debug(str(e))
+    upload_failed = False
+    for filename in filenames:
+        try:
+            response = upload_to_server(workflow, filename, access_token)
+            for file_ in response:
+                if file_.startswith("symlink:"):
                     display_message(
-                        "File {0} could not be uploaded: "
-                        "{0} does not exist.".format(filename),
-                        msg_type="error",
+                        "Symlink resolved to {}. "
+                        "Uploaded hard copy.".format(file_[len("symlink:") :]),
+                        msg_type="success",
                     )
-                    upload_failed = True
-                except Exception as e:
-                    logging.debug(traceback.format_exc())
-                    logging.debug(str(e))
+                else:
                     display_message(
-                        "Something went wrong while uploading {}: \n"
-                        "{}".format(filename, str(e)),
-                        msg_type="error",
+                        "File {} was successfully uploaded.".format(file_),
+                        msg_type="success",
                     )
-                    upload_failed = True
-            if upload_failed:
-                sys.exit(1)
+        except FileNotFoundError as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            display_message(
+                "File {0} could not be uploaded: "
+                "{0} does not exist.".format(filename),
+                msg_type="error",
+            )
+            upload_failed = True
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            display_message(
+                "Something went wrong while uploading {}: \n"
+                "{}".format(filename, str(e)),
+                msg_type="error",
+            )
+            upload_failed = True
+    if upload_failed:
+        sys.exit(1)
 
 
 @files_group.command("rm")

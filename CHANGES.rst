@@ -4,6 +4,7 @@ Changes
 Version 0.9.0 (UNRELEASED)
 --------------------------
 
+- Adds support for ``.gitignore`` during file upload. Files that match ``.gitignore`` will not be uploaded.
 - Changes REANA specification loading and validation functionality by porting some of the logic to ``reana-commons``.
 - Fixes ``validate --environment`` command to detect illegal white space characters in image names.
 

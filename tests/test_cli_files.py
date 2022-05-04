@@ -241,6 +241,45 @@ def test_upload_file(create_yaml_workflow_schema):
                 assert message in result.output
 
 
+def test_upload_file_respect_gitignore(get_workflow_specification_with_directory):
+    """Do not upload file from the directory in input.directories if it matches .gitignore"""
+    reana_token = "000000"
+    env = {"REANA_SERVER_URL": "http://localhost"}
+    runner = CliRunner(env=env)
+    mock_specification = Mock(return_value=get_workflow_specification_with_directory)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.get_workflow_specification", mock_specification
+        ), patch("reana_client.api.client.requests.post") as post_request:
+            with runner.isolated_filesystem():
+                with open(".gitignore", "w") as f:
+                    f.write("do_not_upload.txt\n")
+                    f.write("test\n")
+
+                os.mkdir("data")
+                with open("data/do_not_upload.txt", "w") as f:
+                    f.write("This file should not be uploaded.")
+
+                with open("data/test", "w") as f:
+                    f.write("This file should not be uploaded.")
+
+                with open("data/will_upload.txt", "w") as f:
+                    f.write("This file will be uploaded.")
+
+                result = runner.invoke(
+                    cli, ["upload", "-t", reana_token, "--workflow", "mytest.1"]
+                )
+
+                assert (
+                    "Detected .gitignore file. Some files might get ignored."
+                    in result.output
+                )
+                assert "test" not in result.output
+                post_request.assert_called_once()
+                assert "will_upload.txt" in result.output
+                assert result.exit_code == 0
+
+
 def test_delete_file():
     """Test delete file."""
     status_code = 200

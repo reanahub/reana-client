@@ -44,7 +44,9 @@ RUN_STATUSES = [
 ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR = ["latest", "master", ""]
 """Warns user if above environment image tags are used."""
 
-DOCKER_REGISTRY_INDEX_URL = "https://hub.docker.com/v2/repositories/{image}/tags/{tag}"
+DOCKER_REGISTRY_INDEX_URL = (
+    "https://hub.docker.com/v2/repositories/{repository}{image}/tags/{tag}"
+)
 """Docker Hub registry index URL."""
 
 GITLAB_CERN_REGISTRY_INDEX_URL = (

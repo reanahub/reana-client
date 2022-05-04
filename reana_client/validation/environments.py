@@ -306,7 +306,12 @@ class EnvironmentValidatorBase:
     def _image_exists_in_dockerhub(self, image, tag):
         """Verify if image exists in DockerHub."""
         full_image = self._get_full_image_name(image, tag or "latest")
-        docker_registry_url = DOCKER_REGISTRY_INDEX_URL.format(image=image, tag=tag)
+        # Some images like `python:2.7-slim` require to specify `library`
+        # as a repository in order to work with DockerHub API v2
+        repository = "" if "/" in image else "library/"
+        docker_registry_url = DOCKER_REGISTRY_INDEX_URL.format(
+            repository=repository, image=image, tag=tag
+        )
         # Remove traling slash if no tag was specified
         if not tag:
             docker_registry_url = docker_registry_url[:-1]

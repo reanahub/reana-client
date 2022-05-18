@@ -271,7 +271,7 @@ def test_upload_file_respect_gitignore(get_workflow_specification_with_directory
                 )
 
                 assert (
-                    "Detected .gitignore file. Some files might get ignored."
+                    "==> Detected .gitignore file. Some files might get ignored."
                     in result.output
                 )
                 assert "test" not in result.output

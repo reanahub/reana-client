@@ -340,7 +340,7 @@ def upload_files(  # noqa: C901
                 gitignore_spec = pathspec.PathSpec.from_lines("gitwildmatch", f)
             display_message(
                 "Detected .gitignore file. Some files might get ignored.",
-                msg_type="success",
+                msg_type="info",
             )
         except FileNotFoundError:
             return directories

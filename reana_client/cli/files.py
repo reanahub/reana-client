@@ -334,27 +334,6 @@ def upload_files(  # noqa: C901
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
 
-    def _filter_files_by_gitignore(directories: List[str]) -> List[str]:
-        try:
-            with open(".gitignore") as f:
-                gitignore_spec = pathspec.PathSpec.from_lines("gitwildmatch", f)
-            display_message(
-                "Detected .gitignore file. Some files might get ignored.",
-                msg_type="info",
-            )
-        except FileNotFoundError:
-            return directories
-        else:
-            filtered_filenames = []
-            for directory_path in directories:
-                for root, dirs, files in os.walk(directory_path):
-                    if not gitignore_spec.match_file(root):
-                        for file_name in files:
-                            filename_full_path = os.path.join(root, file_name)
-                            if not gitignore_spec.match_file(filename_full_path):
-                                filtered_filenames.append(filename_full_path)
-            return filtered_filenames
-
     if not filenames:
         try:
             reana_spec = get_workflow_specification(workflow, access_token)[
@@ -376,12 +355,52 @@ def upload_files(  # noqa: C901
                 for f in reana_spec["inputs"].get("files") or []
             ]
 
-            directories_full_path = [
-                os.path.join(os.getcwd(), d)
-                for d in reana_spec["inputs"].get("directories") or []
-            ]
-            filenames += _filter_files_by_gitignore(directories_full_path)
+            # collect all files in input.directories
+            files_from_directories = []
+            directories = reana_spec["inputs"].get("directories") or []
+            for directory_path in directories:
+                for root, _, dir_filenames in os.walk(directory_path):
+                    filenames_full_path = [
+                        os.path.join(root, file) for file in dir_filenames
+                    ]
+                    files_from_directories.extend(filenames_full_path)
 
+            def _filter_files(
+                files: List[str], paths_spec: pathspec.PathSpec
+            ) -> List[str]:
+                return [file for file in files if not paths_spec.match_file(file)]
+
+            try:
+                with open(".gitignore") as f:
+                    gitignore_spec = pathspec.PathSpec.from_lines("gitwildmatch", f)
+                display_message(
+                    "Detected .gitignore file. Some files might get ignored.",
+                    msg_type="info",
+                )
+            except FileNotFoundError:
+                pass
+            else:
+                files_from_directories = _filter_files(
+                    files_from_directories, gitignore_spec
+                )
+
+            try:
+                with open(".reanaignore") as f:
+                    reanaignore_spec = pathspec.PathSpec.from_lines("gitwildmatch", f)
+                display_message(
+                    "Detected .reanaignore file. Some files might get ignored.",
+                    msg_type="info",
+                )
+            except FileNotFoundError:
+                pass
+            else:
+                files_from_directories = _filter_files(
+                    files_from_directories, reanaignore_spec
+                )
+
+            filenames += [
+                os.path.join(os.getcwd(), file) for file in files_from_directories
+            ]
     upload_failed = False
     for filename in filenames:
         try:

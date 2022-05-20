@@ -13,6 +13,7 @@ import sys
 import click
 
 from reana_commons.config import REANA_RESOURCE_HEALTH_COLORS
+from reana_commons.utils import get_quota_resource_usage
 
 from reana_client.cli.utils import (
     NotRequiredIf,
@@ -21,13 +22,6 @@ from reana_client.cli.utils import (
     human_readable_or_raw_option,
 )
 from reana_client.printer import display_message
-
-
-def usage_percentage(usage, limit):
-    """Usage percentage."""
-    if limit == 0:
-        return ""
-    return "({:.0%})".format(usage / limit)
 
 
 @click.group(help="Quota commands")
@@ -99,22 +93,11 @@ def quota_show(
             )
             sys.exit(1)
         if not report:
-            usage = quota[resource].get("usage")
-            limit = quota[resource].get("limit")
-            limit_str = ""
-            percentage = ""
-            kwargs = dict()
-            if limit and limit.get("raw", 0) > 0:
-                health = quota[resource].get("health")
-                percentage = usage_percentage(usage.get("raw"), limit.get("raw"))
-                limit_str = f"out of {limit.get(human_readable_or_raw)} used"
-                kwargs = dict(fg=REANA_RESOURCE_HEALTH_COLORS.get(health))
-            else:
-                limit_str = "used"
-
-            return click.secho(
-                f"{usage[human_readable_or_raw]} {limit_str} {percentage}", **kwargs
+            resource_usage, health = get_quota_resource_usage(
+                quota[resource], human_readable_or_raw
             )
+            health_color = REANA_RESOURCE_HEALTH_COLORS.get(health)
+            return click.secho(resource_usage, fg=health_color)
 
         result = (
             quota[resource][report][human_readable_or_raw]

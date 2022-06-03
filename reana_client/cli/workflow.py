@@ -96,8 +96,8 @@ def workflow_execution_group(ctx):
 @click.option(
     "--all",
     "show_all",
-    count=True,
-    default=True,
+    is_flag=True,
+    default=False,
     help="Show all workflows including deleted ones.",
 )
 @click.option(
@@ -135,11 +135,18 @@ def workflow_execution_group(ctx):
     default=None,
     help="Include size information of the workspace.",
 )
+@click.option(
+    "--show-deleted-runs",
+    "show_deleted_runs",
+    is_flag=True,
+    default=False,
+    help="Include deleted workflows in the output.",
+)
 @add_access_token_options
 @add_pagination_options
 @check_connection
 @click.pass_context
-def workflow_workflows(  # noqa: C901
+def workflows_list(  # noqa: C901
     ctx,
     workflow,
     sessions,
@@ -155,6 +162,7 @@ def workflow_workflows(  # noqa: C901
     filters,
     include_progress,
     include_workspace_size,
+    show_deleted_runs: bool,
 ):  # noqa: D301
     """List all workflows and sessions.
 
@@ -176,11 +184,19 @@ def workflow_workflows(  # noqa: C901
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     type = "interactive" if sessions else "batch"
 
-    status_filter = None
+    status_filter = RUN_STATUSES.copy()
+    if not show_deleted_runs and not show_all:
+        status_filter.remove("deleted")
+
     search_filter = None
     if filters:
         filter_names = ["name", "status"]
-        status_filter, search_filter = parse_filter_parameters(filters, filter_names)
+        provided_status_filter, search_filter = parse_filter_parameters(
+            filters, filter_names
+        )
+        if provided_status_filter:
+            status_filter = provided_status_filter
+
     if _format:
         parsed_format_filters = parse_format_parameters(_format)
     try:
@@ -219,8 +235,6 @@ def workflow_workflows(  # noqa: C901
         data = []
         for workflow in response:
             workflow["size"] = workflow["size"][human_readable_or_raw]
-            if workflow["status"] == "deleted" and not show_all:
-                continue
             name, run_number = get_workflow_name_and_run_number(workflow["name"])
             workflow["name"] = name
             workflow["run_number"] = run_number

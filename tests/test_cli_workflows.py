@@ -9,6 +9,7 @@
 """REANA client workflow tests."""
 
 import json
+from typing import List
 
 import pytest
 import yaml
@@ -18,6 +19,7 @@ from pytest_reana.test_utils import make_mock_api_client
 from reana_commons.config import INTERACTIVE_SESSION_TYPES
 
 from reana_client.api.client import create_workflow_from_json
+from reana_client.config import RUN_STATUSES
 from reana_client.cli import cli
 from reana_client.utils import get_workflow_status_change_msg
 
@@ -78,6 +80,38 @@ def test_workflows_server_ok():
             message = "RUN_NUMBER"
             assert result.exit_code == 0
             assert message in result.output
+
+
+@pytest.mark.parametrize(
+    "cli_options,expected_status_filter",
+    [
+        ([], [status for status in RUN_STATUSES if status != "deleted"]),
+        (["--show-deleted-runs"], RUN_STATUSES),
+        (["--all"], RUN_STATUSES),
+        (["--filter", "status=deleted"], ["deleted"]),
+        (["--filter", "status=finished", "--show-deleted-runs"], ["finished"]),
+        (["--filter", "status=finished", "--all"], ["finished"]),
+        (
+            ["--filter", "name=myworkflow"],
+            [status for status in RUN_STATUSES if status != "deleted"],
+        ),
+        (["--filter", "name=myworkflow", "--show-deleted-runs"], RUN_STATUSES),
+        (["--filter", "name=myworkflow", "--all"], RUN_STATUSES),
+    ],
+)
+def test_deleted_workflows(cli_options: List[str], expected_status_filter: List[str]):
+    """Test whatever deleted workflows are displayed correctly depending on options and filters."""
+    # we do not care what response is in this case
+    response = {"items": []}
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch("reana_client.api.client.get_workflows") as mock_get_workflows:
+            mock_get_workflows.return_value = response
+            runner.invoke(cli, ["list", "-t", reana_token] + cli_options)
+            kwargs = mock_get_workflows.call_args.kwargs
+            assert kwargs["status"] == expected_status_filter
 
 
 def test_workflows_sorting():

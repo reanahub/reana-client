@@ -12,7 +12,7 @@ import json
 import os
 import shlex
 import sys
-from typing import Callable, NoReturn, Optional, Union
+from typing import Callable, NoReturn, Optional, List, Tuple, Union
 
 import click
 
@@ -165,7 +165,7 @@ def parse_format_parameters(_format):
         )
 
 
-def parse_filter_parameters(filters, filter_names):
+def parse_filter_parameters(filters, filter_names) -> Tuple[List[str], str]:
     """Return parsed filter parameters."""
     try:
         status_filters = []

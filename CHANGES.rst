@@ -6,6 +6,8 @@ Version 0.9.0 (UNRELEASED)
 
 - Adds support for ``.reanaignore`` during file upload. Files that match ``.reanaignore`` will not be uploaded.
 - Adds support for ``.gitignore`` during file upload. Files that match ``.gitignore`` will not be uploaded.
+- Changes ``delete`` CLI command to always delete workspace.
+- Changes ``delete_workflow`` API method to always delete workspace.
 - Changes ``list`` to hide deleted workflows by default.
 - Changes ``list`` command to allow displaying deleted workflows via ``--all`` and ``--show-deleted-runs`` options.
 - Changes ``list`` command to allow displaying the duration of workflows with the ``--include-duration`` option.

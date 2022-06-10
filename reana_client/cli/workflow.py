@@ -1176,7 +1176,7 @@ def workflow_run(
 )
 @click.option(
     "--include-workspace",
-    "workspace",
+    "should_delete_workspace",
     is_flag=True,
     help="Delete workspace from REANA.",
 )
@@ -1184,23 +1184,23 @@ def workflow_run(
 @add_access_token_options
 @check_connection
 @click.pass_context
-def workflow_delete(ctx, workflow, all_runs, workspace, access_token):  # noqa: D301
+def workflow_delete(
+    ctx, workflow: str, all_runs: bool, should_delete_workspace: bool, access_token: str
+):  # noqa: D301
     """Delete a workflow.
 
-    The ``delete`` command allows to remove workflow runs from the database and
-    the workspace. By default, the command removes the workflow and all its
-    cached information and hides the workflow from the workflow list. Note that
-    workflow workspace will still be accessible until you use
-    ``--include-workspace`` flag. Note also that you can remove all past runs of
-    a workflow by specifying ``--include-all-runs`` flag.
+    The ``delete`` command removes workflow run(s) from the database.
+    Note that the workspace will always be deleted, even when ``--include-workspace`` is not specified.
+    Note also that you can remove all past runs of a workflow by specifying ``--include-all-runs`` flag.
 
     Example: \n
     \t $ reana-client delete -w myanalysis.42 \n
-    \t $ reana-client delete -w myanalysis.42 --include-all-runs \n
-    \t $ reana-client delete -w myanalysis.42 --include-workspace
+    \t $ reana-client delete -w myanalysis.42 --include-all-runs
     """
     from reana_client.api.client import delete_workflow
     from reana_client.utils import get_api_url
+
+    should_delete_workspace = True
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -1209,7 +1209,7 @@ def workflow_delete(ctx, workflow, all_runs, workspace, access_token):  # noqa: 
     if workflow:
         try:
             logging.info("Connecting to {0}".format(get_api_url()))
-            delete_workflow(workflow, all_runs, workspace, access_token)
+            delete_workflow(workflow, all_runs, should_delete_workspace, access_token)
             if all_runs:
                 message = "All workflows named '{}' have been deleted.".format(
                     workflow.split(".")[0]

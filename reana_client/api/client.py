@@ -670,8 +670,17 @@ def get_workflow_specification(workflow, access_token):
         raise e
 
 
-def delete_workflow(workflow, all_runs, workspace, access_token):
-    """Delete a workflow."""
+def delete_workflow(workflow, all_runs: bool, workspace: bool, access_token: str):
+    """Delete a workflow.
+
+    Please note that the workspace will be always deleted, even if ``workspace`` is set to ``False``.
+    """
+    if not workspace:
+        logging.warning(
+            "Parameter workspace=False was specified in delete_workflow() but workspace will still be deleted."
+        )
+    workspace = True
+
     try:
         parameters = {
             "all_runs": all_runs,

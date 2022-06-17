@@ -8,10 +8,12 @@
 """REANA client utils."""
 
 import base64
+from datetime import datetime
 import logging
 import os
 import sys
 import traceback
+from typing import Dict, Optional
 from uuid import UUID
 
 from reana_commons.utils import get_workflow_status_change_verb
@@ -117,6 +119,32 @@ def get_workflow_name_and_run_number(workflow_name):
         # Couldn't split. Probably not a dot-separated string.
         # Return the name given as parameter without a `run_number`.
         return workflow_name, ""
+
+
+def get_workflow_duration(workflow: Dict) -> Optional[int]:
+    """Calculate the duration of the workflow.
+
+    :param workflow: Workflow details returned by the server.
+    :return: The duration of the workflow in seconds or ``None`` if the starting
+        time is not present.
+    """
+    # FIXME: Use datetime.fromisoformat when moving to Python 3.7 or higher
+    def fromisoformat(date_string):
+        return datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S")
+
+    progress = workflow.get("progress", {})
+    run_started_at = progress.get("run_started_at")
+    run_finished_at = progress.get("run_finished_at")
+
+    duration = None
+    if run_started_at:
+        start_time = fromisoformat(run_started_at)
+        if run_finished_at:
+            end_time = fromisoformat(run_finished_at)
+        else:
+            end_time = datetime.utcnow()
+        duration = round((end_time - start_time).total_seconds())
+    return duration
 
 
 def get_workflow_root():

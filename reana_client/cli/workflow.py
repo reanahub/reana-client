@@ -41,6 +41,7 @@ from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
 from reana_client.printer import display_message
 from reana_client.utils import (
     get_reana_yaml_file_path,
+    get_workflow_duration,
     get_workflow_name_and_run_number,
     get_workflow_status_change_msg,
     is_uuid_v4,
@@ -104,7 +105,8 @@ def workflow_execution_group(ctx):
     "-v",
     "--verbose",
     count=True,
-    help="Print out extra information: workflow id, user id, disk usage.",
+    help="Print out extra information: workflow id, user id, disk usage, "
+    "progress, duration.",
 )
 @human_readable_or_raw_option
 @click.option(
@@ -120,6 +122,14 @@ def workflow_execution_group(ctx):
     help="Filter workflow that contains certain filtering criteria. "
     "Use `--filter <columm_name>=<column_value>` pairs. "
     "Available filters are ``name`` and ``status``.",
+)
+@click.option(
+    "--include-duration",
+    "include_duration",
+    is_flag=True,
+    default=False,
+    help="Include the duration of the workflows in seconds. In case a workflow is in "
+    "progress, its duration as of now will be shown.",
 )
 @click.option(
     "--include-progress",
@@ -160,6 +170,7 @@ def workflows_list(  # noqa: C901
     page,
     size,
     filters,
+    include_duration: bool,
     include_progress,
     include_workspace_size,
     show_deleted_runs: bool,
@@ -215,6 +226,7 @@ def workflows_list(  # noqa: C901
         verbose_headers = ["id", "user"]
         workspace_size_header = ["size"]
         progress_header = ["progress"]
+        duration_header = ["duration"]
         headers = {
             "batch": ["name", "run_number", "created", "started", "ended", "status"],
             "interactive": [
@@ -232,12 +244,16 @@ def workflows_list(  # noqa: C901
             headers[type] += workspace_size_header
         if verbose or include_progress:
             headers[type] += progress_header
+        if verbose or include_duration:
+            headers[type] += duration_header
+
         data = []
         for workflow in response:
             workflow["size"] = workflow["size"][human_readable_or_raw]
             name, run_number = get_workflow_name_and_run_number(workflow["name"])
             workflow["name"] = name
             workflow["run_number"] = run_number
+            workflow["duration"] = get_workflow_duration(workflow)
             if type == "interactive":
                 workflow["session_uri"] = format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
@@ -258,10 +274,22 @@ def workflows_list(  # noqa: C901
                     value = workflow.get(header)
                 row.append(value)
             data.append(row)
+
+        # Sort by given column, making sure that `None` is at the bottom of the list.
         sort_column_id = 2
         if sort_columm_name.lower() in headers[type]:
             sort_column_id = headers[type].index(sort_columm_name.lower())
-        data = sorted(data, key=lambda x: x[sort_column_id], reverse=True)
+        data = sorted(
+            data,
+            key=lambda x: (x[sort_column_id] is not None, x[sort_column_id]),
+            reverse=True,
+        )
+
+        # Substitute `None` with "-"
+        for row in data:
+            for i, value in enumerate(row):
+                row[i] = value or "-"
+
         workflow_ids = ["{0}.{1}".format(w[0], w[1]) for w in data]
         if os.getenv("REANA_WORKON", "") in workflow_ids:
             active_workflow_idx = workflow_ids.index(os.getenv("REANA_WORKON", ""))

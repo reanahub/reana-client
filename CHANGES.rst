@@ -8,6 +8,7 @@ Version 0.9.0 (UNRELEASED)
 - Adds support for ``.gitignore`` during file upload. Files that match ``.gitignore`` will not be uploaded.
 - Changes ``list`` to hide deleted workflows by default.
 - Changes ``list`` command to allow displaying deleted workflows via ``--all`` and ``--show-deleted-runs`` options.
+- Changes ``list`` command to allow displaying the duration of workflows with the ``--include-duration`` option.
 - Changes REANA specification loading and validation functionality by porting some of the logic to ``reana-commons``.
 - Fixes ``validate --environment`` command to detect illegal white space characters in image names.
 

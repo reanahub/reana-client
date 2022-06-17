@@ -671,12 +671,20 @@ def workflow_restart(
     default=None,
     help="Get output in JSON format.",
 )
+@click.option(
+    "--include-duration",
+    "include_duration",
+    is_flag=True,
+    default=False,
+    help="Include the duration of the workflow in seconds. In case the workflow is in "
+    "progress, its duration as of now will be shown.",
+)
 @add_access_token_options
 @check_connection
 @click.option("-v", "--verbose", count=True, help="Set status information verbosity.")
 @click.pass_context
 def workflow_status(  # noqa: C901
-    ctx, workflow, _format, output_format, access_token, verbose
+    ctx, workflow, _format, output_format, include_duration, access_token, verbose
 ):  # noqa: D301
     """Get status of a workflow.
 
@@ -697,7 +705,7 @@ def workflow_status(  # noqa: C901
         else:
             return "-/-"
 
-    def add_data_from_reponse(row, data, headers):
+    def add_data_from_response(row, data, headers):
         name, run_number = get_workflow_name_and_run_number(row["name"])
         total_jobs = row["progress"].get("total")
         if total_jobs:
@@ -760,47 +768,46 @@ def workflow_status(  # noqa: C901
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
-    if workflow:
-        try:
-            if _format:
-                parsed_filters = parse_format_parameters(_format)
-                _format = [item["column_name"] for item in parsed_filters]
-            response = get_workflow_status(workflow, access_token)
-            headers = ["name", "run_number", "created", "status"]
-            verbose_headers = ["id", "user", "command"]
-            data = []
-            if not isinstance(response, list):
-                response = [response]
-            for workflow in response:
-                add_data_from_reponse(workflow, data, headers)
-                if verbose:
-                    headers += verbose_headers
-                    add_verbose_data_from_response(
-                        workflow, verbose_headers, headers, data
-                    )
-
-            if output_format:
-                tablib_data = tablib.Dataset()
-                tablib_data.headers = headers
-                for row in data:
-                    tablib_data.append(row)
-
-                if _format:
-                    tablib_data = tablib_data.subset(rows=None, cols=list(_format))
-
-                display_message(tablib_data.export(output_format))
-            else:
-                click_table_printer(headers, _format, data)
-
-        except Exception as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            display_message(
-                "Cannot retrieve the status of a workflow {}: \n"
-                "{}".format(workflow, str(e)),
-                msg_type="error",
+    try:
+        if _format:
+            parsed_filters = parse_format_parameters(_format)
+            _format = [item["column_name"] for item in parsed_filters]
+        workflow_response = get_workflow_status(workflow, access_token)
+        headers = ["name", "run_number", "created", "status"]
+        verbose_headers = ["id", "user", "command"]
+        data = []
+        add_data_from_response(workflow_response, data, headers)
+        if verbose:
+            headers += verbose_headers
+            add_verbose_data_from_response(
+                workflow_response, verbose_headers, headers, data
             )
-            sys.exit(1)
+        if verbose or include_duration:
+            headers += ["duration"]
+            data[-1] += [get_workflow_duration(workflow_response) or "-"]
+
+        if output_format:
+            tablib_data = tablib.Dataset()
+            tablib_data.headers = headers
+            for row in data:
+                tablib_data.append(row)
+
+            if _format:
+                tablib_data = tablib_data.subset(rows=None, cols=list(_format))
+
+            display_message(tablib_data.export(output_format))
+        else:
+            click_table_printer(headers, _format, data)
+
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        display_message(
+            "Cannot retrieve the status of a workflow {}: \n"
+            "{}".format(workflow, str(e)),
+            msg_type="error",
+        )
+        sys.exit(1)
 
 
 @workflow_execution_group.command("logs")

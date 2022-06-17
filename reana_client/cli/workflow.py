@@ -293,10 +293,7 @@ def workflows_list(  # noqa: C901
         workflow_ids = ["{0}.{1}".format(w[0], w[1]) for w in data]
         if os.getenv("REANA_WORKON", "") in workflow_ids:
             active_workflow_idx = workflow_ids.index(os.getenv("REANA_WORKON", ""))
-            for idx, row in enumerate(data):
-                if idx == active_workflow_idx:
-                    run_number = str(data[idx][headers[type].index("run_number")])
-                    run_number += " *"
+            data[active_workflow_idx][headers[type].index("run_number")] += " *"
         tablib_data = tablib.Dataset()
         tablib_data.headers = headers[type]
         for row in data:

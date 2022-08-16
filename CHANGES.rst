@@ -8,6 +8,7 @@ Version 0.9.0 (UNRELEASED)
 - Adds support for ``.reanaignore`` during file upload. Files that match ``.reanaignore`` will not be uploaded.
 - Adds support for ``.gitignore`` during file upload. Files that match ``.gitignore`` will not be uploaded.
 - Adds ``retention-rules-list`` command to list the retention rules of a workflow.
+- Changes ``create`` and ``restart`` commands to always upload REANA specification file.
 - Changes ``delete`` CLI command to always delete workspace.
 - Changes ``delete_workflow`` API method to always delete workspace.
 - Changes ``list`` to hide deleted workflows by default.

@@ -356,19 +356,23 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         display_message("Workflow name cannot be a valid UUIDv4", msg_type="error")
         sys.exit(1)
 
+    specification_filename = click.format_filename(file)
+
     try:
         reana_specification = load_validate_reana_spec(
-            click.format_filename(file),
+            specification_filename,
             access_token=access_token,
             skip_validation=skip_validation,
             server_capabilities=True,
         )
         logging.info("Connecting to {0}".format(get_api_url()))
         response = create_workflow(reana_specification, name, access_token)
-        click.echo(click.style(response["workflow_name"], fg="green"))
+        workflow_name = response["workflow_name"]
+
+        click.echo(click.style(workflow_name, fg="green"))
         # check if command is called from wrapper command
         if "invoked_by_subcommand" in ctx.parent.__dict__:
-            ctx.parent.workflow_name = response["workflow_name"]
+            ctx.parent.workflow_name = workflow_name
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -376,6 +380,14 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
             "Cannot create workflow {}: \n{}".format(name, str(e)), msg_type="error"
         )
         sys.exit(1)
+
+    # upload specification file by default
+    ctx.invoke(
+        upload_files,
+        workflow=workflow_name,
+        filenames=(specification_filename,),
+        access_token=access_token,
+    )
 
 
 @workflow_execution_group.command("start")
@@ -578,60 +590,69 @@ def workflow_restart(
         "restart": True,
     }
     if file:
+        specification_filename = click.format_filename(file)
         parsed_parameters["reana_specification"] = load_validate_reana_spec(
             click.format_filename(file)
         )
-    if workflow:
-        if parameters or options:
-            try:
-                if "reana_specification" in parsed_parameters:
-                    workflow_type = parsed_parameters["reana_specification"][
-                        "workflow"
-                    ]["type"]
-                    original_parameters = (
-                        parsed_parameters["reana_specification"]
-                        .get("inputs", {})
-                        .get("parameters", {})
-                    )
-                else:
-                    response = get_workflow_parameters(workflow, access_token)
-                    workflow_type = response["type"]
-                    original_parameters = response["parameters"]
+        # upload new specification
+        ctx.invoke(
+            upload_files,
+            workflow=workflow,
+            filenames=(specification_filename,),
+            access_token=access_token,
+        )
 
-                parsed_parameters["operational_options"] = validate_operational_options(
-                    workflow_type, parsed_parameters["operational_options"]
-                )
-                parsed_parameters["input_parameters"] = validate_input_parameters(
-                    parsed_parameters["input_parameters"], original_parameters
-                )
-
-            except REANAValidationError as e:
-                display_message(e.message, msg_type="error")
-                sys.exit(1)
-            except Exception as e:
-                display_message(
-                    "Could not apply given input parameters: "
-                    "{0} \n{1}".format(parameters, str(e)),
-                    msg_type="error",
-                )
-                sys.exit(1)
+    if parameters or options:
         try:
-            logging.info("Connecting to {0}".format(get_api_url()))
-            response = start_workflow(workflow, access_token, parsed_parameters)
-            workflow = response["workflow_name"] + "." + str(response["run_number"])
-            current_status = get_workflow_status(workflow, access_token).get("status")
-            display_message(
-                get_workflow_status_change_msg(workflow, current_status),
-                msg_type="success",
+            if "reana_specification" in parsed_parameters:
+                workflow_type = parsed_parameters["reana_specification"]["workflow"][
+                    "type"
+                ]
+                original_parameters = (
+                    parsed_parameters["reana_specification"]
+                    .get("inputs", {})
+                    .get("parameters", {})
+                )
+            else:
+                response = get_workflow_parameters(workflow, access_token)
+                workflow_type = response["type"]
+                original_parameters = response["parameters"]
+
+            parsed_parameters["operational_options"] = validate_operational_options(
+                workflow_type, parsed_parameters["operational_options"]
             )
+            parsed_parameters["input_parameters"] = validate_input_parameters(
+                parsed_parameters["input_parameters"], original_parameters
+            )
+
+        except REANAValidationError as e:
+            display_message(e.message, msg_type="error")
+            sys.exit(1)
         except Exception as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
             display_message(
-                "Cannot start workflow {}: \n{}".format(workflow, str(e)),
+                "Could not apply given input parameters: "
+                "{0} \n{1}".format(parameters, str(e)),
                 msg_type="error",
             )
             sys.exit(1)
+
+    try:
+        logging.info("Connecting to {0}".format(get_api_url()))
+        response = start_workflow(workflow, access_token, parsed_parameters)
+        workflow = response["workflow_name"] + "." + str(response["run_number"])
+        current_status = get_workflow_status(workflow, access_token).get("status")
+        display_message(
+            get_workflow_status_change_msg(workflow, current_status),
+            msg_type="success",
+        )
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        display_message(
+            "Cannot start workflow {}: \n{}".format(workflow, str(e)),
+            msg_type="error",
+        )
+        sys.exit(1)
 
 
 @workflow_execution_group.command("status")

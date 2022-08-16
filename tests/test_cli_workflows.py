@@ -485,7 +485,7 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
         with patch(
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
-        ):
+        ), patch("reana_client.api.client.requests.post") as upload_request:
             with runner.isolated_filesystem():
                 with open("reana.yaml", "w") as f:
                     f.write(create_yaml_workflow_schema)
@@ -494,6 +494,9 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
                 )
                 assert result.exit_code == 0
                 assert response["workflow_name"] in result.output
+
+                upload_request.assert_called_once()
+                assert "File /reana.yaml was successfully uploaded." in result.output
 
 
 def test_workflow_create_not_valid_name(create_yaml_workflow_schema):

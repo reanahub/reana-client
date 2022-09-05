@@ -117,6 +117,8 @@ def info(ctx, access_token: str, output_format: str):  # noqa: D301
             display_message(json.dumps(response))
         else:
             for item in response.values():
+                if not item:
+                    continue
                 value = item.get("value")
                 value = ", ".join(value) if isinstance(value, list) else value
                 display_message(f"{item.get('title')}: {value}")

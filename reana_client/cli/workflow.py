@@ -182,9 +182,9 @@ def workflows_list(  # noqa: C901
     interactive sessions, you need to pass the ``--sessions`` command-line
     option.
 
-    Example: \n
-    \t $ reana-client list --all \n
-    \t $ reana-client list --sessions \n
+    Example:\n
+    \t $ reana-client list --all\n
+    \t $ reana-client list --sessions\n
     \t $ reana-client list --verbose --bytes
     """
     import tablib
@@ -359,7 +359,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
     working directory, or supplied via command-line -f option, see examples
     below.
 
-    Examples: \n
+    Examples:\n
     \t $ reana-client create\n
     \t $ reana-client create -w myanalysis\n
     \t $ reana-client create -w myanalysis -f myreana.yaml\n
@@ -444,8 +444,8 @@ def workflow_start(
     options can be repetitive. For example, to disable caching for the Serial
     workflow engine, you can set ``-o CACHE=off``.
 
-    Examples: \n
-    \t $ reana-client start -w myanalysis.42 -p sleeptime=10 -p myparam=4 \n
+    Examples:\n
+    \t $ reana-client start -w myanalysis.42 -p sleeptime=10 -p myparam=4\n
     \t $ reana-client start -w myanalysis.42 -p myparam1=myvalue1 -o CACHE=off
     """
     from reana_client.utils import get_api_url
@@ -576,8 +576,8 @@ def workflow_restart(
     ``-o`` or ``--options``.  The input parameters and operational options can be
     repetitive.
 
-    Examples: \n
-    \t $ reana-client restart -w myanalysis.42 -p sleeptime=10 -p myparam=4 \n
+    Examples:\n
+    \t $ reana-client restart -w myanalysis.42 -p sleeptime=10 -p myparam=4\n
     \t $ reana-client restart -w myanalysis.42 -p myparam=myvalue\n
     \t $ reana-client restart -w myanalysis.42 -o TARGET=gendata\n
     \t $ reana-client restart -w myanalysis.42 -o FROM=fitdata
@@ -692,8 +692,8 @@ def workflow_status(  # noqa: C901
     be created, queued, running, failed, etc. You can increase verbosity or
     filter retrieved information by passing appropriate command-line options.
 
-    Examples: \n
-    \t $ reana-client status -w myanalysis.42 \n
+    Examples:\n
+    \t $ reana-client status -w myanalysis.42\n
     \t $ reana-client status -w myanalysis.42 -v --json
     """
     import tablib
@@ -839,7 +839,7 @@ def workflow_logs(
     only finished steps of the workflow are returned, the logs of the currently
     processed step is not returned until it is finished.
 
-    Examples: \n
+    Examples:\n
     \t $ reana-client logs -w myanalysis.42
     \t $ reana-client logs -w myanalysis.42 -s 1st_step
     """
@@ -980,7 +980,7 @@ def workflow_validate(
     The ``validate`` command allows to check syntax and validate the reana.yaml
     workflow specification file.
 
-    Examples: \n
+    Examples:\n
     \t $ reana-client validate -f reana.yaml
     """
     if server_capabilities:
@@ -1041,7 +1041,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     should be therefore used with care, only if you are absolutely sure that
     there is no point in continuing the running the workflow.
 
-    Example: \n
+    Example:\n
     \t $ reana-client stop -w myanalysis.42 --force
     """
     from reana_client.api.client import stop_workflow
@@ -1134,8 +1134,8 @@ def workflow_run(
     The ``run`` command allows to create a new workflow, upload its input files
     and start it in one command.
 
-    Examples: \n
-    \t $ reana-client run -w myanalysis-test-small -p myparam=mysmallvalue \n
+    Examples:\n
+    \t $ reana-client run -w myanalysis-test-small -p myparam=mysmallvalue\n
     \t $ reana-client run -w myanalysis-test-big -p myparam=mybigvalue
     """
     # set context parameters for subcommand
@@ -1193,8 +1193,8 @@ def workflow_delete(
     Note that the workspace will always be deleted, even when ``--include-workspace`` is not specified.
     Note also that you can remove all past runs of a workflow by specifying ``--include-all-runs`` flag.
 
-    Example: \n
-    \t $ reana-client delete -w myanalysis.42 \n
+    Example:\n
+    \t $ reana-client delete -w myanalysis.42\n
     \t $ reana-client delete -w myanalysis.42 --include-all-runs
     """
     from reana_client.api.client import delete_workflow
@@ -1263,8 +1263,8 @@ def workflow_diff(
     workflow_b, which must be provided as arguments. The output will show the
     difference in workflow run parameters, the generated files, the logs, etc.
 
-    Examples: \n
-    \t $ reana-client diff myanalysis.42 myotheranalysis.43 \n
+    Examples:\n
+    \t $ reana-client diff myanalysis.42 myotheranalysis.43\n
     \t $ reana-client diff myanalysis.42 myotheranalysis.43 --brief
     """
     from reana_client.api.client import diff_workflows

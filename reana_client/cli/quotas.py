@@ -63,7 +63,7 @@ def quota_show(
 
     The ``quota-show`` command displays quota usage for the user.
 
-    Examples: \n
+    Examples:\n
     \t $ reana-client quota-show --resource disk --report limit\n
     \t $ reana-client quota-show --resource disk --report usage\n
     \t $ reana-client quota-show --resource disk\n

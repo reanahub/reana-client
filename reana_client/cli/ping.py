@@ -34,7 +34,7 @@ def ping(ctx, access_token):  # noqa: D301
 
     The ``ping`` command allows to test connection to REANA server.
 
-    Examples: \n
+    Examples:\n
     \t $ reana-client ping
     """
     try:
@@ -81,7 +81,7 @@ def version(ctx):  # noqa: D301
 
     The ``version`` command shows REANA client version.
 
-    Examples: \n
+    Examples:\n
     \t $ reana-client version
     """
     display_message(__version__)
@@ -106,7 +106,7 @@ def info(ctx, access_token: str, output_format: str):  # noqa: D301
     Lists all the available workspaces. It also returns the default workspace
     defined by the admin.
 
-    Examples: \n
+    Examples:\n
     \t $ reana-client info
     """
     try:

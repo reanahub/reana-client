@@ -57,11 +57,11 @@ def secrets_group(ctx):
 def secrets_add(env, file, overwrite, access_token):  # noqa: D301
     """Add secrets from literal string or from file.
 
-    Examples: \n
-    \t $ reana-client secrets-add --env PASSWORD=password \n
-    \t $ reana-client secrets-add --file ~/.keytab \n
-    \t $ reana-client secrets-add --env USER=reanauser \n
-    \t                            --env PASSWORD=password \n
+    Examples:\n
+    \t $ reana-client secrets-add --env PASSWORD=password\n
+    \t $ reana-client secrets-add --file ~/.keytab\n
+    \t $ reana-client secrets-add --env USER=reanauser\n
+    \t                            --env PASSWORD=password\n
     \t                            --file ~/.keytab
     """
     from reana_client.api.client import add_secrets
@@ -104,7 +104,7 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
 def secrets_delete(secrets, access_token):  # noqa: D301
     """Delete user secrets by name.
 
-     Examples: \n
+     Examples:\n
     \t $ reana-client secrets-delete PASSWORD
     """
     from reana_client.api.client import delete_secrets
@@ -140,7 +140,7 @@ def secrets_delete(secrets, access_token):  # noqa: D301
 def secrets_list(access_token):  # noqa: D301
     """List user secrets.
 
-    Examples: \n
+    Examples:\n
     \t $ reana-client secrets-list
     """
     from reana_client.api.client import list_secrets

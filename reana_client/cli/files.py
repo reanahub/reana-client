@@ -105,10 +105,10 @@ def get_files(
     ``--workflow`` or ``-w``. The SOURCE argument is optional and specifies a
     pattern matching files and directories.
 
-    Examples: \n
-    \t $ reana-client ls --workflow myanalysis.42 \n
-    \t $ reana-client ls --workflow myanalysis.42 --human-readable \n
-    \t $ reana-client ls --workflow myanalysis.42 'data/*root*' \n
+    Examples:\n
+    \t $ reana-client ls --workflow myanalysis.42\n
+    \t $ reana-client ls --workflow myanalysis.42 --human-readable\n
+    \t $ reana-client ls --workflow myanalysis.42 'data/*root*'\n
     \t $ reana-client ls --workflow myanalysis.42 --filter name=hello
     """  # noqa: W605
     import tablib
@@ -211,9 +211,9 @@ def download_files(
     are downloaded. You can also specify the individual files you would like
     to download, see examples below.
 
-    Examples: \n
-    \t $ reana-client download # download all output files \n
-    \t $ reana-client download mydata.tmp outputs/myplot.png \n
+    Examples:\n
+    \t $ reana-client download # download all output files\n
+    \t $ reana-client download mydata.tmp outputs/myplot.png\n
     \t $ reana-client download -o - data.txt # write data.txt to stdout
     """
     from reana_client.api.client import download_file, get_workflow_specification
@@ -324,8 +324,8 @@ def upload_files(  # noqa: C901
     behaviour is to upload all input files and directories specified in the
     reana.yaml file.
 
-    Examples: \n
-    \t $ reana-client upload -w myanalysis.42 \n
+    Examples:\n
+    \t $ reana-client upload -w myanalysis.42\n
     \t $ reana-client upload -w myanalysis.42 code/mycode.py
     """
     from reana_client.api.client import get_workflow_specification, upload_to_server
@@ -452,7 +452,7 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
     Note that you can use glob to remove similar files.
 
     Examples:\n
-    \t $ reana-client rm -w myanalysis.42 data/mydata.csv \n
+    \t $ reana-client rm -w myanalysis.42 data/mydata.csv\n
     \t $ reana-client rm -w myanalysis.42 'data/*root*'
     """  # noqa: W605
     from reana_client.api.client import delete_file
@@ -556,9 +556,9 @@ def workflow_disk_usage(
 
     The ``du`` command allows to chech the disk usage of given workspace.
 
-    Examples: \n
-    \t $ reana-client du -w myanalysis.42 -s \n
-    \t $ reana-client du -w myanalysis.42 -s --human-readable \n
+    Examples:\n
+    \t $ reana-client du -w myanalysis.42 -s\n
+    \t $ reana-client du -w myanalysis.42 -s --human-readable\n
     \t $ reana-client du -w myanalysis.42 --filter name=data/
     """
     from reana_client.api.client import get_workflow_disk_usage

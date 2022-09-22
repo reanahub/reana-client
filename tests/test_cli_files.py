@@ -17,7 +17,6 @@ import zipfile
 from click.testing import CliRunner
 from mock import Mock, patch
 from pytest_reana.test_utils import make_mock_api_client
-
 from reana_client.cli import cli
 
 
@@ -427,31 +426,36 @@ def test_delete_non_existing_file():
                 assert message in result.output
 
 
-def test_move_file_running_workflow():
-    """Test move files when workflow is running."""
-    status_code = 200
+def test_move_files():
+    """Test move files."""
     reana_token = "000000"
-    src_file = "file11"
+    workflow = "mytest.1"
+    source = "file1"
     target = "file2"
-    response = {"status": "running", "logs": "", "name": "mytest.1"}
-    message = "File(s) could not be moved for running workflow"
+
     mock_http_response = Mock()
-    mock_http_response.status_code = status_code
-    mock_http_response.raw_bytes = str(response).encode()
-    mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    mock_http_response.status_code = 200
+    mock_http_response.raw_bytes = "{}".encode()
+    mock_client = Mock()
+    mock_result = mock_client.api.move_files.return_value
+    mock_result.result.return_value = ({}, mock_http_response)
+
+    runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
     with runner.isolation():
-        with patch(
-            "reana_client.api.client.current_rs_api_client",
-            make_mock_api_client("reana-server")(mock_response, mock_http_response),
-        ):
+        with patch("reana_client.api.client.current_rs_api_client", mock_client):
             result = runner.invoke(
                 cli,
-                ["mv", "-t", reana_token, "--workflow", "mytest.1", src_file, target],
+                ["mv", "-t", reana_token, "--workflow", workflow, source, target],
             )
-            assert result.exit_code == 1
-            assert message in result.output
+
+            mock_client.api.move_files.assert_called_once_with(
+                source=source,
+                target=target,
+                workflow_id_or_name=workflow,
+                access_token=reana_token,
+            )
+            assert result.exit_code == 0
+            assert "successfully" in result.output
 
 
 def test_list_files_filter():

@@ -13,6 +13,7 @@ Version 0.9.0 (UNRELEASED)
 - Changes ``list`` command to allow displaying the duration of workflows with the ``--include-duration`` option.
 - Changes ``status`` command to allow displaying the duration of workflows with the ``--include-duration`` option.
 - Changes REANA specification loading and validation functionality by porting some of the logic to ``reana-commons``.
+- Changes ``mv`` command to allow moving files while a workflow is running.
 - Fixes ``validate --environment`` command to detect illegal white space characters in image names.
 - Fixes ``list`` command to highlight the workflow specified in ``REANA_WORKON`` correctly.
 

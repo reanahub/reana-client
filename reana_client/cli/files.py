@@ -508,7 +508,8 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
 def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
     """Move files within workspace.
 
-    The ``mv`` command allow to move the files within workspace.
+    The ``mv`` command allows to move files within a workspace. Note that the
+    workflow might fail if files are moved during its execution.
 
     Examples:\n
     \t $ reana-client mv data/input.txt input/input.txt
@@ -519,34 +520,17 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
 
-    if workflow:
-        try:
-            current_status = get_workflow_status(workflow, access_token).get("status")
-            if current_status == "running":
-                display_message(
-                    "File(s) could not be moved for running workflow",
-                    msg_type="error",
-                )
-                sys.exit(1)
-            files = list_files(workflow, access_token)
-            current_files = [file["name"] for file in files]
-            if not any(source in item for item in current_files):
-                display_message(
-                    "Source file(s) {} does not exist in "
-                    "workspace {}".format(source, current_files),
-                    msg_type="error",
-                )
-                sys.exit(1)
-            mv_files(source, target, workflow, access_token)
-            display_message(
-                "{} was successfully moved to {}.".format(source, target),
-                msg_type="success",
-            )
-        except Exception as e:
-            logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            display_message("Something went wrong. {}".format(e), msg_type="error")
-            sys.exit(1)
+    try:
+        mv_files(source, target, workflow, access_token)
+        display_message(
+            "{} was successfully moved to {}.".format(source, target),
+            msg_type="success",
+        )
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        display_message("Something went wrong. {}".format(e), msg_type="error")
+        sys.exit(1)
 
 
 @files_group.command("du")

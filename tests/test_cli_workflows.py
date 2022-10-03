@@ -540,10 +540,19 @@ def test_create_workflow_from_json(create_yaml_workflow_schema):
 
 
 @pytest.mark.parametrize(
-    "status",
-    ["created", "running", "finished", "failed", "deleted", "stopped", "queued"],
+    "status, exit_code",
+    [
+        ("created", 0),
+        ("pending", 0),
+        ("queued", 0),
+        ("running", 0),
+        ("finished", 0),
+        ("failed", 1),
+        ("deleted", 1),
+        ("stopped", 1),
+    ],
 )
-def test_workflow_start_successful(status):
+def test_workflow_start_successful(status, exit_code):
     """Test workflow start when creation is successfull."""
     workflow_name = "mytest.1"
     response = {
@@ -569,7 +578,7 @@ def test_workflow_start_successful(status):
             result = runner.invoke(
                 cli, ["start", "-t", reana_token, "-w", response["workflow_name"]]
             )
-            assert result.exit_code == 0
+            assert result.exit_code == exit_code
             assert expected_message in result.output
 
 

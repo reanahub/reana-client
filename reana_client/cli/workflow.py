@@ -455,6 +455,15 @@ def workflow_start(
         start_workflow,
     )
 
+    def display_status(workflow: str, current_status: str):
+        """Display the current status of the workflow."""
+        status_msg = get_workflow_status_change_msg(workflow, current_status)
+        if current_status in ["deleted", "failed", "stopped"]:
+            display_message(status_msg, msg_type="error")
+            sys.exit(1)
+        else:
+            display_message(status_msg, msg_type="success")
+
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
@@ -487,36 +496,28 @@ def workflow_start(
             logging.info("Connecting to {0}".format(get_api_url()))
             response = start_workflow(workflow, access_token, parsed_parameters)
             current_status = get_workflow_status(workflow, access_token).get("status")
-            display_message(
-                get_workflow_status_change_msg(workflow, current_status),
-                msg_type="success",
-            )
+            display_status(workflow, current_status)
+
             if follow:
+                # keep printing the current status of the workflow
                 while current_status in ["pending", "queued", "running"]:
                     time.sleep(TIMECHECK)
                     current_status = get_workflow_status(workflow, access_token).get(
                         "status"
                     )
-                    display_message(
-                        get_workflow_status_change_msg(workflow, current_status),
-                        msg_type="success",
-                    )
+                    display_status(workflow, current_status)
+
                     if current_status == "finished":
-                        if follow:
-                            display_message(
-                                "Listing workflow output files...",
-                                msg_type="info",
-                            )
-                            ctx.invoke(
-                                get_files,
-                                workflow=workflow,
-                                access_token=access_token,
-                                output_format="url",
-                                human_readable_or_raw="raw",
-                            )
-                        sys.exit(0)
-                    elif current_status in ["deleted", "failed", "stopped"]:
-                        sys.exit(1)
+                        display_message(
+                            "Listing workflow output files...", msg_type="info"
+                        )
+                        ctx.invoke(
+                            get_files,
+                            workflow=workflow,
+                            access_token=access_token,
+                            output_format="url",
+                            human_readable_or_raw="raw",
+                        )
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))

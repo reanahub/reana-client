@@ -195,7 +195,7 @@ jobs:
 
           - name: Install Python dependencies
             run: |
-              pip install -I -r .${{ matrix.testenv }}-requirements.txt
+              pip install -r .${{ matrix.testenv }}-requirements.txt
 
           - name: Run pytest
             run: ./run-tests.sh --check-pytest

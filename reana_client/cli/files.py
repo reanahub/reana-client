@@ -250,10 +250,10 @@ def download_files(
             )
             sys.exit(1)
 
-        if "outputs" in reana_spec:
+        if reana_spec.get("outputs"):
             filenames = []
-            filenames += reana_spec["outputs"].get("files", [])
-            filenames += reana_spec["outputs"].get("directories", [])
+            filenames += reana_spec["outputs"].get("files") or []
+            filenames += reana_spec["outputs"].get("directories") or []
 
     if workflow:
         download_failed = False
@@ -347,9 +347,8 @@ def upload_files(  # noqa: C901
             )
             sys.exit(1)
 
-        if "inputs" in reana_spec:
+        if reana_spec.get("inputs"):
             filenames = []
-
             filenames += [
                 os.path.join(os.getcwd(), f)
                 for f in reana_spec["inputs"].get("files") or []

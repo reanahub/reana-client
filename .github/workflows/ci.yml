@@ -173,6 +173,12 @@ jobs:
                 - testenv: release
                   python: '3.10'
 
+                - testenv: lowest
+                  python: '3.11'
+
+                - testenv: release
+                  python: '3.11'
+
         steps:
           - uses: actions/checkout@v2
 

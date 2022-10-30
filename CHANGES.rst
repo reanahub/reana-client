@@ -4,6 +4,7 @@ Changes
 Version 0.9.0 (UNRELEASED)
 --------------------------
 
+- Adds support for Python 3.11.
 - Adds support for ``.reanaignore`` during file upload. Files that match ``.reanaignore`` will not be uploaded.
 - Adds support for ``.gitignore`` during file upload. Files that match ``.gitignore`` will not be uploaded.
 - Changes ``delete`` CLI command to always delete workspace.

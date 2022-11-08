@@ -36,7 +36,7 @@ def secrets_group(ctx):
     multiple=True,
     cls=NotRequiredIf,
     not_required_if="file",
-    help="Secrets to be uploaded from literal string." "e.g. PASSWORD=password123",
+    help="Secrets to be uploaded from literal string. E.g. RUCIO_USERNAME=ruciouser",
 )
 @click.option(
     "--file",
@@ -58,11 +58,10 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
     """Add secrets from literal string or from file.
 
     Examples:\n
-    \t $ reana-client secrets-add --env PASSWORD=password\n
-    \t $ reana-client secrets-add --file ~/.keytab\n
-    \t $ reana-client secrets-add --env USER=reanauser\n
-    \t                            --env PASSWORD=password\n
-    \t                            --file ~/.keytab
+    \t $ reana-client secrets-add --env RUCIO_USERNAME=ruciouser\n
+    \t $ reana-client secrets-add --file userkey.pem\n
+    \t $ reana-client secrets-add --env VOMSPROXY_FILE=x509up_u1000\n
+    \t                            --file /tmp/x509up_u1000
     """
     from reana_client.api.client import add_secrets
 
@@ -100,12 +99,12 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
 @secrets_group.command()
 @add_access_token_options
 @check_connection
-@click.argument("secrets", type=str, nargs=-1)
+@click.argument("secrets", type=str, nargs=-1, required=True)
 def secrets_delete(secrets, access_token):  # noqa: D301
     """Delete user secrets by name.
 
      Examples:\n
-    \t $ reana-client secrets-delete PASSWORD
+    \t $ reana-client secrets-delete RUCIO_USERNAME
     """
     from reana_client.api.client import delete_secrets
 
@@ -113,10 +112,9 @@ def secrets_delete(secrets, access_token):  # noqa: D301
         deleted_secrets = delete_secrets(secrets, access_token)
     except REANASecretDoesNotExist as e:
         logging.debug(str(e), exc_info=True)
+        missing_secrets = ", ".join(e.missing_secrets_list)
         display_message(
-            "Secrets {} do not exist. Nothing was deleted".format(
-                e.missing_secrets_list
-            ),
+            f"Secrets {missing_secrets} do not exist. Nothing was deleted",
             msg_type="error",
         )
         sys.exit(1)

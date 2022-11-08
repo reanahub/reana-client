@@ -17,6 +17,7 @@ Version 0.9.0 (UNRELEASED)
 - Changes ``mv`` command to allow moving files while a workflow is running.
 - Fixes ``validate --environment`` command to detect illegal white space characters in image names.
 - Fixes ``list`` command to highlight the workflow specified in ``REANA_WORKON`` correctly.
+- Fixes ``secrets-delete`` command error message when deleting non existing secrets.
 
 Version 0.8.2 (UNRELEASED)
 --------------------------

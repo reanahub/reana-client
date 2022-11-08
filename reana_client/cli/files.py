@@ -351,15 +351,29 @@ def upload_files(  # noqa: C901
 
         if reana_spec.get("inputs"):
             filenames = []
-            filenames += [
-                os.path.join(os.getcwd(), f)
-                for f in reana_spec["inputs"].get("files") or []
-            ]
+
+            # collect all files in input.files
+            for f in reana_spec["inputs"].get("files") or []:
+                # check for directories in files
+                if os.path.isdir(f):
+                    display_message(
+                        f"Found directory in `inputs.files`: {f}",
+                        msg_type="error",
+                    )
+                    sys.exit(1)
+                filenames.append(os.path.join(os.getcwd(), f))
 
             # collect all files in input.directories
             files_from_directories = []
             directories = reana_spec["inputs"].get("directories") or []
             for directory_path in directories:
+                # check for files in directories
+                if os.path.isfile(directory_path):
+                    display_message(
+                        f"Found file in `inputs.directories`: {directory_path}",
+                        msg_type="error",
+                    )
+                    sys.exit(1)
                 for root, _, dir_filenames in os.walk(directory_path):
                     filenames_full_path = [
                         os.path.join(root, file) for file in dir_filenames
@@ -402,8 +416,18 @@ def upload_files(  # noqa: C901
             filenames += [
                 os.path.join(os.getcwd(), file) for file in files_from_directories
             ]
+
+    # collect and filter out all the unique filepaths
+    filepaths = set()
+    for filepath in filenames:
+        if os.path.isfile(filepath):
+            filepaths.add(filepath)
+        else:
+            for root, _, files in os.walk(filepath):
+                filepaths.update([os.path.join(root, file) for file in files])
+
     upload_failed = False
-    for filename in filenames:
+    for filename in filepaths:
         try:
             if not is_regular_path(filename):
                 display_message(f"Ignoring symlink {filepath}", msg_type="info")

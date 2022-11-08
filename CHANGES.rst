@@ -19,6 +19,7 @@ Version 0.9.0 (UNRELEASED)
 - Fixes ``validate --environment`` command to detect illegal white space characters in image names.
 - Fixes ``list`` command to highlight the workflow specified in ``REANA_WORKON`` correctly.
 - Fixes ``secrets-delete`` command error message when deleting non existing secrets.
+- Fixes ``upload`` command to report in case input directories are listed under files and vice versa.
 
 Version 0.8.2 (UNRELEASED)
 --------------------------

@@ -14,6 +14,7 @@ import os
 import sys
 import traceback
 import zipfile
+from pathlib import Path
 from typing import List, Tuple
 
 import click
@@ -35,6 +36,7 @@ from reana_client.cli.utils import (
 )
 from reana_client.config import JSON, STD_OUTPUT_CHAR, URL
 from reana_client.errors import FileDeletionError
+from reana_client.utils import is_regular_path
 
 FILES_BLACKLIST = (".git/", "/.git/")
 
@@ -306,7 +308,7 @@ def download_files(
 @click.argument(
     "filenames",
     metavar="SOURCES",
-    type=click.Path(exists=True, resolve_path=True),
+    type=click.Path(exists=True),
     nargs=-1,
 )
 @add_workflow_option
@@ -403,19 +405,17 @@ def upload_files(  # noqa: C901
     upload_failed = False
     for filename in filenames:
         try:
-            response = upload_to_server(workflow, filename, access_token)
+            if not is_regular_path(filename):
+                display_message(f"Ignoring symlink {filepath}", msg_type="info")
+                continue
+
+            filepath = os.path.abspath(filename)
+            response = upload_to_server(workflow, filepath, access_token)
             for file_ in response:
-                if file_.startswith("symlink:"):
-                    display_message(
-                        "Symlink resolved to {}. "
-                        "Uploaded hard copy.".format(file_[len("symlink:") :]),
-                        msg_type="success",
-                    )
-                else:
-                    display_message(
-                        "File {} was successfully uploaded.".format(file_),
-                        msg_type="success",
-                    )
+                display_message(
+                    "File {} was successfully uploaded.".format(file_),
+                    msg_type="success",
+                )
         except FileNotFoundError as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))

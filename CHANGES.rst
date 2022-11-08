@@ -15,6 +15,7 @@ Version 0.9.0 (UNRELEASED)
 - Changes ``status`` command to allow displaying the duration of workflows with the ``--include-duration`` option.
 - Changes REANA specification loading and validation functionality by porting some of the logic to ``reana-commons``.
 - Changes ``mv`` command to allow moving files while a workflow is running.
+- Changes ``upload`` command to prevent uploading symlinks.
 - Fixes ``validate --environment`` command to detect illegal white space characters in image names.
 - Fixes ``list`` command to highlight the workflow specified in ``REANA_WORKON`` correctly.
 - Fixes ``secrets-delete`` command error message when deleting non existing secrets.

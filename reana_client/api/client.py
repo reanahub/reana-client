@@ -25,7 +25,7 @@ from werkzeug.local import LocalProxy
 
 from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import is_uuid_v4
+from reana_client.utils import is_uuid_v4, is_regular_path
 
 current_rs_api_client = LocalProxy(
     partial(get_current_api_client, component="reana-server")
@@ -565,9 +565,12 @@ def upload_to_server(workflow, paths, access_token):
         if ".." in paths.split("/"):
             raise FileUploadError('Path cannot contain ".."')
 
+        if not is_regular_path(path):
+            logging.info(f"Ignoring symlink {path}")
+            return []
+
         # Check if input is a directory and upload everything
         # including subdirectories.
-
         if os.path.isdir(path):
             logging.debug("'{}' is a directory.".format(path))
             logging.info("Uploading contents of folder '{}' ...".format(path))
@@ -583,11 +586,6 @@ def upload_to_server(workflow, paths, access_token):
 
         # Check if input is an absolute path and upload file.
         else:
-            symlink = False
-            if os.path.islink(path):
-                path = os.path.realpath(path)
-                logging.info("Symlink {} found, uploading" " hard copy.".format(path))
-                symlink = True
             with open(path, "rb") as f:
                 fname = os.path.basename(f.name)
                 # Calculate the path that will store the file
@@ -604,8 +602,6 @@ def upload_to_server(workflow, paths, access_token):
                 try:
                     upload_file(workflow, f, save_path, access_token)
                     logging.info("File '{}' was successfully uploaded.".format(fname))
-                    if symlink:
-                        save_path = "symlink:{}".format(save_path)
                     return [save_path]
                 except Exception as e:
                     logging.debug(traceback.format_exc())

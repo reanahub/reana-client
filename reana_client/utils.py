@@ -11,6 +11,7 @@ import base64
 from datetime import datetime
 import logging
 import os
+import pathlib
 import sys
 import traceback
 from typing import Dict, Optional
@@ -86,6 +87,15 @@ def is_uuid_v4(uuid_or_name):
         return False
 
     return uuid.hex == uuid_or_name.replace("-", "")
+
+
+def is_regular_path(path: str) -> bool:
+    """Check if path does not refer to a symbolic link."""
+    full_path = pathlib.Path(os.path.abspath(path))
+    for parent in full_path.parents:
+        if not parent.is_dir() or parent.is_symlink():
+            return False
+    return not full_path.is_symlink()
 
 
 def get_workflow_name_and_run_number(workflow_name):

@@ -771,8 +771,7 @@ def workflow_status(  # noqa: C901
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     try:
         if _format:
-            parsed_filters = parse_format_parameters(_format)
-            _format = [item["column_name"] for item in parsed_filters]
+            parsed_format_filters = parse_format_parameters(_format)
         workflow_response = get_workflow_status(workflow, access_token)
         headers = ["name", "run_number", "created", "status"]
         verbose_headers = ["id", "user", "command"]
@@ -787,18 +786,25 @@ def workflow_status(  # noqa: C901
             headers += ["duration"]
             data[-1] += [get_workflow_duration(workflow_response) or "-"]
 
-        if output_format:
-            tablib_data = tablib.Dataset()
-            tablib_data.headers = headers
-            for row in data:
-                tablib_data.append(row)
+        tablib_data = tablib.Dataset()
+        tablib_data.headers = headers
+        for row in data:
+            tablib_data.append(row=row, tags=row)
 
-            if _format:
-                tablib_data = tablib_data.subset(rows=None, cols=list(_format))
-
-            display_message(tablib_data.export(output_format))
+        if _format:
+            tablib_data, filtered_headers = format_data(
+                parsed_format_filters, headers, tablib_data
+            )
+            if output_format:
+                display_message(json.dumps(tablib_data))
+            else:
+                tablib_data = [list(item.values()) for item in tablib_data]
+                click_table_printer(filtered_headers, filtered_headers, tablib_data)
         else:
-            click_table_printer(headers, _format, data)
+            if output_format:
+                display_message(tablib_data.export(output_format))
+            else:
+                click_table_printer(headers, _format, data)
 
     except Exception as e:
         logging.debug(traceback.format_exc())

@@ -19,7 +19,6 @@ from jsonschema.exceptions import ValidationError
 from reana_commons.config import INTERACTIVE_SESSION_TYPES, REANA_COMPUTE_BACKENDS
 from reana_commons.errors import REANAValidationError
 from reana_commons.validation.operational_options import validate_operational_options
-from reana_commons.utils import click_table_printer
 
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (
@@ -28,13 +27,12 @@ from reana_client.cli.utils import (
     add_pagination_options,
     add_workflow_option,
     check_connection,
-    format_data,
+    display_formatted_output,
     format_session_uri,
     get_formatted_progress,
     human_readable_or_raw_option,
     key_value_to_dict,
     parse_filter_parameters,
-    parse_format_parameters,
     requires_environments,
 )
 from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
@@ -187,7 +185,6 @@ def workflows_list(  # noqa: C901
     \t $ reana-client list --sessions\n
     \t $ reana-client list --verbose --bytes
     """
-    import tablib
     from reana_client.api.client import get_workflows
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
@@ -208,8 +205,6 @@ def workflows_list(  # noqa: C901
         if provided_status_filter:
             status_filter = provided_status_filter
 
-    if _format:
-        parsed_format_filters = parse_format_parameters(_format)
     try:
         response = get_workflows(
             access_token,
@@ -294,25 +289,8 @@ def workflows_list(  # noqa: C901
         if os.getenv("REANA_WORKON", "") in workflow_ids:
             active_workflow_idx = workflow_ids.index(os.getenv("REANA_WORKON", ""))
             data[active_workflow_idx][headers[type].index("run_number")] += " *"
-        tablib_data = tablib.Dataset()
-        tablib_data.headers = headers[type]
-        for row in data:
-            tablib_data.append(row=row, tags=row)
 
-        if _format:
-            tablib_data, filtered_headers = format_data(
-                parsed_format_filters, headers[type], tablib_data
-            )
-            if output_format:
-                display_message(json.dumps(tablib_data))
-            else:
-                tablib_data = [list(item.values()) for item in tablib_data]
-                click_table_printer(filtered_headers, filtered_headers, tablib_data)
-        else:
-            if output_format:
-                display_message(tablib_data.export(output_format))
-            else:
-                click_table_printer(headers[type], _format, data)
+        display_formatted_output(data, headers[type], _format, output_format)
 
     except Exception as e:
         logging.debug(traceback.format_exc())
@@ -697,7 +675,6 @@ def workflow_status(  # noqa: C901
     \t $ reana-client status -w myanalysis.42\n
     \t $ reana-client status -w myanalysis.42 -v --json
     """
-    import tablib
     from reana_client.api.client import get_workflow_status
 
     def render_progress(finished_jobs, total_jobs):
@@ -770,8 +747,6 @@ def workflow_status(  # noqa: C901
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     try:
-        if _format:
-            parsed_format_filters = parse_format_parameters(_format)
         workflow_response = get_workflow_status(workflow, access_token)
         headers = ["name", "run_number", "created", "status"]
         verbose_headers = ["id", "user", "command"]
@@ -786,25 +761,7 @@ def workflow_status(  # noqa: C901
             headers += ["duration"]
             data[-1] += [get_workflow_duration(workflow_response) or "-"]
 
-        tablib_data = tablib.Dataset()
-        tablib_data.headers = headers
-        for row in data:
-            tablib_data.append(row=row, tags=row)
-
-        if _format:
-            tablib_data, filtered_headers = format_data(
-                parsed_format_filters, headers, tablib_data
-            )
-            if output_format:
-                display_message(json.dumps(tablib_data))
-            else:
-                tablib_data = [list(item.values()) for item in tablib_data]
-                click_table_printer(filtered_headers, filtered_headers, tablib_data)
-        else:
-            if output_format:
-                display_message(tablib_data.export(output_format))
-            else:
-                click_table_printer(headers, _format, data)
+        display_formatted_output(data, headers, _format, output_format)
 
     except Exception as e:
         logging.debug(traceback.format_exc())

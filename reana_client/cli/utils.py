@@ -15,11 +15,15 @@ import sys
 from typing import Callable, NoReturn, Optional, List, Tuple, Union
 
 import click
+import tablib
+
+from reana_commons.utils import click_table_printer
 
 from reana_client.config import (
     ERROR_MESSAGES,
     RUN_STATUSES,
     JOB_STATUS_TO_MSG_COLOR,
+    JSON,
 )
 from reana_client.printer import display_message
 from reana_client.utils import workflow_uuid_or_name
@@ -216,7 +220,7 @@ def format_data(parsed_filters, headers, tablib_data):
     parsed_filters = [i for i in parsed_filters if i["column_name"] in headers]
     column_headers = [i["column_name"] for i in parsed_filters] or None
     tablib_data = tablib_data.subset(rows=None, cols=column_headers)
-    tablib_data = json.loads(tablib_data.export("json"))
+    tablib_data = json.loads(tablib_data.export("json")) if tablib_data else []
     filtered_data = list(tablib_data)
     for item in filtered_data:
         for filter_ in parsed_filters:
@@ -227,6 +231,36 @@ def format_data(parsed_filters, headers, tablib_data):
                 tablib_data.remove(item)
                 break
     return tablib_data, column_headers or []
+
+
+def display_formatted_output(
+    data: List[List[str]],
+    headers: List[str],
+    _format: Tuple[str],
+    output_format: Optional[str],
+) -> None:
+    """Format and display output data."""
+    tablib_data = tablib.Dataset()
+    tablib_data.headers = headers
+
+    for row in data:
+        tablib_data.append(row=row, tags=row)
+
+    if _format:
+        parsed_format_filters = parse_format_parameters(_format)
+        tablib_data, filtered_headers = format_data(
+            parsed_format_filters, headers, tablib_data
+        )
+        if output_format == JSON:
+            display_message(json.dumps(tablib_data))
+        else:
+            tablib_data = [list(item.values()) for item in tablib_data]
+            click_table_printer(filtered_headers, filtered_headers, tablib_data)
+    else:
+        if output_format == JSON:
+            display_message(tablib_data.export(output_format))
+        else:
+            click_table_printer(headers, _format, data)
 
 
 def format_session_uri(reana_server_url, path, access_token):

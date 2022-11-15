@@ -8,13 +8,11 @@
 """REANA client output related commands."""
 
 import io
-import json
 import logging
 import os
 import sys
 import traceback
 import zipfile
-from pathlib import Path
 from typing import List, Tuple
 
 import click
@@ -29,10 +27,9 @@ from reana_client.cli.utils import (
     add_pagination_options,
     add_workflow_option,
     check_connection,
-    format_data,
+    display_formatted_output,
     human_readable_or_raw_option,
     parse_filter_parameters,
-    parse_format_parameters,
 )
 from reana_client.config import JSON, STD_OUTPUT_CHAR, URL
 from reana_client.errors import FileDeletionError
@@ -113,7 +110,6 @@ def get_files(
     \t $ reana-client ls --workflow myanalysis.42 'data/*root*'\n
     \t $ reana-client ls --workflow myanalysis.42 --filter name=hello
     """  # noqa: W605
-    import tablib
     from reana_client.api.client import current_rs_api_client, list_files
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
@@ -124,8 +120,6 @@ def get_files(
     headers = ["name", "size", "last-modified"]
     if filters:
         _, search_filter = parse_filter_parameters(filters, headers)
-    if _format:
-        parsed_format_filters = parse_format_parameters(_format)
     if workflow:
         logging.info('Workflow "{}" selected'.format(workflow))
         try:
@@ -157,26 +151,10 @@ def get_files(
                             workflow_id_or_name=workflow, file_name=file_["name"]
                         )
                     )
-            tablib_data = tablib.Dataset()
-            tablib_data.headers = headers
-            for row in data:
-                tablib_data.append(row)
             if output_format == URL:
                 display_message("\n".join(urls))
-            elif _format:
-                tablib_data, filtered_headers = format_data(
-                    parsed_format_filters, headers, tablib_data
-                )
-                if output_format == JSON:
-                    display_message(json.dumps(tablib_data))
-                else:
-                    tablib_data = [list(item.values()) for item in tablib_data]
-                    click_table_printer(filtered_headers, filtered_headers, tablib_data)
             else:
-                if output_format == JSON:
-                    display_message(tablib_data.export(output_format))
-                else:
-                    click_table_printer(headers, _format, data)
+                display_formatted_output(data, headers, _format, output_format)
 
         except Exception as e:
             logging.debug(traceback.format_exc())

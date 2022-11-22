@@ -1062,3 +1062,32 @@ def info(access_token):
         raise Exception(e.response.json()["message"])
     except Exception as e:
         raise e
+
+
+def get_workflow_retention_rules(workflow, access_token):
+    """Get the retention rules of a workflow."""
+    try:
+        (
+            response,
+            http_response,
+        ) = current_rs_api_client.api.get_workflow_retention_rules(
+            workflow_id_or_name=workflow,
+            access_token=access_token,
+        ).result()
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(status_code=http_response.status_code)
+            )
+
+    except HTTPError as e:
+        logging.debug(
+            "Workflow retention rules could not be retrieved: "
+            "\nStatus: {}\nReason: {}\n"
+            "Message: {}".format(
+                e.response.status_code, e.response.reason, e.response.json()["message"]
+            )
+        )
+        raise Exception(e.response.json()["message"])

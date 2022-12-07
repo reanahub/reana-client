@@ -49,6 +49,7 @@ install_requires = [
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",
+    "swagger_spec_validator>=2.4.0,<3.0.0; python_version<'3.7'",
 ]
 
 packages = find_packages()

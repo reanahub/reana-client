@@ -1,33 +1,30 @@
 Changes
 =======
 
-Version 0.9.0 (UNRELEASED)
+Version 0.9.0 (2023-01-26)
 --------------------------
 
 - Adds support for Python 3.11.
-- Adds support for ``.reanaignore`` during file upload. Files that match ``.reanaignore`` will not be uploaded.
-- Adds support for ``.gitignore`` during file upload. Files that match ``.gitignore`` will not be uploaded.
+- Adds support for ``.gitignore`` and ``.reanaignore`` to specify files that should not be uploaded to REANA.
 - Adds ``retention-rules-list`` command to list the retention rules of a workflow.
-- Changes ``create`` and ``restart`` commands to always upload REANA specification file.
-- Changes ``delete`` CLI command to always delete workspace.
-- Changes ``delete_workflow`` API method to always delete workspace.
-- Changes ``list`` to hide deleted workflows by default.
+- Changes REANA specification loading and validation functionalities by porting some of the logic to ``reana-commons``.
+- Changes ``create`` and ``restart`` commands to always upload the REANA specification file.
+- Changes ``delete`` command to always delete the workflow's workspace.
+- Changes ``delete_workflow`` Python API function to always delete the workflow's workspace.
+- Changes ``download`` command to add the possibility to write files to the standard output via ``-o -`` option.
+- Changes ``list`` command to hide deleted workflows by default.
 - Changes ``list`` command to allow displaying deleted workflows via ``--all`` and ``--show-deleted-runs`` options.
-- Changes ``list`` command to allow displaying the duration of workflows with the ``--include-duration`` option.
-- Changes ``status`` command to allow displaying the duration of workflows with the ``--include-duration`` option.
-- Changes REANA specification loading and validation functionality by porting some of the logic to ``reana-commons``.
+- Changes ``list`` and ``status`` commands to allow displaying the duration of workflows with the ``--include-duration`` option.
 - Changes ``mv`` command to allow moving files while a workflow is running.
 - Changes ``upload`` command to prevent uploading symlinks.
-- Fixes ``validate --environment`` command to detect illegal white space characters in image names.
+- Changes ``validation --environment`` command to use Docker registry v2 APIs to check that a Docker image exists in DockerHub.
 - Fixes ``list`` command to highlight the workflow specified in ``REANA_WORKON`` correctly.
 - Fixes ``secrets-delete`` command error message when deleting non existing secrets.
-- Fixes ``upload`` command to report in case input directories are listed under files and vice versa.
-
-Version 0.8.2 (UNRELEASED)
---------------------------
-
-- Changes ``download`` command to add the possibility to write files to the standard output via ``-o -`` option.
+- Fixes ``start`` command to report failed workflows as errors.
 - Fixes ``start`` and ``run`` commands to correctly follow the execution of the workflow until termination.
+- Fixes ``status`` command to respect output format provided by the ``--format`` option.
+- Fixes ``upload`` command to report when input directories are listed under the ``files`` section in the REANA specification file and vice versa.
+- Fixes ``validate --environment`` command to detect illegal whitespace characters in Docker image names.
 
 Version 0.8.1 (2022-02-15)
 --------------------------

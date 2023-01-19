@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -19,7 +19,7 @@ readme = open("README.rst").read()
 history = open("CHANGES.rst").read()
 
 tests_require = [
-    "pytest-reana>=0.9.0a7,<0.10.0",
+    "pytest-reana>=0.9.0,<0.10.0",
 ]
 
 extras_require = {
@@ -45,7 +45,7 @@ install_requires = [
     "click>=7",
     "pathspec==0.9.0",
     "jsonpointer>=2.0",
-    "reana-commons[yadage,snakemake,cwl]>=0.9.0a16,<0.10.0",
+    "reana-commons[yadage,snakemake,cwl]>=0.9.1,<0.10.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",

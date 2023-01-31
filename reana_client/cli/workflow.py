@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -1175,7 +1175,8 @@ def workflow_delete(
     """Delete a workflow.
 
     The ``delete`` command removes workflow run(s) from the database.
-    Note that the workspace will always be deleted, even when ``--include-workspace`` is not specified.
+    Note that the workspace and any open session attached to it will always be
+    deleted, even when ``--include-workspace`` is not specified.
     Note also that you can remove all past runs of a workflow by specifying ``--include-all-runs`` flag.
 
     Example:\n

@@ -64,7 +64,6 @@ def test_ping_ok():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-
             result = runner.invoke(cli, ["ping", "-t", reana_token])
             message = "Authenticated as: John Doe <johndoe@example.org>"
             assert message in result.output

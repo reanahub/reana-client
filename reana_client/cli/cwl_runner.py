@@ -173,7 +173,6 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
             response = get_workflow_logs(workflow_id, access_token)
             logs = response["logs"]
             if logs != first_logs:
-
                 logging.error(logs[len(first_logs) :])
                 first_logs = logs
 

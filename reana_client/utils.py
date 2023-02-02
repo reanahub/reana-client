@@ -138,6 +138,7 @@ def get_workflow_duration(workflow: Dict) -> Optional[int]:
     :return: The duration of the workflow in seconds or ``None`` if the starting
         time is not present.
     """
+
     # FIXME: Use datetime.fromisoformat when moving to Python 3.7 or higher
     def fromisoformat(date_string):
         return datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S")

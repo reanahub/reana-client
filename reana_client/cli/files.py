@@ -534,6 +534,56 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
         sys.exit(1)
 
 
+@files_group.command("prune")
+@check_connection
+@add_workflow_option
+@add_access_token_options
+@click.option(
+    "--include-inputs",
+    "include_inputs",
+    is_flag=True,
+    help="Delete also the input files of the workflow. Note that this includes the workflow specification file.",
+)
+@click.option(
+    "--include-outputs",
+    "include_outputs",
+    is_flag=True,
+    help="Delete also the output files of the workflow.",
+)
+@click.pass_context
+def prune_files(
+    ctx, workflow, access_token, include_inputs, include_outputs
+):  # noqa: D301
+    """Prune workspace files.
+
+    The ``prune`` command deletes all the intermediate files of a given workflow that are not present
+    in the input or output section of the workflow specification.
+
+    Examples:\n
+    \t $ reana-client prune -w myanalysis.42\n
+    \t $ reana-client prune -w myanalysis.42 --include-inputs
+    """
+    from reana_client.api.client import prune_workspace
+
+    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+
+    try:
+        response = prune_workspace(
+            workflow, include_inputs, include_outputs, access_token
+        )
+        display_message(response["message"], msg_type="success")
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        display_message(
+            "Workspace could not be pruned: \n{}".format(e),
+            msg_type="error",
+        )
+        sys.exit(1)
+
+
 @files_group.command("du")
 @add_workflow_option
 @check_connection

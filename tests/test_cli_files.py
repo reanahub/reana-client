@@ -634,3 +634,37 @@ def test_list_files_filter_with_filename():
             assert len(json_response) == 3
             assert json_response[0]["name"] in response["items"][0]["name"]
             assert "2021-06-14" in json_response[1]["last-modified"]
+
+
+def test_prune_workspace():
+    """Test prune workspace files."""
+    status_code = 200
+    response = {
+        "message": "The workspace has been correctly pruned.",
+        "workflow_id": "string",
+        "workflow_name": "string",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "prune",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-worflow.1",
+                    "--include-outputs",
+                ],
+            )
+            assert result.exit_code == 0
+            assert response["message"] in result.output

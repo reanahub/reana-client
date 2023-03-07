@@ -1091,3 +1091,32 @@ def get_workflow_retention_rules(workflow, access_token):
             )
         )
         raise Exception(e.response.json()["message"])
+
+
+def prune_workspace(workflow, include_inputs, include_outputs, access_token):
+    """Prune workspace files."""
+    try:
+        (response, http_response) = current_rs_api_client.api.prune_workspace(
+            workflow_id_or_name=workflow,
+            include_inputs=include_inputs,
+            include_outputs=include_outputs,
+            access_token=access_token,
+        ).result()
+
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(status_code=http_response.status_code)
+            )
+
+    except HTTPError as e:
+        logging.debug(
+            "Workspace could not be pruned: "
+            "\nStatus: {}\nReason: {}\n"
+            "Message: {}".format(
+                e.response.status_code, e.response.reason, e.response.json()["message"]
+            )
+        )
+        raise Exception(e.response.json()["message"])

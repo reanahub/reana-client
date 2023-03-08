@@ -555,7 +555,7 @@ def workflow_disk_usage(
 ):  # noqa: D301
     """Get workspace disk usage.
 
-    The ``du`` command allows to chech the disk usage of given workspace.
+    The ``du`` command allows to check the disk usage of given workspace.
 
     Examples:\n
     \t $ reana-client du -w myanalysis.42 -s\n

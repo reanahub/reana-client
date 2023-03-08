@@ -10,6 +10,7 @@ The list of contributors in alphabetical order:
 - `Daniel Prelipcean <https://orcid.org/0000-0002-4855-194X>`_
 - `Diego Rodriguez <https://orcid.org/0000-0003-0649-2002>`_
 - `Dinos Kousidis <https://orcid.org/0000-0002-4914-4289>`_
+- `Giuseppe Steduto <https://orcid.org/0009-0002-1258-8553>`_
 - `Harri Hirvonsalo <https://orcid.org/0000-0002-5503-510X>`_
 - `Jan Okraska <https://orcid.org/0000-0002-1416-3244>`_
 - `Leticia Wanderley <https://orcid.org/0000-0003-4649-6630>`_

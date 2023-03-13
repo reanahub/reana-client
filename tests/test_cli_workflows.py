@@ -114,7 +114,36 @@ def test_deleted_workflows(cli_options: List[str], expected_status_filter: List[
             assert kwargs["status"] == expected_status_filter
 
 
-def test_workflows_sorting():
+@pytest.mark.parametrize(
+    "cli_options, expected_output",
+    [
+        (
+            ["list", "-t", "000000", "--sort", "run_number"],
+            (
+                "mytest   15           2018-06-13T10:55:37   -                     -                     running\n"
+                "mytest   2            2018-06-13T09:55:35   -                     -                     running\n"
+                "mytest   1 *          2018-06-13T09:47:35   2018-06-13T09:47:40   2018-06-13T10:30:03   running"
+            ),
+        ),
+        (
+            [
+                "list",
+                "-t",
+                "000000",
+                "--include-workspace-size",
+                "-h",
+                "--sort",
+                "size",
+            ],
+            (
+                "mytest   1 *          2018-06-13T09:47:35   2018-06-13T09:47:40   2018-06-13T10:30:03   running   1.55 MiB\n"
+                "mytest   2            2018-06-13T09:55:35   -                     -                     running   540 KiB \n"
+                "mytest   15           2018-06-13T10:55:37   -                     -                     running   192 KiB "
+            ),
+        ),
+    ],
+)
+def test_workflows_sorting(cli_options: List[str], expected_output: str):
     """Test workflows sorting."""
     response = {
         "items": [
@@ -128,7 +157,7 @@ def test_workflows_sorting():
                     "run_started_at": "2018-06-13T09:47:40",
                     "run_finished_at": "2018-06-13T10:30:03",
                 },
-                "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "size": {"raw": 1622016, "human_readable": "1.55 MiB"},
             },
             {
                 "status": "running",
@@ -136,7 +165,15 @@ def test_workflows_sorting():
                 "user": "00000000-0000-0000-0000-000000000000",
                 "name": "mytest.2",
                 "id": "256b25f4-4cfb-4684-b7a8-73872ef455a2",
-                "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "size": {"raw": 552960, "human_readable": "540 KiB"},
+            },
+            {
+                "status": "running",
+                "created": "2018-06-13T10:55:37",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.15",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a3",
+                "size": {"raw": 196608, "human_readable": "192 KiB"},
             },
         ]
     }
@@ -145,22 +182,15 @@ def test_workflows_sorting():
     mock_http_response.status_code = status_code
     mock_response = response
     env = {"REANA_SERVER_URL": "localhost", "REANA_WORKON": "mytest.1"}
-    reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(
-                cli, ["list", "-t", reana_token, "--sort", "run_number"]
-            )
-            message = (
-                "mytest   2            2018-06-13T09:55:35   -                     -                     running\n"
-                "mytest   1 *          2018-06-13T09:47:35   2018-06-13T09:47:40   2018-06-13T10:30:03   running"
-            )
+            result = runner.invoke(cli, cli_options)
             assert result.exit_code == 0
-            assert message in result.output
+            assert expected_output in result.output
 
 
 def test_workflows_sessions():

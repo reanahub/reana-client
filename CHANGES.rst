@@ -3,6 +3,8 @@ Changes
 
 Version 0.9.1 (UNRELEASED)
 --------------------------
+
+- Adds ``prune`` command to delete all intermediate files of a given workflow.
 - Fixes ``list`` command to correctly list workflows when sorting them by their run number or by the size of their workspace.
 - Fixes ``du`` command help message typo.
 

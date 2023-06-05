@@ -1361,7 +1361,7 @@ def workflow_open_interactive_session(
     Examples:\n
     \t $ reana-client open -w myanalysis.42 jupyter
     """
-    from reana_client.api.client import open_interactive_session
+    from reana_client.api.client import open_interactive_session, info
 
     if workflow:
         try:
@@ -1389,6 +1389,15 @@ def workflow_open_interactive_session(
             display_message(
                 "It could take several minutes to start the interactive session."
             )
+            reana_info = info(access_token)
+            max_inactivity_days_entry = (
+                reana_info.get("maximum_interactive_session_inactivity_period") or {}
+            )
+            max_inactivity_days = max_inactivity_days_entry.get("value")
+            if max_inactivity_days:
+                display_message(
+                    f"Please note that it will be automatically closed after {max_inactivity_days} days of inactivity."
+                )
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))

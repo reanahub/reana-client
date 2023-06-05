@@ -816,11 +816,33 @@ def test_workflow_input_parameters():
 
 
 @pytest.mark.parametrize(
-    "interactive_session_type",
-    INTERACTIVE_SESSION_TYPES
-    + [pytest.param("wrong-interactive-type", marks=pytest.mark.xfail)],
+    "interactive_session_type,reana_info,is_autoclosure_message_expected",
+    [
+        (
+            session_type,
+            {"maximum_interactive_session_inactivity_period": {"value": 30}},
+            True,
+        )
+        for session_type in INTERACTIVE_SESSION_TYPES
+    ]
+    + [
+        (
+            INTERACTIVE_SESSION_TYPES[0],
+            {"maximum_interactive_session_inactivity_period": None},
+            False,
+        ),
+        (INTERACTIVE_SESSION_TYPES[0], dict(), False),
+        pytest.param(
+            "wrong-interactive-type",
+            {"maximum_interactive_session_inactivity_period": {"value": 30}},
+            True,
+            marks=pytest.mark.xfail,
+        ),
+    ],
 )
-def test_open_interactive_session(interactive_session_type):
+def test_open_interactive_session(
+    interactive_session_type, reana_info, is_autoclosure_message_expected
+):
     """Test opening an interactive session."""
     status_code = 200
     workflow_id = "d9304bdf-0d19-45d9-ae87-d5fd18059193"
@@ -836,10 +858,14 @@ def test_open_interactive_session(interactive_session_type):
         with patch(
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ), patch(
+            "reana_client.api.client.info",
+            return_value=reana_info,
         ):
-            expected_message = "{reana_server_url}/{workflow_id}".format(
+            expected_url_session = "{reana_server_url}/{workflow_id}".format(
                 reana_server_url=reana_server_url, workflow_id=workflow_id
             )
+            expected_auto_closure_message = "will be automatically closed after 30 days"
             result = runner.invoke(
                 cli,
                 [
@@ -851,7 +877,11 @@ def test_open_interactive_session(interactive_session_type):
                     interactive_session_type,
                 ],
             )
-            assert expected_message in result.output
+            assert expected_url_session in result.output
+            if is_autoclosure_message_expected:
+                assert expected_auto_closure_message in result.output
+            else:
+                assert expected_auto_closure_message not in result.output
 
 
 def test_close_interactive_session():

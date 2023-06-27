@@ -15,6 +15,7 @@ include docs/cmd_list.txt
 include docs/requirements.txt
 include pytest.ini
 include tox.ini
+exclude .readthedocs.yaml
 prune docs/_build
 recursive-include docs *.png
 recursive-include docs *.py

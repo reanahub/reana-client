@@ -57,6 +57,9 @@ GITLAB_CERN_REGISTRY_INDEX_URL = (
 GITLAB_CERN_REGISTRY_PREFIX = "gitlab-registry.cern.ch"
 """Prefix for GitLab image registry at CERN."""
 
+DOCKER_REGISTRY_PREFIX = "docker.io"
+"""Prefix for DockerHub image registry."""
+
 PRINTER_COLOUR_SUCCESS = "green"
 """Default colour for success messages on terminal."""
 

@@ -8,6 +8,7 @@
 
 """REANA client validate environments tests."""
 
+from unittest.mock import MagicMock, patch
 import pytest
 
 from reana_client.errors import EnvironmentValidationError
@@ -52,3 +53,31 @@ def test_validate_environment_image_tag(image, output, exit_):
 def test_get_full_image_name(image, tag, full_image_name):
     validator = EnvironmentValidatorSerial()
     assert validator._get_full_image_name(image, tag) == full_image_name
+
+
+@pytest.mark.parametrize(
+    "full_image, expected_url",
+    [
+        (
+            "reanahub/reana-env-aliphysics:vAN-20180614-1",
+            "https://hub.docker.com/v2/repositories/reanahub/reana-env-aliphysics/tags/vAN-20180614-1",
+        ),
+        (
+            "docker.io/reanahub/reana-env-aliphysics:vAN-20180614-1",
+            "https://hub.docker.com/v2/repositories/reanahub/reana-env-aliphysics/tags/vAN-20180614-1",
+        ),
+        (
+            "python:2.7",
+            "https://hub.docker.com/v2/repositories/library/python/tags/2.7",
+        ),
+    ],
+)
+def test_image_exists_in_dockerhub(full_image, expected_url):
+    """Test that URL is correct when querying DockerHub."""
+    validator = EnvironmentValidatorSerial()
+    image, tag = validator._validate_image_tag(full_image)
+    get_mock = MagicMock()
+    get_mock.return_value.ok = True
+    with patch("requests.get", get_mock):
+        assert validator._image_exists_in_dockerhub(image, tag)
+        get_mock.assert_called_once_with(expected_url)

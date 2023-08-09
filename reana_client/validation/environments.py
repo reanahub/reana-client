@@ -23,6 +23,7 @@ from reana_commons.config import (
 from reana_client.errors import EnvironmentValidationError
 from reana_client.config import (
     DOCKER_REGISTRY_INDEX_URL,
+    DOCKER_REGISTRY_PREFIX,
     ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR,
     GITLAB_CERN_REGISTRY_INDEX_URL,
     GITLAB_CERN_REGISTRY_PREFIX,
@@ -310,6 +311,10 @@ class EnvironmentValidatorBase:
     def _image_exists_in_dockerhub(self, image, tag):
         """Verify if image exists in DockerHub."""
         full_image = self._get_full_image_name(image, tag or "latest")
+        # remove leading `docker.io/` prefix, if present
+        dockerhub_prefix = f"{DOCKER_REGISTRY_PREFIX}/"
+        if image.startswith(dockerhub_prefix):
+            image = image[len(dockerhub_prefix) :]
         # Some images like `python:2.7-slim` require to specify `library`
         # as a repository in order to work with DockerHub API v2
         repository = "" if "/" in image else "library/"

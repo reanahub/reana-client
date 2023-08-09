@@ -18,6 +18,7 @@ from reana_commons.config import (
     WORKFLOW_RUNTIME_USER_GID,
     WORKFLOW_RUNTIME_USER_UID,
 )
+from reana_commons.utils import run_command
 
 
 from reana_client.errors import EnvironmentValidationError
@@ -222,14 +223,14 @@ class EnvironmentValidatorBase:
     def _image_exists_locally(self, image, tag):
         """Verify if image exists locally."""
         full_image = self._get_full_image_name(image, tag or "latest")
-        local_images = self._get_local_docker_images()
-        if full_image in local_images:
+        image_id = run_command(
+            f'docker images -q "{full_image}"', display=False, return_output=True
+        )
+        if image_id:
             self.messages.append(
                 {
                     "type": "success",
-                    "message": "Environment image {} exists locally.".format(
-                        full_image
-                    ),
+                    "message": f"Environment image {full_image} exists locally.",
                 }
             )
             return True
@@ -237,9 +238,7 @@ class EnvironmentValidatorBase:
             self.messages.append(
                 {
                     "type": "warning",
-                    "message": "Environment image {} does not exist locally.".format(
-                        full_image
-                    ),
+                    "message": f"Environment image {full_image} does not exist locally.",
                 }
             )
             return False
@@ -398,19 +397,6 @@ class EnvironmentValidatorBase:
     def _get_full_image_name(self, image, tag=None):
         """Return full image name with tag if is passed."""
         return "{}{}".format(image, ":{}".format(tag) if tag else "")
-
-    def _get_local_docker_images(self):
-        """Return a list with local docker images."""
-        from reana_commons.utils import run_command
-
-        # Check if docker is installed.
-        run_command("docker version", display=False, return_output=True)
-        docker_images = run_command(
-            'docker images --format "{{ .Repository }}:{{ .Tag }}"',
-            display=False,
-            return_output=True,
-        )
-        return docker_images.splitlines()
 
 
 class EnvironmentValidatorSerial(EnvironmentValidatorBase):

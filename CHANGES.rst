@@ -4,6 +4,7 @@ Changes
 Version 0.9.1 (UNRELEASED)
 --------------------------
 
+- Changes ``validate`` command to display non-critical validation warnings when checking the REANA specification file.
 - Adds ``prune`` command to delete all intermediate files of a given workflow.
 - Fixes ``list`` command to correctly list workflows when sorting them by their run number or by the size of their workspace.
 - Fixes ``du`` command help message typo.

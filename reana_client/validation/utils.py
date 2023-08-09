@@ -51,12 +51,39 @@ def validate_reana_spec(
             f"Verifying REANA specification file... {filepath}",
             msg_type="info",
         )
-        validate_reana_yaml(reana_yaml)
-        display_message(
-            "Valid REANA specification file.",
-            msg_type="success",
-            indented=True,
-        )
+        validation_warnings = validate_reana_yaml(reana_yaml)
+        if validation_warnings:
+            display_message(
+                "The REANA specification appears valid, but some warnings were found.",
+                msg_type="warning",
+                indented=True,
+            )
+        for warning_key, warning_value in validation_warnings.items():
+            if warning_key == "additional_properties":
+                # warning_values is a list of unexpected properties
+                message = (
+                    f"Unexpected properties found in REANA specification file: "
+                    f"{', '.join(warning_value)}"
+                )
+            else:
+                message = warning_value
+            display_message(
+                message,
+                msg_type="warning",
+                indented=True,
+            )
+        if validation_warnings:
+            display_message(
+                "Please make sure that the REANA specification file is correct.",
+                msg_type="warning",
+                indented=True,
+            )
+        else:
+            display_message(
+                "Valid REANA specification file.",
+                msg_type="success",
+                indented=True,
+            )
 
         validate_parameters(reana_yaml)
 

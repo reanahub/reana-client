@@ -12,7 +12,7 @@ jobs:
     lint-shellcheck:
         runs-on: ubuntu-20.04
         steps:
-          - uses: actions/checkout@v2
+          - uses: actions/checkout@v3
 
           - name: Runs shell script static analysis
             run: |
@@ -22,10 +22,10 @@ jobs:
     lint-black:
         runs-on: ubuntu-20.04
         steps:
-          - uses: actions/checkout@v2
+          - uses: actions/checkout@v3
 
           - name: Setup Python
-            uses: actions/setup-python@v2
+            uses: actions/setup-python@v4
             with:
               python-version: '3.8'
 
@@ -39,10 +39,10 @@ jobs:
       runs-on: ubuntu-20.04
       steps:
         - name: Checkout
-          uses: actions/checkout@v2
+          uses: actions/checkout@v3
 
         - name: Setup Python
-          uses: actions/setup-python@v2
+          uses: actions/setup-python@v4
           with:
             python-version: '3.8'
 
@@ -55,10 +55,10 @@ jobs:
     lint-pydocstyle:
       runs-on: ubuntu-20.04
       steps:
-        - uses: actions/checkout@v2
+        - uses: actions/checkout@v3
 
         - name: Setup Python
-          uses: actions/setup-python@v2
+          uses: actions/setup-python@v4
           with:
             python-version: '3.8'
 
@@ -71,10 +71,10 @@ jobs:
     lint-check-manifest:
       runs-on: ubuntu-20.04
       steps:
-        - uses: actions/checkout@v2
+        - uses: actions/checkout@v3
 
         - name: Setup Python
-          uses: actions/setup-python@v2
+          uses: actions/setup-python@v4
           with:
             python-version: '3.8'
 
@@ -87,10 +87,10 @@ jobs:
     docs-cli-commands:
         runs-on: ubuntu-20.04
         steps:
-          - uses: actions/checkout@v2
+          - uses: actions/checkout@v3
 
           - name: Setup Python
-            uses: actions/setup-python@v2
+            uses: actions/setup-python@v4
             with:
                 python-version: '3.8'
 
@@ -105,10 +105,10 @@ jobs:
     docs-cli-api:
         runs-on: ubuntu-20.04
         steps:
-          - uses: actions/checkout@v2
+          - uses: actions/checkout@v3
 
           - name: Setup Python
-            uses: actions/setup-python@v2
+            uses: actions/setup-python@v4
             with:
                 python-version: '3.8'
 
@@ -123,10 +123,10 @@ jobs:
     docs-sphinx:
       runs-on: ubuntu-20.04
       steps:
-        - uses: actions/checkout@v2
+        - uses: actions/checkout@v3
 
         - name: Setup Python
-          uses: actions/setup-python@v2
+          uses: actions/setup-python@v4
           with:
             python-version: '3.8'
 
@@ -180,10 +180,10 @@ jobs:
                   python: '3.11'
 
         steps:
-          - uses: actions/checkout@v2
+          - uses: actions/checkout@v3
 
           - name: Set up Python ${{ matrix.python }}
-            uses: actions/setup-python@v2
+            uses: actions/setup-python@v4
             with:
               python-version: ${{ matrix.python }}
 
@@ -208,7 +208,7 @@ jobs:
 
           - name: Codecov Coverage
             if: matrix.python == '3.8'
-            uses: codecov/codecov-action@v1
+            uses: codecov/codecov-action@v3
             with:
               token: ${{ secrets.CODECOV_TOKEN }}
               files: coverage.xml

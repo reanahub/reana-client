@@ -33,7 +33,14 @@ current_rs_api_client = LocalProxy(
 
 
 def ping(access_token):
-    """Health check REANA server."""
+    """Check if the REANA server is reachable and the user is correctly authenticated.
+
+    :param access_token: access token of the current user.
+
+    :return: a dictionary with the ``status`` key (``"Connected"`` if the server is reachable, the error message if
+             there is a problem), the ``error`` key (``True`` if there is an error, ``False`` otherwise),
+             and info about the current user in ``full_name`` and ``email``.
+    """
     try:
         response, http_response = current_rs_api_client.api.get_you(
             access_token=access_token
@@ -63,7 +70,13 @@ def ping(access_token):
 
 
 def get_user_quota(access_token):
-    """Retrieve user quota usage and limits."""
+    """Retrieve user quota usage and limits.
+
+    :param access_token: access token of the current user.
+
+    :return: a dictionary with the information about the usage and limits of the user's quota.
+             The keys are ``cpu`` and ``disk``, and refer to the respective usage and limits.
+    """
     try:
         response, http_response = current_rs_api_client.api.get_you(
             access_token=access_token
@@ -100,7 +113,26 @@ def get_workflows(
     include_workspace_size=None,
     workflow=None,
 ):
-    """List all existing workflows."""
+    """List all existing workflows.
+
+    :param access_token: access token of the current user.
+    :param type: type of workflow to be listed: ``"interactive"`` if you want to
+                 list only the workflows that have an interactive session attached, with the
+                 info about the session, or ``"batch"`` (default) otherwise.
+    :param verbose: show detailed information about workflows.
+    :param page: page number of the paginated list of workflows.
+    :param size: number of workflows per page.
+    :param status: filter workflows by status.
+    :param search: search workflows by name.
+    :param include_progress: include progress information in the response.
+    :param include_workspace_size: include workspace size information in the response.
+    :param workflow: name or id of the workflow.
+
+    :return: a list of dictionaries with the information about the workflows.
+             The information includes the workflow ``name``, ``id``, ``status``, ``size``,
+             ``user`` (given as the user's ID), and info about the interactive session if
+             present.
+    """
     try:
         response, http_response = current_rs_api_client.api.get_workflows(
             access_token=access_token,
@@ -139,6 +171,10 @@ def get_workflow_status(workflow, access_token):
 
     :param workflow: name or id of the workflow.
     :param access_token: access token of the current user.
+
+    :return: a dictionary with the information about the workflow status.
+             The dictionary has the following keys: ``id``, ``logs``, ``name``,
+             ``progress``, ``status``, ``user``.
     """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_status(
@@ -166,7 +202,15 @@ def get_workflow_status(workflow, access_token):
 
 
 def create_workflow(reana_specification, name, access_token):
-    """Create a workflow."""
+    """Create a workflow.
+
+    :param reana_specification: a dictionary representing the REANA specification of the workflow.
+    :param name: name of the workflow.
+    :param access_token: access token of the current user.
+
+    :return: if the workflow was created successfully, a dictionary with the information about
+             the ``workflow_id`` and ``workflow_name``, along with a ``message`` of success.
+    """
     try:
         (response, http_response) = current_rs_api_client.api.create_workflow(
             reana_specification=json.loads(
@@ -205,16 +249,19 @@ def create_workflow_from_json(
     workflow_engine="yadage",
     outputs=None,
 ):
-    """Create a workflow from json specification.
+    """Create a workflow from JSON specification.
 
     :param name: name or UUID of the workflow to be started.
     :param access_token: access token of the current user.
-    :param workflow_json: workflow specification in json format.
+    :param workflow_json: workflow specification in JSON format.
     :param workflow_file: workflow specification file path.
                           Ignores ``workflow_json`` if provided.
     :param parameters: workflow input parameters dictionary.
     :param workflow_engine: one of the workflow engines (yadage, serial, cwl)
     :param outputs: dictionary with expected workflow outputs.
+
+    :return: if the workflow was created successfully, a dictionary with the information about
+             the ``workflow_id`` and ``workflow_name``, along with a ``message`` of success.
 
     :Example:
 
@@ -224,7 +271,8 @@ def create_workflow_from_json(
             workflow_json=workflow_json,
             name='workflow_name.1',
             access_token='access_token',
-            parameters={'files': ['file.txt'], 'parameters': {'key': 'value'}},
+            parameters={'files': ['file.txt'],
+                'parameters': {'key': 'value'}},
             workflow_engine='serial')
     """
     validate_workflow_name(name)
@@ -288,6 +336,10 @@ def start_workflow(workflow, access_token, parameters):
     :param access_token: access token of the current user.
     :param parameters: dict of workflow parameters to override the original
         ones (after workflow creation).
+
+    :return: if the workflow was started successfully, a dictionary with the information about
+             the ``workflow_id``, ``workflow_name``, ``run_number``, ``status``, and ``user``,
+             along with a ``message`` of success.
     """
     try:
         (response, http_response) = current_rs_api_client.api.start_workflow(
@@ -319,10 +371,13 @@ def start_workflow(workflow, access_token, parameters):
 def upload_file(workflow, file_, file_name, access_token):
     """Upload file to workflow workspace.
 
-    :param workflow: name or id which identifies the workflow.
+    :param workflow: name or id of the workflow.
     :param file_: content of a file that will be uploaded.
     :param file_name: name of a file that will be uploaded.
     :param access_token: access token of the current user.
+
+    :return: if the file was uploaded successfully, a dictionary
+             with a ``message`` of success.
     """
     from reana_client.utils import get_api_url
 
@@ -361,11 +416,14 @@ def upload_file(workflow, file_, file_name, access_token):
 def get_workflow_logs(workflow, access_token, steps=None, page=None, size=None):
     """Get logs from a workflow engine.
 
-    :param workflow: name or id which identifies the workflow.
+    :param workflow: name or id of the workflow.
     :param access_token: access token of the current user.
     :param steps: list of step names to get logs for.
     :param page: page number of returned log list.
     :param size: page size of returned log list.
+
+    :return: a dictionary with a ``logs`` key containing a JSON string that
+             contains the requested logs.
     """
     try:
         (response, http_response) = current_rs_api_client.api.get_workflow_logs(
@@ -400,10 +458,11 @@ def get_workflow_logs(workflow, access_token, steps=None, page=None, size=None):
 def download_file(workflow, file_name, access_token):
     """Download the requested file if it exists.
 
-    :param workflow: name or id which identifies the workflow.
+    :param workflow: name or id of the workflow.
     :param file_name: file name or path to the file requested.
     :param access_token: access token of the current user.
-    :return: Tuple containing file binary content, filename and whether
+
+    :return: a tuple containing file binary content, filename and whether
         the returned file is a zip archive containing multiple files.
     """
     try:
@@ -455,8 +514,13 @@ def download_file(workflow, file_name, access_token):
 def delete_file(workflow, file_name, access_token):
     """Delete the requested file if it exists.
 
-    :param workflow: name or id which identifies the workflow.
+    :param workflow: name or id of the workflow.
     :param file_name: file name or path to the file requested.
+    :param access_token: access token of the current user.
+
+    :return: a dictionary with two keys: ``deleted`` and ``failed``.
+             Each of this keys contains another dictionary with the
+             name of the file as key and info about the size as value.
     """
     try:
         (response, http_response) = current_rs_api_client.api.delete_file(
@@ -496,14 +560,14 @@ def list_files(
 ):
     """Return the list of files for a given workflow workspace.
 
-    :param workflow: name or id which identifies the workflow.
+    :param workflow: name or id of the workflow.
     :param access_token: access token of the current user.
     :param file_name: file name(s) (glob) to list.
     :param page: page number of returned file list.
     :param size: page size of returned file list.
     :param search: filter search results by parameters.
-    :returns: a list of dictionaries composed by the `name`, `size` and
-                `last-modified`.
+    :returns: a list of dictionaries that have the ``name``, ``size`` and
+                ``last-modified`` keys.
     """
     try:
         (response, http_response) = current_rs_api_client.api.get_files(
@@ -544,6 +608,8 @@ def upload_to_server(workflow, paths, access_token):
         used to store the files.
     :param paths: absolute filepath(s) of files to be uploaded.
     :param access_token: access token of the current user.
+
+    :return: the list of path of files that were uploaded.
     """
     if not workflow:
         raise ValueError("Workflow name or id must be provided")
@@ -613,7 +679,14 @@ def upload_to_server(workflow, paths, access_token):
 
 
 def get_workflow_parameters(workflow, access_token):
-    """Get parameters of previously created workflow."""
+    """Get parameters of previously created workflow.
+
+    :param workflow: name or id of the workflow.
+    :param access_token: access token of the current user.
+
+    :returns: a dictionary that cointains info about the workflow (``name``, ``type``), and
+              a dictionary of workflow parameters under the ``parameters`` key.
+    """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_parameters(
             workflow_id_or_name=workflow, access_token=access_token
@@ -640,7 +713,14 @@ def get_workflow_parameters(workflow, access_token):
 
 
 def get_workflow_specification(workflow, access_token):
-    """Get specification of previously created workflow."""
+    """Get specification of previously created workflow.
+
+    :param workflow: name or id of the workflow.
+    :param access_token: access token of the current user.
+
+    :returns: a dictionary that cointains two top-level keys: ``parameters``, and
+              ``specification`` (which contains a dictionary created from the workflow specification).
+    """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_specification(
             workflow_id_or_name=workflow, access_token=access_token
@@ -669,7 +749,15 @@ def get_workflow_specification(workflow, access_token):
 def delete_workflow(workflow, all_runs: bool, workspace: bool, access_token: str):
     """Delete a workflow.
 
-    Please note that the workspace will be always deleted, even if ``workspace`` is set to ``False``.
+    Please note that the workspace will always be deleted, even if ``workspace`` is set to ``False``.
+
+    :param workflow: name or id of the workflow.
+    :param all_runs: whether to delete all the runs of the workflow.
+    :param workspace: whether to delete the workspace of the workflow.
+    :param access_token: access token of the current user.
+
+    :return: a dictionary that cointains info about the deleted workflow (``workflow_id``, ``workflow_name``,
+             ``status``, ``user``), and a ``message`` key.
     """
     if not workspace:
         logging.warning(
@@ -710,7 +798,16 @@ def delete_workflow(workflow, all_runs: bool, workspace: bool, access_token: str
 
 
 def stop_workflow(workflow, force_stop, access_token):
-    """Stop a workflow."""
+    """Stop a workflow.
+
+    :param workflow: name or id of the workflow.
+    :param force_stop: whether to stop the workflow immediately, without
+        waiting for the jobs to finish.
+    :param access_token: access token of the current user.
+
+    :return: a dictionary that cointains info about the stopped workflow (``workflow_id``, ``workflow_name``,
+             ``status``, ``user``), and a ``message`` key.
+    """
     try:
         parameters = {"force_stop": force_stop}
         (response, http_response) = current_rs_api_client.api.set_workflow_status(
@@ -748,7 +845,8 @@ def diff_workflows(workflow_id_a, workflow_id_b, brief, access_token, context_li
     :param context_lines: Optional parameter to set the number of
                           context lines shown in the diff output.
     :param access_token: API token of user requesting diff.
-    :returns: A list of dictionaries composed by ``asset``, ``type``, ``lines``,
+
+    :return: a list of dictionaries composed by ``asset``, ``type``, ``lines``,
         ``a`` and ``b``. Asset refers to the workflow asset where a
         difference was found, type refers to the asset type, lines refer
         to the lines of the file where the differences are and a, b fields
@@ -789,14 +887,14 @@ def open_interactive_session(
 ):
     """Open an interactive session inside the workflow workspace.
 
-    :param workflow: Workflow which workspace will be available inside the
+    :param workflow: name or id of the workflow whose workspace will be available inside the
         interactive session.
     :param access_token: Workflow owner REANA access token.
     :param interactive_session_type: Type of interactive session to spawn.
     :param interactive_session_configuration: Specific configuration for
         the interactive session.
 
-    :return: Gives the relative path to the interactive service.
+    :return: the relative path to the interactive session.
     """
     try:
         (response, http_response) = current_rs_api_client.api.open_interactive_session(
@@ -831,7 +929,7 @@ def close_interactive_session(workflow, access_token):
     :param workflow: name or id of the workflow to close.
     :param access_token: workflow owner REANA access token.
 
-    :return: Gives the relative path to the interactive service.
+    :return: the relative path to the interactive session.
     """
     try:
         (response, http_response) = current_rs_api_client.api.close_interactive_session(
@@ -863,8 +961,11 @@ def mv_files(source, target, workflow, access_token):
 
     :param source: source filename or path.
     :param target: target filename or path.
-    :param workflow: name or id which identifies the workflow.
+    :param workflow: name or id of the workflow.
     :param access_token: token of user.
+
+    :return: a dictionary containing the ``workflow_id``, ``workflow_name``,
+             and a ``message`` about the success of the operation.
     """
     try:
         (response, http_response) = current_rs_api_client.api.move_files(
@@ -896,7 +997,22 @@ def mv_files(source, target, workflow, access_token):
 
 
 def get_workflow_disk_usage(workflow, parameters, access_token):
-    """Display disk usage workflow."""
+    """Display disk usage workflow.
+
+    :param workflow: name or id of the workflow.
+    :param parameters: a dictionary to customize the response. It has the following
+        (optional) keys:
+
+        - ``summarize``: a boolean value to indicate whether to summarize the response
+          to include only the total workspace disk usage
+        - ``search``: a string to filter the response by file name
+
+    :param access_token: access token of the current user.
+
+    :return: a dictionary containing the ``workflow_id``, ``workflow_name``, and the ``user`` ID, with
+             a ``disk_usage_info`` keys that contains a list of dictionaries, each of one corresponding
+             to a file, with the ``name`` and ``size`` keys.
+    """
     try:
         (response, http_response) = current_rs_api_client.api.get_workflow_disk_usage(
             workflow_id_or_name=workflow,
@@ -928,14 +1044,17 @@ def add_secrets(secrets, overwrite, access_token):
     """Add new secrets.
 
     :param secrets: dictionary containing all the secrets to be sent.
-      The dictionary with secret names for keys and for each key there is
-       a dictionary with two fields:
-      - 'value':  a base64 encoded file or literal string
-      - 'type': 'file' or 'env'
+        The dictionary has the secret names for keys and for each key there is
+        a dictionary with two fields:
+
+        - ``value``:  a base64 encoded file or literal string
+        - ``type``: ``"file"`` or ``"env"``
+
     :param overwrite: whether secrets should be overwritten when they
      already exist.
     :param access_token: access token of the current user.
 
+    :return: a dictionary containing the ``message`` key with a success message.
     """
     try:
         (response, http_response) = current_rs_api_client.api.add_secrets(
@@ -971,6 +1090,7 @@ def delete_secrets(secrets, access_token):
     :param secrets: list of secret names to be deleted.
     :param access_token: access token of the current user.
 
+    :return: a list with the names of the deleted secrets.
     """
     try:
         (response, http_response) = current_rs_api_client.api.delete_secrets(
@@ -1007,6 +1127,8 @@ def list_secrets(access_token):
 
     :param access_token: access token of the current user.
 
+    :return: a list of dictionaries, each of one corresponding to a secret, with the
+             ``name`` and ``type`` keys.
     """
     try:
         (response, http_response) = current_rs_api_client.api.get_secrets(
@@ -1038,6 +1160,11 @@ def info(access_token):
 
     :param access_token: access token of the current user.
 
+    :return: a dictionary containing relevant values and configuration options about the cluster.
+             Each key contains a dictionary with the ``title`` key, explaining the meaning of the
+             value, and the ``value`` key, containing the value itself.
+             Example of the returned keys include ``compute_backends``, ``default_kubernetes_memory_limit``,
+             and ``maximum_interactive_session_inactivity_period``.
     """
     try:
         (response, http_response) = current_rs_api_client.api.info(
@@ -1065,7 +1192,17 @@ def info(access_token):
 
 
 def get_workflow_retention_rules(workflow, access_token):
-    """Get the retention rules of a workflow."""
+    """Get the retention rules of a workflow.
+
+    :param workflow: name or id of the workflow.
+    :param access_token: access token of the current user.
+
+    :return: a dictionary containing the ``workflow_id``, ``workflow_name``, and
+             the ``retention_rules`` key with a list of dictionaries representing
+             the retention rules of the workflow. Each dictionary contains info
+             about the affected workspace files, and the schedule of the retention
+             rule.
+    """
     try:
         (
             response,
@@ -1094,7 +1231,16 @@ def get_workflow_retention_rules(workflow, access_token):
 
 
 def prune_workspace(workflow, include_inputs, include_outputs, access_token):
-    """Prune workspace files."""
+    """Prune workspace files.
+
+    :param workflow: name or id of the workflow.
+    :param include_inputs: whether to also delete inputs.
+    :param include_outputs: whether to also delete outputs.
+    :param access_token: access token of the current user.
+
+    :return: a dictionary containing the ``workflow_id``, ``workflow_name``, and
+             a ``message`` key with the result of the operation.
+    """
     try:
         (response, http_response) = current_rs_api_client.api.prune_workspace(
             workflow_id_or_name=workflow,

@@ -24,6 +24,9 @@
 from __future__ import print_function
 
 import os
+import sys
+
+from unittest.mock import Mock
 
 import sphinx.environment
 
@@ -32,6 +35,11 @@ import sphinx.environment
 # If your documentation needs a minimal Sphinx version, state it here.
 #
 # needs_sphinx = '1.0'
+
+# Manually mock the modules to connect to the REANA server API.
+# Note that autodoc_mock_imports does not work.
+MOCK_MODULES = ["reana_commons.api_client"]
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # Do not warn on external images.
 suppress_warnings = ["image.nonlocal_uri"]

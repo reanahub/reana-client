@@ -1,15 +1,16 @@
 Changes
 =======
 
-Version 0.9.1 (UNRELEASED)
+Version 0.9.1 (2023-09-27)
 --------------------------
 
 - Adds support for Python 3.12.
-- Adds ``prune`` command to delete all intermediate files of a given workflow.
+- Adds ``prune`` command to delete all intermediate files of a given workflow. Use with care.
+- Changes ``open`` command to inform user about the auto-closure of interactive sessions after a certain inactivity timeout.
 - Changes ``validate`` command to display non-critical validation warnings when checking the REANA specification file.
 - Fixes ``list`` command to correctly list workflows when sorting them by their run number or by the size of their workspace.
 - Fixes ``du`` command help message typo.
-- Fixes ``validation --environments`` command to correctly handle fully qualified image names.
+- Fixes ``validation --environments`` command to correctly handle fully-qualified image names.
 
 Version 0.9.0 (2023-01-26)
 --------------------------

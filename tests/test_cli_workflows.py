@@ -118,7 +118,7 @@ def test_deleted_workflows(cli_options: List[str], expected_status_filter: List[
     "cli_options, expected_output",
     [
         (
-            ["list", "-t", "000000", "--sort", "run_number"],
+            ["list", "-t", "000000", "--sort", "Run_NUMber"],
             (
                 "mytest   15           2018-06-13T10:55:37   -                     -                     running\n"
                 "mytest   2            2018-06-13T09:55:35   -                     -                     running\n"

@@ -1,6 +1,11 @@
 Changes
 =======
 
+Version 0.9.2 (UNRELEASED)
+--------------------------
+
+- Fixes ``list`` command to be case-insensitive when using the ``--sort`` flag to sort the workflow runs by a specific column name.
+
 Version 0.9.1 (2023-09-27)
 --------------------------
 

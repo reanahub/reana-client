@@ -109,7 +109,7 @@ def workflow_execution_group(ctx):
 @human_readable_or_raw_option
 @click.option(
     "--sort",
-    "sort_columm_name",
+    "sort_column_name",
     default="CREATED",
     help="Sort the output by specified column",
 )
@@ -164,7 +164,7 @@ def workflows_list(  # noqa: C901
     show_all,
     verbose,
     human_readable_or_raw,
-    sort_columm_name,
+    sort_column_name,
     page,
     size,
     filters,
@@ -269,17 +269,19 @@ def workflows_list(  # noqa: C901
                 row.append(value)
             data.append(row)
 
+        sort_column_id = 2
+        sort_column_name = sort_column_name.lower()
+        if sort_column_name in headers[type]:
+            sort_column_id = headers[type].index(sort_column_name)
+
         # Sort by given column, making sure that `None` is at the bottom of the list.
         def get_sort_key(x, column_id):
-            if sort_columm_name == "run_number":
+            if headers[type][column_id] == "run_number":
                 return list(map(int, x[column_id].split(".")))
-            elif sort_columm_name in workspace_size_header:
+            elif headers[type][column_id] in workspace_size_header:
                 return x[column_id]["raw"]
             return x[column_id] is not None, x[column_id]
 
-        sort_column_id = 2
-        if sort_columm_name.lower() in headers[type]:
-            sort_column_id = headers[type].index(sort_columm_name.lower())
         data = sorted(
             data,
             key=lambda x: get_sort_key(x, sort_column_id),

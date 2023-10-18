@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import, print_function
 
+import textwrap
+
 import pytest
 from typing import Dict
 
@@ -117,6 +119,49 @@ def cwl_workflow_spec_step():
             out: [result]
         """
     return cwl_workflow_spec_step
+
+
+@pytest.fixture()
+def create_snakemake_yaml_external_input_workflow_schema():
+    """Return dummy schema for a Snakemake workflow with external parameters."""
+    reana_cwl_yaml_schema = """
+        inputs:
+          parameters:
+            input: config.yaml
+        workflow:
+          type: snakemake
+          file: Snakefile
+        outputs:
+          files:
+            - foo.txt
+        """
+    return reana_cwl_yaml_schema
+
+
+@pytest.fixture()
+def snakemake_workflow_spec_step_param():
+    """Return dummy Snakemake workflow loaded spec."""
+    snakefile = textwrap.dedent(
+        """
+        rule foo:
+            params:
+                param1=config["param1"],
+                param2=config["param2"],
+            output:
+                "foo.txt"
+    """
+    )
+    return snakefile
+
+
+@pytest.fixture()
+def external_parameter_yaml_file():
+    """Return dummy external parameter YAML file."""
+    config_yaml = """
+        param1: 200
+        param2: 300
+        """
+    return config_yaml
 
 
 @pytest.fixture()

@@ -9,6 +9,7 @@
 """REANA client workflow tests."""
 
 import json
+import sys
 from typing import List
 
 import pytest
@@ -567,6 +568,52 @@ def test_create_workflow_from_json(create_yaml_workflow_schema):
                 access_token=reana_token,
                 parameters=workflow_json["inputs"],
                 workflow_engine="serial",
+            )
+            assert response["workflow_name"] == result["workflow_name"]
+            assert response["message"] == result["message"]
+
+
+def test_create_snakemake_workflow_from_json_parameters(
+    create_snakemake_yaml_external_input_workflow_schema,
+    tmp_path,
+    snakemake_workflow_spec_step_param,
+    external_parameter_yaml_file,
+):
+    """Test create workflow from json with external parameters."""
+    if sys.version_info.major == 3 and sys.version_info.minor in (11, 12):
+        pytest.xfail(
+            "Snakemake features of reana-client are not supported on Python 3.11"
+        )
+    status_code = 201
+    response = {
+        "message": "The workflow has been successfully created.",
+        "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac",
+        "workflow_name": "mytest",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    workflow_json = yaml.load(
+        create_snakemake_yaml_external_input_workflow_schema, Loader=yaml.FullLoader
+    )
+    with open(tmp_path / "Snakefile", "w") as f:
+        f.write(snakemake_workflow_spec_step_param)
+    with open(tmp_path / "config.yaml", "w") as f:
+        f.write(external_parameter_yaml_file)
+    with patch.dict("os.environ", env):
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = create_workflow_from_json(
+                workflow_file=str(tmp_path / "Snakefile"),
+                name=response["workflow_name"],
+                access_token=reana_token,
+                parameters=workflow_json["inputs"],
+                workflow_engine="snakemake",
+                workspace_path=str(tmp_path),
             )
             assert response["workflow_name"] == result["workflow_name"]
             assert response["message"] == result["message"]

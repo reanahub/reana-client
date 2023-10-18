@@ -18,6 +18,10 @@ from urllib.parse import urljoin
 import requests
 from bravado.exception import HTTPError
 from reana_commons.validation.utils import validate_reana_yaml, validate_workflow_name
+from reana_commons.specification import (
+    load_workflow_spec_from_reana_yaml,
+    load_input_parameters,
+)
 from reana_commons.api_client import get_current_api_client
 from reana_commons.config import REANA_WORKFLOW_ENGINES
 from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
@@ -248,6 +252,7 @@ def create_workflow_from_json(
     parameters=None,
     workflow_engine="yadage",
     outputs=None,
+    workspace_path=None,
 ):
     """Create a workflow from JSON specification.
 
@@ -259,6 +264,7 @@ def create_workflow_from_json(
     :param parameters: workflow input parameters dictionary.
     :param workflow_engine: one of the workflow engines (yadage, serial, cwl)
     :param outputs: dictionary with expected workflow outputs.
+    :param workspace_path: path to the workspace where the workflow is located.
 
     :return: if the workflow was created successfully, a dictionary with the information about
              the ``workflow_id`` and ``workflow_name``, along with a ``message`` of success.
@@ -290,21 +296,29 @@ def create_workflow_from_json(
         )
     try:
         reana_yaml = dict(workflow={})
-        if workflow_file:
-            reana_yaml["workflow"]["file"] = workflow_file
-        else:
-            reana_yaml["workflow"]["specification"] = workflow_json
         reana_yaml["workflow"]["type"] = workflow_engine
         if parameters:
             reana_yaml["inputs"] = parameters
         if outputs:
             reana_yaml["outputs"] = outputs
+        if workflow_file:
+            reana_yaml["workflow"]["file"] = workflow_file
+            reana_yaml["workflow"][
+                "specification"
+            ] = load_workflow_spec_from_reana_yaml(reana_yaml, workspace_path)
+        else:
+            reana_yaml["workflow"]["specification"] = workflow_json
+        # The function below loads the input parameters into the reana_yaml dictionary
+        # taking them from the parameters yaml files (used by CWL and Snakemake workflows),
+        # and replacing the `input.parameters.input` field with the actual parameters values.
+        # For this reason, we have to load the workflow specification first, as otherwise
+        # the specification validation would fail.
+        input_params = load_input_parameters(reana_yaml, workspace_path)
+        if input_params is not None:
+            reana_yaml["inputs"]["parameters"] = input_params
         validate_reana_yaml(reana_yaml)
-        reana_specification = reana_yaml
         (response, http_response) = current_rs_api_client.api.create_workflow(
-            reana_specification=json.loads(
-                json.dumps(reana_specification, sort_keys=True)
-            ),
+            reana_specification=json.loads(json.dumps(reana_yaml, sort_keys=True)),
             workflow_name=name,
             access_token=access_token,
         ).result()

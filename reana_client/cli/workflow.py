@@ -19,6 +19,7 @@ from jsonschema.exceptions import ValidationError
 from reana_commons.config import INTERACTIVE_SESSION_TYPES, REANA_COMPUTE_BACKENDS
 from reana_commons.errors import REANAValidationError
 from reana_commons.validation.operational_options import validate_operational_options
+import yaml
 
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (
@@ -1004,6 +1005,15 @@ def workflow_validate(
         display_message(
             "{0} is not a valid REANA specification:\n{1}".format(
                 click.format_filename(file), e.message
+            ),
+            msg_type="error",
+        )
+        sys.exit(1)
+    except yaml.parser.ParserError as e:
+        logging.debug(traceback.format_exc())
+        display_message(
+            "{0} is not a valid YAML file:\n{1}".format(
+                click.format_filename(file, shorten=True), e
             ),
             msg_type="error",
         )

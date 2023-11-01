@@ -115,6 +115,7 @@ def get_workflows(
     search=None,
     include_progress=None,
     include_workspace_size=None,
+    include_last_command=None,
     workflow=None,
 ):
     """List all existing workflows.
@@ -130,6 +131,7 @@ def get_workflows(
     :param search: search workflows by name.
     :param include_progress: include progress information in the response.
     :param include_workspace_size: include workspace size information in the response.
+    :param include_last_command: include info about the command currently executing.
     :param workflow: name or id of the workflow.
 
     :return: a list of dictionaries with the information about the workflows.
@@ -148,6 +150,7 @@ def get_workflows(
             search=search,
             include_progress=include_progress,
             include_workspace_size=include_workspace_size,
+            include_last_command=include_last_command,
             workflow_id_or_name=workflow,
         ).result()
         if http_response.status_code == 200:
@@ -170,11 +173,12 @@ def get_workflows(
         raise e
 
 
-def get_workflow_status(workflow, access_token):
+def get_workflow_status(workflow, access_token, include_last_command=False):
     """Get status of previously created workflow.
 
     :param workflow: name or id of the workflow.
     :param access_token: access token of the current user.
+    :param include_last_command: show the last command executed/ing in the workflow.
 
     :return: a dictionary with the information about the workflow status.
              The dictionary has the following keys: ``id``, ``logs``, ``name``,
@@ -182,7 +186,9 @@ def get_workflow_status(workflow, access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_status(
-            workflow_id_or_name=workflow, access_token=access_token
+            workflow_id_or_name=workflow,
+            access_token=access_token,
+            include_last_command=include_last_command,
         ).result()
         if http_response.status_code == 200:
             return response

@@ -10,6 +10,7 @@
 import functools
 import json
 import os
+import re
 import shlex
 import sys
 from typing import Callable, NoReturn, Optional, List, Tuple, Union
@@ -275,6 +276,23 @@ def get_formatted_progress(progress):
     total_jobs = progress.get("total", {}).get("total") or "-"
     finished_jobs = progress.get("finished", {}).get("total") or "-"
     return "{0}/{1}".format(finished_jobs, total_jobs)
+
+
+def get_formatted_workflow_command(progress):
+    """Return lastly executed command if possible, otherwise try to return the step name."""
+    current_command = progress.get("current_command")
+    if current_command:
+        # Change multiline commands to a single line, replacing any sequence of consecutive newlines with a semicolon.
+        current_command = re.sub(r"\n+", "; ", current_command)
+        if current_command.startswith('bash -c "cd '):
+            current_command = current_command[current_command.index(";") + 2 : -2]
+        return current_command
+    else:
+        if "current_step_name" in progress and progress.get("current_step_name"):
+            current_step_name = progress.get("current_step_name")
+            return current_step_name
+        else:
+            return "-"
 
 
 def key_value_to_dict(ctx, param, value):

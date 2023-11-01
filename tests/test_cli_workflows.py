@@ -402,6 +402,81 @@ def test_workflows_without_include_workspace_size():
             assert "SIZE" not in result.output
 
 
+def test_workflows_include_last_command():
+    """Test workflows command with --include-last-command flag."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"human_readable": "15.97 MiB", "raw": 16741346},
+                "progress": {
+                    "current_command": "some_command\n\nanother one\nlast one",
+                    "run_started_at": "2021-05-10T12:55:04",
+                    "run_finished_at": "2021-05-10T12:55:23",
+                },
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli, ["list", "--include-last-command", "-t", reana_token]
+            )
+            assert result.exit_code == 0
+            assert "LAST_COMMAND" in result.output
+            assert "some_command; another one; last one" in result.output
+
+
+def test_workflows_without_include_last_command():
+    """Test workflows command without --include-last-command flag."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"human_readable": "", "raw": -1},
+                "progress": {
+                    "current_command": "some_command",
+                    "run_started_at": "2021-05-10T12:55:04",
+                    "run_finished_at": "2021-05-10T12:55:23",
+                },
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(cli, ["list", "-t", reana_token])
+            assert result.exit_code == 0
+            assert "COMMAND" not in result.output
+
+
 def test_workflows_format():
     """Test workflows command with --format."""
     response = {
@@ -794,6 +869,7 @@ def test_get_workflow_status_ok():
             assert isinstance(json_response, list)
             assert len(json_response) == 1
             assert json_response[0]["name"] in response["name"]
+            assert json_response[0]["last_command"] == "-"
 
 
 @patch("reana_client.cli.workflow.workflow_create")

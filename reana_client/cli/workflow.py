@@ -31,6 +31,7 @@ from reana_client.cli.utils import (
     display_formatted_output,
     format_session_uri,
     get_formatted_progress,
+    get_formatted_workflow_command,
     human_readable_or_raw_option,
     key_value_to_dict,
     parse_filter_parameters,
@@ -145,6 +146,13 @@ def workflow_execution_group(ctx):
     help="Include size information of the workspace.",
 )
 @click.option(
+    "--include-last-command",
+    "include_last_command",
+    is_flag=True,
+    default=None,
+    help="Include the information about the last command executed (or currently in execution) by the workflow.",
+)
+@click.option(
     "--show-deleted-runs",
     "show_deleted_runs",
     is_flag=True,
@@ -172,6 +180,7 @@ def workflows_list(  # noqa: C901
     include_duration: bool,
     include_progress,
     include_workspace_size,
+    include_last_command,
     show_deleted_runs: bool,
 ):  # noqa: D301
     """List all workflows and sessions.
@@ -217,11 +226,13 @@ def workflows_list(  # noqa: C901
             search=search_filter,
             include_progress=include_progress,
             include_workspace_size=include_workspace_size,
+            include_last_command=include_last_command,
             workflow=workflow,
         )
         verbose_headers = ["id", "user"]
         workspace_size_header = ["size"]
         progress_header = ["progress"]
+        command_header = ["last_command"]
         duration_header = ["duration"]
         headers = {
             "batch": ["name", "run_number", "created", "started", "ended", "status"],
@@ -242,6 +253,8 @@ def workflows_list(  # noqa: C901
             headers[type] += progress_header
         if verbose or include_duration:
             headers[type] += duration_header
+        if verbose or include_last_command:
+            headers[type] += command_header
 
         data = []
         for workflow in response:
@@ -260,6 +273,8 @@ def workflows_list(  # noqa: C901
                 value = None
                 if header in progress_header:
                     value = get_formatted_progress(workflow.get("progress"))
+                elif header in command_header:
+                    value = get_formatted_workflow_command(workflow.get("progress"))
                 elif header in ["started", "ended"]:
                     _key = (
                         "run_started_at" if header == "started" else "run_finished_at"
@@ -692,12 +707,32 @@ def workflow_restart(
     help="Include the duration of the workflow in seconds. In case the workflow is in "
     "progress, its duration as of now will be shown.",
 )
+@click.option(
+    "--include-last-command",
+    "include_last_command",
+    is_flag=True,
+    default=False,
+    help="Include the information about the command that is currently being executed by the workflow.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Set status information verbosity.",
+)
 @add_access_token_options
 @check_connection
-@click.option("-v", "--verbose", count=True, help="Set status information verbosity.")
 @click.pass_context
 def workflow_status(  # noqa: C901
-    ctx, workflow, _format, output_format, include_duration, access_token, verbose
+    ctx,
+    workflow,
+    _format,
+    output_format,
+    include_duration,
+    include_last_command,
+    verbose,
+    access_token,
 ):  # noqa: D301
     """Get status of a workflow.
 
@@ -753,47 +788,35 @@ def workflow_status(  # noqa: C901
         data.append(parsed_response)
         return data
 
-    def add_verbose_data_from_response(response, verbose_headers, headers, data):
+    def add_verbose_data_from_response(response, verbose_headers, data):
         for k in verbose_headers:
-            if k == "command":
-                current_command = response["progress"]["current_command"]
-                if current_command:
-                    if current_command.startswith('bash -c "cd '):
-                        current_command = current_command[
-                            current_command.index(";") + 2 : -2
-                        ]
-                    data[-1] += [current_command]
-                else:
-                    if "current_step_name" in response["progress"] and response[
-                        "progress"
-                    ].get("current_step_name"):
-                        current_step_name = response["progress"].get(
-                            "current_step_name"
-                        )
-                        data[-1] += [current_step_name]
-                    else:
-                        headers.remove("command")
-            else:
-                data[-1] += [response.get(k)]
+            data[-1] += [response.get(k)]
         return data
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
     try:
-        workflow_response = get_workflow_status(workflow, access_token)
+        include_duration = verbose or include_duration
+        include_last_command = verbose or include_last_command
+        workflow_response = get_workflow_status(
+            workflow, access_token, include_last_command
+        )
         headers = ["name", "run_number", "created", "status"]
-        verbose_headers = ["id", "user", "command"]
+        verbose_headers = ["id", "user"]
         data = []
         add_data_from_response(workflow_response, data, headers)
         if verbose:
             headers += verbose_headers
-            add_verbose_data_from_response(
-                workflow_response, verbose_headers, headers, data
-            )
-        if verbose or include_duration:
+            add_verbose_data_from_response(workflow_response, verbose_headers, data)
+        if include_duration:
             headers += ["duration"]
             data[-1] += [get_workflow_duration(workflow_response) or "-"]
+        if include_last_command:
+            headers += ["last_command"]
+            data[-1] += [
+                get_formatted_workflow_command(workflow_response.get("progress")) or "-"
+            ]
 
         display_formatted_output(data, headers, _format, output_format)
 

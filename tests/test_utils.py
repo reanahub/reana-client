@@ -11,6 +11,8 @@
 from unittest.mock import patch
 from datetime import datetime
 
+import pytest
+from reana_client.cli.utils import get_formatted_workflow_command
 from reana_client.utils import get_workflow_duration
 
 
@@ -47,3 +49,17 @@ def test_duration_running_workflow():
             *args, **kw
         )
         assert get_workflow_duration(workflow) == 60 + 11
+
+
+@pytest.mark.parametrize(
+    "progress,expected_output",
+    [
+        ({"current_command": 'bash -c "cd /some/path; some_command;"'}, "some_command"),
+        ({"current_command": "some_command"}, "some_command"),
+        ({"current_command": None, "current_step_name": "step_1"}, "step_1"),
+        ({"current_command": None, "current_step_name": None}, "-"),
+        ({}, "-"),
+    ],
+)
+def test_get_formatted_workflow_command(progress, expected_output):
+    assert get_formatted_workflow_command(progress) == expected_output

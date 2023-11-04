@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -17,19 +17,18 @@ from urllib.parse import urljoin
 
 import requests
 from bravado.exception import HTTPError
-from reana_commons.validation.utils import validate_reana_yaml, validate_workflow_name
-from reana_commons.specification import (
-    load_workflow_spec_from_reana_yaml,
-    load_input_parameters,
-)
+from reana_client.config import ERROR_MESSAGES
+from reana_client.errors import FileDeletionError, FileUploadError
+from reana_client.utils import is_regular_path, is_uuid_v4
 from reana_commons.api_client import get_current_api_client
 from reana_commons.config import REANA_WORKFLOW_ENGINES
 from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
+from reana_commons.specification import (
+    load_input_parameters,
+    load_workflow_spec_from_reana_yaml,
+)
+from reana_commons.validation.utils import validate_reana_yaml, validate_workflow_name
 from werkzeug.local import LocalProxy
-
-from reana_client.config import ERROR_MESSAGES
-from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import is_uuid_v4, is_regular_path
 
 current_rs_api_client = LocalProxy(
     partial(get_current_api_client, component="reana-server")
@@ -1278,5 +1277,53 @@ def prune_workspace(workflow, include_inputs, include_outputs, access_token):
             "Message: {}".format(
                 e.response.status_code, e.response.reason, e.response.json()["message"]
             )
+        )
+        raise Exception(e.response.json()["message"])
+
+
+def share_workflow(
+    workflow, user_email_to_share_with, access_token, message=None, valid_until=None
+):
+    """Share a workflow with a user.
+
+    :param workflow: name or id of the workflow.
+    :param user_email_to_share_with: user to share the workflow with.
+    :param access_token: access token of the current user.
+    :param message: Optional message to include when sharing the workflow.
+    :param valid_until: Specify the date when access to the workflow will expire (format: YYYY-MM-DD).
+
+    :return: a dictionary containing the ``workflow_id``, ``workflow_name``, and
+             a ``message`` key with the result of the operation.
+    """
+    try:
+        share_params = {
+            "workflow_id_or_name": workflow,
+            "user_email_to_share_with": user_email_to_share_with,
+            "access_token": access_token,
+        }
+
+        if message:
+            share_params["message"] = message
+
+        if valid_until:
+            share_params["valid_until"] = valid_until
+
+        (response, http_response) = current_rs_api_client.api.share_workflow(
+            **share_params
+        ).result()
+
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                f"{http_response.status_code}"
+            )
+
+    except HTTPError as e:
+        logging.debug(
+            "Workflow could not be shared: "
+            f"\nStatus: {e.response.status_code}\nReason: {e.response.reason}\n"
+            f"Message: {e.response.json()['message']}"
         )
         raise Exception(e.response.json()["message"])

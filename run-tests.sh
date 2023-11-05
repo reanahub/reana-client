@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2022 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -53,7 +53,11 @@ check_sphinx () {
 }
 
 check_pytest () {
-    python setup.py test
+    if [ -n "${PYTESTARG-}" ]; then
+        pytest "$PYTESTARG"
+    else
+        python setup.py test
+    fi
 }
 
 check_all() {

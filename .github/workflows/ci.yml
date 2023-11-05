@@ -180,10 +180,10 @@ jobs:
                   python: '3.11'
 
                 - testenv: lowest
-                  python: '3.12-dev'
+                  python: '3.12'
 
                 - testenv: release
-                  python: '3.12-dev'
+                  python: '3.12'
         steps:
           - uses: actions/checkout@v3
 

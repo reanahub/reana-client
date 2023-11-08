@@ -1026,3 +1026,38 @@ def test_share_add_workflow():
             )
             assert result.exit_code == 0
             assert response["message"] in result.output
+
+
+def test_share_remove_workflow():
+    """Test share-remove workflows."""
+    status_code = 200
+    response = {
+        "message": "is no longer shared with",
+        "workflow_id": "string",
+        "workflow_name": "string",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-remove",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "bob@.cern.ch",
+                ],
+            )
+            assert result.exit_code == 0
+            assert response["message"] in result.output

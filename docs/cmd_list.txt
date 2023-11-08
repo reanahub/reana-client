@@ -31,7 +31,8 @@ Workflow execution commands:
   validate  Validate workflow specification file.
 
 Workflow sharing commands:
-  share-add  Share a workflow with other users (read-only).
+  share-add     Share a workflow with other users (read-only).
+  share-remove  Unshare a workflow.
 
 Workspace interactive commands:
   close  Close an interactive session.

@@ -1327,3 +1327,41 @@ def share_workflow(
             f"Message: {e.response.json()['message']}"
         )
         raise Exception(e.response.json()["message"])
+
+
+def unshare_workflow(workflow, user_email_to_unshare_with, access_token):
+    """Unshare a workflow with a user.
+
+    :param workflow: name or id of the workflow.
+    :param user_email_to_unshare_with: user to unshare the workflow with.
+    :param access_token: access token of the current user.
+
+    :return: a dictionary containing the ``workflow_id``, ``workflow_name``, and
+             a ``message`` key with the result of the operation.
+    """
+    try:
+        unshare_params = {
+            "workflow_id_or_name": workflow,
+            "user_email_to_unshare_with": user_email_to_unshare_with,
+            "access_token": access_token,
+        }
+
+        (response, http_response) = current_rs_api_client.api.unshare_workflow(
+            **unshare_params
+        ).result()
+
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                f"{http_response.status_code}"
+            )
+
+    except HTTPError as e:
+        logging.debug(
+            "Workflow could not be unshared: "
+            f"\nStatus: {e.response.status_code}\nReason: {e.response.reason}\n"
+            f"Message: {e.response.json()['message']}"
+        )
+        raise Exception(e.response.json()["message"])

@@ -1536,3 +1536,64 @@ def workflow_share_add(
 
     if share_errors:
         sys.exit(1)
+
+
+@workflow_sharing_group.command("share-remove")
+@check_connection
+@add_workflow_option
+@add_access_token_options
+@click.option(
+    "-u",
+    "--user",
+    "users",
+    multiple=True,
+    help="Users to unshare the workflow with.",
+    required=True,
+)
+@click.pass_context
+def share_workflow_remove(ctx, workflow, access_token, users):  # noqa D412
+    """Unshare a workflow.
+
+    The `share-remove` command allows for unsharing a workflow. The workflow
+    will no longer be visible to the users with whom it was shared.
+
+    Example:
+
+    $ reana-client share-remove -w myanalysis.42 --user bob@example.org
+    """
+    from reana_client.api.client import unshare_workflow
+
+    unshare_errors = []
+    unshared_users = []
+
+    if workflow:
+        try:
+            for user in users:
+                try:
+                    logging.info(f"Unsharing workflow {workflow} with user {user}")
+                    unshare_workflow(workflow, user, access_token)
+                    unshared_users.append(user)
+                except Exception as e:
+                    unshare_errors.append(
+                        f"Failed to unshare {workflow} with {user}: {str(e)}"
+                    )
+                    logging.debug(traceback.format_exc())
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            display_message(
+                "An error occurred while unsharing workflow:\n{}".format(str(e)),
+                msg_type="error",
+            )
+
+        if unshared_users:
+            display_message(
+                f"{workflow} is no longer shared with {', '.join(unshared_users)}",
+                msg_type="success",
+            )
+        if unshare_errors:
+            for error in unshare_errors:
+                display_message(error, msg_type="error")
+
+    else:
+        display_message(f"Cannot find workflow {workflow}", msg_type="error")

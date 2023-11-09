@@ -11,9 +11,6 @@
 reana_yaml_valid_file_names = ["reana.yaml", "reana.yml"]
 """REANA specification valid file names."""
 
-default_user = "00000000-0000-0000-0000-000000000000"
-"""Default user to use when submitting workflows to REANA Server."""
-
 ERROR_MESSAGES = {
     "missing_access_token": "Please provide your access token by using"
     " the -t/--access-token flag, or by setting the"

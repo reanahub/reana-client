@@ -7,6 +7,7 @@ The list of contributors in alphabetical order:
 - `Audrius Mecionis <https://orcid.org/0000-0002-3759-1663>`_
 - `Anton Khodak <https://orcid.org/0000-0003-3263-4553>`_
 - `Camila Diaz <https://orcid.org/0000-0001-5543-797X>`_
+- `Daan Rosendal <https://orcid.org/0000-0002-3447-9000>`_
 - `Daniel Prelipcean <https://orcid.org/0000-0002-4855-194X>`_
 - `Diego Rodriguez <https://orcid.org/0000-0003-0649-2002>`_
 - `Dinos Kousidis <https://orcid.org/0000-0002-4914-4289>`_

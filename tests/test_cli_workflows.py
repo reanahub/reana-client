@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -17,12 +17,11 @@ import yaml
 from click.testing import CliRunner
 from mock import Mock, patch
 from pytest_reana.test_utils import make_mock_api_client
-from reana_commons.config import INTERACTIVE_SESSION_TYPES
-
 from reana_client.api.client import create_workflow_from_json
-from reana_client.config import RUN_STATUSES
 from reana_client.cli import cli
+from reana_client.config import RUN_STATUSES
 from reana_client.utils import get_workflow_status_change_msg
+from reana_commons.config import INTERACTIVE_SESSION_TYPES
 
 
 def test_workflows_server_not_connected():
@@ -988,3 +987,42 @@ def test_yml_ext_specification(create_yaml_workflow_schema):
         result = runner.invoke(cli, ["validate", "-t", reana_token])
         assert result.exit_code != 0
         assert message in result.output
+
+
+def test_share_add_workflow():
+    """Test share-add workflows."""
+    status_code = 200
+    response = {
+        "message": "is now read-only shared with",
+        "workflow_id": "string",
+        "workflow_name": "string",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-add",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "bob@.cern.ch",
+                    "--message",
+                    "Test message",
+                    "--valid-until",
+                    "2024-01-01",
+                ],
+            )
+            assert result.exit_code == 0
+            assert response["message"] in result.output

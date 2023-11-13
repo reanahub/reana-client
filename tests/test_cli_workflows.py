@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -988,3 +988,30 @@ def test_yml_ext_specification(create_yaml_workflow_schema):
         result = runner.invoke(cli, ["validate", "-t", reana_token])
         assert result.exit_code != 0
         assert message in result.output
+
+
+def test_run_with_no_inputs(spec_without_inputs):
+    """Test running workflow when specification does not contain inputs."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with patch(
+        "reana_client.cli.workflow.workflow_create"
+    ) as cli_workflow_create, patch(
+        "reana_client.cli.workflow.workflow_start"
+    ) as cli_workflow_start, patch(
+        "reana_client.api.client.get_workflow_specification",
+        Mock(return_value={"specification": spec_without_inputs}),
+    ) as get_workflow_specification, patch(
+        "reana_client.api.client.upload_to_server"
+    ) as upload_to_server, runner.isolated_filesystem():
+        with open("reana.yaml", "w") as f:
+            yaml.dump(spec_without_inputs, f)
+
+        result = runner.invoke(cli, ["run", "-t", reana_token])
+
+        assert result.exit_code == 0
+        cli_workflow_create.assert_called()
+        cli_workflow_start.assert_called()
+        get_workflow_specification.assert_called()
+        upload_to_server.assert_not_called()

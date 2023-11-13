@@ -6,6 +6,7 @@ Version 0.9.2 (UNRELEASED)
 
 - Fixes ``create_workflow_from_json`` API command to always send the workflow specification to the server.
 - Fixes ``list`` command to be case-insensitive when using the ``--sort`` flag to sort the workflow runs by a specific column name.
+- Fixes ``run`` wrapper command for workflows that do not contain ``inputs`` clause in their specification.
 
 Version 0.9.1 (2023-09-27)
 --------------------------

@@ -1160,7 +1160,6 @@ def workflow_run(
     ctx.invoke(
         upload_files,
         workflow=ctx.workflow_name,
-        filenames=None,
         access_token=access_token,
     )
     display_message("Starting workflow...", msg_type="info")

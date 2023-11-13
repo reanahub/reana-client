@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2020, 2021, 2022 CERN.
+# Copyright (C) 2017, 2018, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -279,3 +279,16 @@ def cwl_workflow_spec_loaded():
         }
     }
     return cwl_workflow_spec
+
+
+@pytest.fixture()
+def spec_without_inputs():
+    """REANA specification without `inputs`."""
+    return {
+        "workflow": {
+            "type": "serial",
+            "steps": [
+                {"environment": "registry.example.org/foo/bar", "commands": ["sleep"]}
+            ],
+        }
+    }

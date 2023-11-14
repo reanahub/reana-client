@@ -33,6 +33,7 @@ Workflow execution commands:
 Workflow sharing commands:
   share-add     Share a workflow with other users (read-only).
   share-remove  Unshare a workflow.
+  share-status  Show with whom a workflow is shared.
 
 Workspace interactive commands:
   close  Close an interactive session.

@@ -1365,3 +1365,38 @@ def unshare_workflow(workflow, user_email_to_unshare_with, access_token):
             f"Message: {e.response.json()['message']}"
         )
         raise Exception(e.response.json()["message"])
+
+
+def get_workflow_sharing_status(workflow, access_token):
+    """Get the share status of a workflow.
+
+    :param workflow: name or id of the workflow.
+    :param access_token: access token of the current user.
+
+    :return: a dictionary containing the ``workflow_id``, ``workflow_name``, and
+             a ``sharing_status`` key with the result of the operation.
+    """
+    try:
+        (
+            response,
+            http_response,
+        ) = current_rs_api_client.api.get_workflow_share_status(
+            workflow_id_or_name=workflow,
+            access_token=access_token,
+        ).result()
+
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                f"{http_response.status_code}"
+            )
+
+    except HTTPError as e:
+        logging.debug(
+            "Workflow sharing status could not be retrieved: "
+            f"\nStatus: {e.response.status_code}\nReason: {e.response.reason}\n"
+            f"Message: {e.response.json()['message']}"
+        )
+        raise Exception(e.response.json()["message"])

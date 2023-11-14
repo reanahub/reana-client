@@ -1606,3 +1606,75 @@ def share_workflow_remove(ctx, workflow, access_token, users):  # noqa D412
 
     else:
         display_message(f"Cannot find workflow {workflow}", msg_type="error")
+
+
+@workflow_sharing_group.command("share-status")
+@check_connection
+@add_workflow_option
+@add_access_token_options
+@click.option(
+    "--format",
+    "_format",
+    multiple=True,
+    default=None,
+    help="Format output according to column titles or column "
+    "values. Use <columm_name>=<column_value> format.",
+)
+@click.option(
+    "--json",
+    "output_format",
+    flag_value="json",
+    default=None,
+    help="Get output in JSON format.",
+)
+@click.pass_context
+def share_workflow_status(
+    ctx, workflow, _format, output_format, access_token
+):  # noqa D412
+    """Show with whom a workflow is shared.
+
+    The `share-status` command allows for checking with whom a workflow is
+    shared.
+
+    Example:
+
+    $ reana-client share-status -w myanalysis.42
+    """
+    from reana_client.api.client import get_workflow_sharing_status
+
+    try:
+        sharing_status = get_workflow_sharing_status(workflow, access_token)
+
+        if sharing_status:
+            shared_with = sharing_status.get("shared_with", [])
+
+            if shared_with:
+                headers = ["user_email", "valid_until"]
+                data = [
+                    [
+                        entry["user_email"],
+                        entry["valid_until"]
+                        if entry["valid_until"] is not None
+                        else "-",
+                    ]
+                    for entry in shared_with
+                ]
+
+                display_formatted_output(data, headers, _format, output_format)
+            else:
+                display_message(
+                    f"Workflow {workflow} is not shared with anyone.", msg_type="info"
+                )
+        else:
+            display_message(
+                f"Workflow {workflow} is not shared with anyone.", msg_type="info"
+            )
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        display_message(
+            "An error occurred while checking workflow sharing status:\n{}".format(
+                str(e)
+            ),
+            msg_type="error",
+        )

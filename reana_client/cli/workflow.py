@@ -157,6 +157,25 @@ def workflow_sharing_group(ctx):
     default=False,
     help="Include deleted workflows in the output.",
 )
+@click.option(
+    "--shared",
+    "shared",
+    is_flag=True,
+    default=False,
+    help="List all shared (owned and unowned) workflows.",
+)
+@click.option(
+    "--shared-by",
+    "shared_by",
+    default=None,
+    help="List workflows shared by the specified user(s).",
+)
+@click.option(
+    "--shared-with",
+    "shared_with",
+    default=None,
+    help="List workflows shared with the specified user(s).",
+)
 @add_access_token_options
 @add_pagination_options
 @check_connection
@@ -179,20 +198,41 @@ def workflows_list(  # noqa: C901
     include_progress,
     include_workspace_size,
     show_deleted_runs: bool,
+    shared,
+    shared_by,
+    shared_with,
 ):  # noqa: D301
     """List all workflows and sessions.
 
     The ``list`` command lists workflows and sessions. By default, the list of
     workflows is returned. If you would like to see the list of your open
     interactive sessions, you need to pass the ``--sessions`` command-line
-    option.
+    option. If you would like to see the list of all workflows, including those
+    shared with you, you need to pass the ``--shared`` command-line option.
 
-    Example:\n
+    Along with specific user emails, you can pass the following special values
+    to the ``--shared-by`` and ``--shared-with`` command-line options:\n
+    \t - ``--shared-by anybody``: list workflows shared with you by anybody.\n
+    \t - ``--shared-with anybody``: list your shared workflows exclusively.\n
+    \t - ``--shared-with nobody``: list your unshared workflows exclusively.\n
+    \t - ``--shared-with bob@cern.ch,cecile@cern.ch``: list workflows shared with either bob@cern.ch or cecile@cern.ch
+
+    Examples:\n
     \t $ reana-client list --all\n
     \t $ reana-client list --sessions\n
-    \t $ reana-client list --verbose --bytes
+    \t $ reana-client list --verbose --bytes\n
+    \t $ reana-client list --shared\n
+    \t $ reana-client list --shared-by bob@cern.ch\n
+    \t $ reana-client list --shared-with anybody
     """
     from reana_client.api.client import get_workflows
+
+    if shared_by and shared_with:
+        display_message(
+            "Please provide either --shared-by or --shared-with, not both.",
+            msg_type="error",
+        )
+        sys.exit(1)
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -224,13 +264,23 @@ def workflows_list(  # noqa: C901
             include_progress=include_progress,
             include_workspace_size=include_workspace_size,
             workflow=workflow,
+            shared=shared,
+            shared_by=shared_by,
+            shared_with=shared_with,
         )
         verbose_headers = ["id", "user"]
         workspace_size_header = ["size"]
         progress_header = ["progress"]
         duration_header = ["duration"]
         headers = {
-            "batch": ["name", "run_number", "created", "started", "ended", "status"],
+            "batch": [
+                "name",
+                "run_number",
+                "created",
+                "started",
+                "ended",
+                "status",
+            ],
             "interactive": [
                 "name",
                 "run_number",
@@ -248,6 +298,14 @@ def workflows_list(  # noqa: C901
             headers[type] += progress_header
         if verbose or include_duration:
             headers[type] += duration_header
+
+        if shared:
+            headers[type] += ["shared_with", "shared_by"]
+        else:
+            if shared_with:
+                headers[type] += ["shared_with"]
+            if shared_by:
+                headers[type] += ["shared_by"]
 
         data = []
         for workflow in response:
@@ -271,6 +329,10 @@ def workflows_list(  # noqa: C901
                         "run_started_at" if header == "started" else "run_finished_at"
                     )
                     value = workflow.get("progress", {}).get(_key) or "-"
+                if header == "shared_by":
+                    value = workflow.get("owner_email")
+                if header == "shared_with":
+                    value = workflow.get("shared_with")
                 if not value:
                     value = workflow.get(header)
                 row.append(value)

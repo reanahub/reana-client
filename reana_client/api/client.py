@@ -115,6 +115,9 @@ def get_workflows(
     include_progress=None,
     include_workspace_size=None,
     workflow=None,
+    shared=None,
+    shared_by=None,
+    shared_with=None,
 ):
     """List all existing workflows.
 
@@ -130,6 +133,9 @@ def get_workflows(
     :param include_progress: include progress information in the response.
     :param include_workspace_size: include workspace size information in the response.
     :param workflow: name or id of the workflow.
+    :param shared: list all shared (owned and unowned) workflows.
+    :param shared_by: list workflows shared by the specified user(s).
+    :param shared_with: list workflows shared with the specified user(s).
 
     :return: a list of dictionaries with the information about the workflows.
              The information includes the workflow ``name``, ``id``, ``status``, ``size``,
@@ -148,6 +154,9 @@ def get_workflows(
             include_progress=include_progress,
             include_workspace_size=include_workspace_size,
             workflow_id_or_name=workflow,
+            shared=shared,
+            shared_by=shared_by,
+            shared_with=shared_with,
         ).result()
         if http_response.status_code == 200:
             return response.get("items")

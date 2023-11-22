@@ -58,15 +58,26 @@ def validate_reana_spec(
                 msg_type="warning",
                 indented=True,
             )
-        for warning_key, warning_value in validation_warnings.items():
+        for warning_key, warning_values in validation_warnings.items():
             if warning_key == "additional_properties":
                 # warning_values is a list of unexpected properties
+                messages = [
+                    f"'{value['property']}'"
+                    + (f" (at {value['path']})" if value["path"] else "")
+                    for value in warning_values
+                ]
                 message = (
                     f"Unexpected properties found in REANA specification file: "
-                    f"{', '.join(warning_value)}"
+                    f"{', '.join(messages)}."
                 )
             else:
-                message = warning_value
+                # warning_values is a list of dictionaries with 'message' and 'path'
+                messages = [
+                    f"{value['message']}"
+                    + (f" (at {value['path']})" if value["path"] else "")
+                    for value in warning_values
+                ]
+                message = f"{'; '.join(messages)}."
             display_message(
                 message,
                 msg_type="warning",

@@ -1,11 +1,13 @@
 Changes
 =======
 
-Version 0.9.2 (UNRELEASED)
+Version 0.9.2 (2023-12-19)
 --------------------------
 
-- Fixes ``create_workflow_from_json`` API command to always send the workflow specification to the server.
-- Fixes ``list`` command to be case-insensitive when using the ``--sort`` flag to sort the workflow runs by a specific column name.
+- Changes ``validate`` command to show detailed errors when the specification file is not a valid YAML file.
+- Changes the validation of specification files to show improved validation warnings, which also indicate where unexpected properties are located in the file.
+- Fixes ``create_workflow_from_json`` API function to always load and send the workflow specification to the server.
+- Fixes ``list`` command to accept case-insensitive column names when sorting the returned workflow runs via the ``--sort`` option.
 - Fixes ``run`` wrapper command for workflows that do not contain ``inputs`` clause in their specification.
 
 Version 0.9.1 (2023-09-27)

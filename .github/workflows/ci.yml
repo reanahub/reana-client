@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -9,211 +9,237 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-    lint-shellcheck:
-        runs-on: ubuntu-20.04
-        steps:
-          - uses: actions/checkout@v3
+  lint-commitlint:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-          - name: Runs shell script static analysis
-            run: |
-              sudo apt-get install shellcheck
-              ./run-tests.sh --check-shellscript
+      - name: Setup Node
+        uses: actions/setup-node@v4
 
-    lint-black:
-        runs-on: ubuntu-20.04
-        steps:
-          - uses: actions/checkout@v3
+      - name: Install commitlint
+        run: |
+          npm install conventional-changelog-conventionalcommits
+          npm install commitlint@latest
 
-          - name: Setup Python
-            uses: actions/setup-python@v4
-            with:
-              python-version: '3.8'
+      - name: Check commit message compliance of the recently pushed commit
+        if: github.event_name == 'push'
+        run: |
+          ./run-tests.sh --check-commitlint HEAD~1 HEAD
 
-          - name: Install Python dependencies
-            run: pip install black
+      - name: Check commit message compliance of the pull request
+        if: github.event_name == 'pull_request'
+        run: |
+          ./run-tests.sh --check-commitlint ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} ${{ github.event.pull_request.head.sha }}
 
-          - name: Check Python code formatting
-            run: ./run-tests.sh --check-black
+  lint-shellcheck:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
 
-    lint-flake8:
-      runs-on: ubuntu-20.04
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v3
+      - name: Runs shell script static analysis
+        run: |
+          sudo apt-get install shellcheck
+          ./run-tests.sh --check-shellcheck
 
-        - name: Setup Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.8'
+  lint-black:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
 
-        - name: Check compliance with pep8, pyflakes and circular complexity
-          run: |
-            pip install --upgrade pip
-            pip install flake8
-            ./run-tests.sh --check-flake8
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
 
-    lint-pydocstyle:
-      runs-on: ubuntu-20.04
-      steps:
-        - uses: actions/checkout@v3
+      - name: Install Python dependencies
+        run: pip install black
 
-        - name: Setup Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.8'
+      - name: Check Python code formatting
+        run: ./run-tests.sh --check-black
 
-        - name: Install Python dependencies
-          run: pip install pydocstyle
+  lint-flake8:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
 
-        - name: Check compliance with Python docstring conventions
-          run: ./run-tests.sh --check-pydocstyle
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
 
-    lint-check-manifest:
-      runs-on: ubuntu-20.04
-      steps:
-        - uses: actions/checkout@v3
+      - name: Check compliance with pep8, pyflakes and circular complexity
+        run: |
+          pip install --upgrade pip
+          pip install flake8
+          ./run-tests.sh --check-flake8
 
-        - name: Setup Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.8'
+  lint-pydocstyle:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
 
-        - name: Install Python dependencies
-          run: pip install check-manifest
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
 
-        - name: Check Python manifest completeness
-          run: ./run-tests.sh --check-manifest
+      - name: Install Python dependencies
+        run: pip install pydocstyle
 
-    docs-cli-commands:
-        runs-on: ubuntu-20.04
-        steps:
-          - uses: actions/checkout@v3
+      - name: Check compliance with Python docstring conventions
+        run: ./run-tests.sh --check-pydocstyle
 
-          - name: Setup Python
-            uses: actions/setup-python@v4
-            with:
-                python-version: '3.8'
+  lint-check-manifest:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
 
-          - name: Install Python dependencies
-            run: |
-                pip install --upgrade pip setuptools py
-                pip install -e .[all]
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
 
-          - name: Verify reana client commands list
-            run: ./run-tests.sh --check-cli-cmds
+      - name: Install Python dependencies
+        run: pip install check-manifest
 
-    docs-cli-api:
-        runs-on: ubuntu-20.04
-        steps:
-          - uses: actions/checkout@v3
+      - name: Check Python manifest completeness
+        run: ./run-tests.sh --check-manifest
 
-          - name: Setup Python
-            uses: actions/setup-python@v4
-            with:
-                python-version: '3.8'
+  docs-cli-commands:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
 
-          - name: Install Python dependencies
-            run: |
-                pip install --upgrade pip setuptools py
-                pip install -e .[all]
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
 
-          - name: Verify reana client api docs
-            run: ./run-tests.sh --check-cli-api
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools py
+          pip install -e .[all]
 
-    docs-sphinx:
-      runs-on: ubuntu-20.04
-      steps:
-        - uses: actions/checkout@v3
+      - name: Verify reana client commands list
+        run: ./run-tests.sh --check-cli-cmds
 
-        - name: Setup Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.8'
+  docs-cli-api:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
 
-        - name: Install Python dependencies
-          run: |
-            pip install --upgrade pip setuptools py
-            pip install -e .[all]
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
 
-        - name: Run Sphinx documentation with doctests
-          run: ./run-tests.sh --check-sphinx
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools py
+          pip install -e .[all]
 
-    python-tests:
-        runs-on: ubuntu-20.04
-        strategy:
-          matrix:
-              include:
-                - testenv: lowest
-                  python: '3.6'
+      - name: Verify reana client api docs
+        run: ./run-tests.sh --check-cli-api
 
-                - testenv: release
-                  python: '3.6'
+  docs-sphinx:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
 
-                - testenv: lowest
-                  python: '3.7'
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
 
-                - testenv: release
-                  python: '3.7'
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools py
+          pip install -e .[all]
 
-                - testenv: lowest
-                  python: '3.8'
+      - name: Run Sphinx documentation with doctests
+        run: ./run-tests.sh --check-sphinx
 
-                - testenv: release
-                  python: '3.8'
+  python-tests:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        include:
+          - testenv: lowest
+            python: '3.6'
 
-                - testenv: lowest
-                  python: '3.9'
+          - testenv: release
+            python: '3.6'
 
-                - testenv: release
-                  python: '3.9'
+          - testenv: lowest
+            python: '3.7'
 
-                - testenv: lowest
-                  python: '3.10'
+          - testenv: release
+            python: '3.7'
 
-                - testenv: release
-                  python: '3.10'
+          - testenv: lowest
+            python: '3.8'
 
-                - testenv: lowest
-                  python: '3.11'
+          - testenv: release
+            python: '3.8'
 
-                - testenv: release
-                  python: '3.11'
+          - testenv: lowest
+            python: '3.9'
 
-                - testenv: lowest
-                  python: '3.12'
+          - testenv: release
+            python: '3.9'
 
-                - testenv: release
-                  python: '3.12'
-        steps:
-          - uses: actions/checkout@v3
+          - testenv: lowest
+            python: '3.10'
 
-          - name: Set up Python ${{ matrix.python }}
-            uses: actions/setup-python@v4
-            with:
-              python-version: ${{ matrix.python }}
+          - testenv: release
+            python: '3.10'
 
-          - name: Setup requirements builder
-            run: |
-              pip install --upgrade pip setuptools py
-              pip install wheel
-              pip install requirements-builder
-              if [[ ${{ matrix.testenv }} == lowest ]]; then
-                  requirements-builder -e all --level=min --req requirements-dev.txt setup.py > .lowest-requirements.txt
-              fi
-              if [[ ${{ matrix.testenv }} == release ]]; then
-                  requirements-builder -e all --level=pypi --req requirements-dev.txt setup.py > .release-requirements.txt
-              fi
+          - testenv: lowest
+            python: '3.11'
 
-          - name: Install Python dependencies
-            run: |
-              pip install -r .${{ matrix.testenv }}-requirements.txt
+          - testenv: release
+            python: '3.11'
 
-          - name: Run pytest
-            run: ./run-tests.sh --check-pytest
+          - testenv: lowest
+            python: '3.12'
 
-          - name: Codecov Coverage
-            if: matrix.python == '3.8'
-            uses: codecov/codecov-action@v3
-            with:
-              token: ${{ secrets.CODECOV_TOKEN }}
-              files: coverage.xml
+          - testenv: release
+            python: '3.12'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Setup requirements builder
+        run: |
+          pip install --upgrade pip setuptools py
+          pip install wheel
+          pip install requirements-builder
+          if [[ ${{ matrix.testenv }} == lowest ]]; then
+          requirements-builder -e all --level=min --req requirements-dev.txt setup.py > .lowest-requirements.txt
+          fi
+          if [[ ${{ matrix.testenv }} == release ]]; then
+          requirements-builder -e all --level=pypi --req requirements-dev.txt setup.py > .release-requirements.txt
+          fi
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r .${{ matrix.testenv }}-requirements.txt
+
+      - name: Run pytest
+        run: ./run-tests.sh --check-pytest
+
+      - name: Codecov Coverage
+        if: matrix.python == '3.8'
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml

@@ -580,10 +580,6 @@ def test_create_snakemake_workflow_from_json_parameters(
     external_parameter_yaml_file,
 ):
     """Test create workflow from json with external parameters."""
-    if sys.version_info.major == 3 and sys.version_info.minor in (11, 12):
-        pytest.xfail(
-            "Snakemake features of reana-client are not supported on Python 3.11"
-        )
     status_code = 201
     response = {
         "message": "The workflow has been successfully created.",

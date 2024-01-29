@@ -434,9 +434,11 @@ class EnvironmentValidatorYadage(EnvironmentValidatorBase):
         def _check_environment(environment):
             image = "{}{}".format(
                 environment["image"],
-                ":{}".format(environment["imagetag"])
-                if "imagetag" in environment
-                else "",
+                (
+                    ":{}".format(environment["imagetag"])
+                    if "imagetag" in environment
+                    else ""
+                ),
             )
             k8s_uid = next(
                 (

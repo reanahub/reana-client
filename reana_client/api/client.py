@@ -303,9 +303,9 @@ def create_workflow_from_json(
             reana_yaml["outputs"] = outputs
         if workflow_file:
             reana_yaml["workflow"]["file"] = workflow_file
-            reana_yaml["workflow"][
-                "specification"
-            ] = load_workflow_spec_from_reana_yaml(reana_yaml, workspace_path)
+            reana_yaml["workflow"]["specification"] = (
+                load_workflow_spec_from_reana_yaml(reana_yaml, workspace_path)
+            )
         else:
             reana_yaml["workflow"]["specification"] = workflow_json
         # The function below loads the input parameters into the reana_yaml dictionary

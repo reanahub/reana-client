@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -146,12 +146,15 @@ def get_workflow_duration(workflow: Dict) -> Optional[int]:
     progress = workflow.get("progress", {})
     run_started_at = progress.get("run_started_at")
     run_finished_at = progress.get("run_finished_at")
+    run_stopped_at = progress.get("run_stopped_at")
 
     duration = None
     if run_started_at:
         start_time = fromisoformat(run_started_at)
         if run_finished_at:
             end_time = fromisoformat(run_finished_at)
+        elif run_stopped_at:
+            end_time = fromisoformat(run_stopped_at)
         else:
             end_time = datetime.utcnow()
         duration = round((end_time - start_time).total_seconds())

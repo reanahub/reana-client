@@ -168,48 +168,8 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        include:
-          - testenv: lowest
-            python: '3.6'
-
-          - testenv: release
-            python: '3.6'
-
-          - testenv: lowest
-            python: '3.7'
-
-          - testenv: release
-            python: '3.7'
-
-          - testenv: lowest
-            python: '3.8'
-
-          - testenv: release
-            python: '3.8'
-
-          - testenv: lowest
-            python: '3.9'
-
-          - testenv: release
-            python: '3.9'
-
-          - testenv: lowest
-            python: '3.10'
-
-          - testenv: release
-            python: '3.10'
-
-          - testenv: lowest
-            python: '3.11'
-
-          - testenv: release
-            python: '3.11'
-
-          - testenv: lowest
-            python: '3.12'
-
-          - testenv: release
-            python: '3.12'
+        testenv: [lowest, release]
+        python: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v3
 
@@ -224,10 +184,10 @@ jobs:
           pip install wheel
           pip install requirements-builder
           if [[ ${{ matrix.testenv }} == lowest ]]; then
-          requirements-builder -e all --level=min --req requirements-dev.txt setup.py > .lowest-requirements.txt
+          requirements-builder -e tests --level=min --req requirements-dev.txt setup.py > .lowest-requirements.txt
           fi
           if [[ ${{ matrix.testenv }} == release ]]; then
-          requirements-builder -e all --level=pypi --req requirements-dev.txt setup.py > .release-requirements.txt
+          requirements-builder -e tests --level=pypi --req requirements-dev.txt setup.py > .release-requirements.txt
           fi
 
       - name: Install Python dependencies

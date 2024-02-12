@@ -1,10 +1,13 @@
 #!/bin/sh
 #
 # This file is part of REANA.
-# Copyright (C) 2022 CERN.
+# Copyright (C) 2022, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
+
+set -o errexit
+set -o nounset
 
 if [ $# -eq 0 ]; then
     echo "Usage: $0 <version>"
@@ -25,14 +28,14 @@ if ! [ -x "$(command -v convert)" ]; then
 fi
 
 download_python_appimage () {
-    wget https://github.com/niess/python-appimage/releases/download/python3.8/python3.8.12-cp38-cp38-manylinux1_x86_64.AppImage
-    chmod +x python3.8.12-cp38-cp38-manylinux1_x86_64.AppImage
+    wget https://github.com/niess/python-appimage/releases/download/python3.8/python3.8.18-cp38-cp38-manylinux1_x86_64.AppImage
+    chmod +x python3.8.18-cp38-cp38-manylinux1_x86_64.AppImage
     wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
     chmod a+x appimagetool-x86_64.AppImage
 }
 
 extract_python_appimage () {
-    ./python3.8.12-cp38-cp38-manylinux1_x86_64.AppImage --appimage-extract
+    ./python3.8.18-cp38-cp38-manylinux1_x86_64.AppImage --appimage-extract
 }
 
 install_reana_client_into_python_appimage () {
@@ -40,7 +43,7 @@ install_reana_client_into_python_appimage () {
 }
 
 modify_python_appimage_to_run_reana_client_by_default () {
-    sed -i -e 's|/opt/python3.8/bin/python3.8|/usr/bin/reana-client|g' ./squashfs-root/AppRun
+    (cd squashfs-root && ln -sf usr/bin/reana-client AppRun)
 }
 
 test_modified_python_appimage () {
@@ -48,7 +51,7 @@ test_modified_python_appimage () {
 }
 
 edit_desktop_file () {
-    mv squashfs-root/usr/share/applications/python3.8.12.desktop squashfs-root/usr/share/applications/reana-client.desktop
+    mv squashfs-root/usr/share/applications/python3.8.18.desktop squashfs-root/usr/share/applications/reana-client.desktop
     sed -i -e 's|^Name=.*|Name=reana-client|g' squashfs-root/usr/share/applications/*.desktop
     sed -i -e 's|^Exec=.*|Exec=reana-client|g' squashfs-root/usr/share/applications/*.desktop
     sed -i -e 's|^Icon=.*|Icon=reana-client|g' squashfs-root/usr/share/applications/*.desktop
@@ -75,7 +78,7 @@ test_created_reana_client_appimage () {
 
 clean_after_ourselves () {
     rm -rf logo-reana.png squashfs-root
-    rm -rf appimagetool-x86_64.AppImage python3.8.12-cp38-cp38-manylinux1_x86_64.AppImage
+    rm -rf appimagetool-x86_64.AppImage python3.8.18-cp38-cp38-manylinux1_x86_64.AppImage
 }
 
 download_python_appimage

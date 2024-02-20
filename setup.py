@@ -51,6 +51,7 @@ install_requires = [
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",
     "swagger_spec_validator>=2.4.0,<3.0.0; python_version<'3.7'",
+    "pulp>=2.7.0,<2.8.0",
 ]
 
 packages = find_packages()

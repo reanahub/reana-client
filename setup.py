@@ -19,7 +19,7 @@ readme = open("README.md").read()
 history = open("CHANGELOG.md").read()
 
 tests_require = [
-    "pytest-reana>=0.9.2,<0.10.0",
+    "pytest-reana>=0.95.0a2,<0.96.0",
 ]
 
 extras_require = {
@@ -46,7 +46,7 @@ install_requires = [
     "click>=7",
     "pathspec==0.9.0",
     "jsonpointer>=2.0",
-    "reana-commons[yadage,snakemake,cwl]>=0.9.8,<0.10.0",
+    "reana-commons[yadage,snakemake,cwl]>=0.95.0a2,<0.96.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",

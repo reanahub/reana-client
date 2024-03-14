@@ -11,6 +11,7 @@ include *.txt
 include *.yaml
 include *.yml
 include .flake8
+include Dockerfile
 include LICENSE
 include pytest.ini
 include tox.ini

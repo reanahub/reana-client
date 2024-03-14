@@ -110,6 +110,26 @@ jobs:
       - name: Check Python manifest completeness
         run: ./run-tests.sh --check-manifest
 
+  lint-dockerfile:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Check Dockerfile compliance
+        run: ./run-tests.sh --check-dockerfile
+
+  docker-build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: |
+          ./run-tests.sh --check-docker-build
+          ./run-tests.sh --check-docker-run
+
   docs-cli-commands:
     runs-on: ubuntu-20.04
     steps:
@@ -203,3 +223,33 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
+
+  release-docker:
+    runs-on: ubuntu-20.04
+    if: >
+      vars.RELEASE_DOCKER == 'true' &&
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/')
+    needs:
+      - docs-cli-api
+      - docs-cli-commands
+      - docs-sphinx
+      - lint-black
+      - lint-check-manifest
+      - lint-commitlint
+      - lint-dockerfile
+      - lint-flake8
+      - lint-pydocstyle
+      - lint-shellcheck
+      - python-tests
+    steps:
+      - name: Release Docker image
+        uses: reanahub/reana-github-actions/release-docker@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          token: ${{ secrets.DOCKER_TOKEN }}
+          organisation: ${{ vars.DOCKER_ORGANISATION }}
+          registry: ${{ vars.DOCKER_REGISTRY }}
+          platform: |
+            linux/amd64
+            linux/arm64

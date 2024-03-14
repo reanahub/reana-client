@@ -64,6 +64,18 @@ check_cli_api () {
     rm cli_api.md
 }
 
+check_dockerfile () {
+    docker run -i --rm docker.io/hadolint/hadolint:v2.12.0 < Dockerfile
+}
+
+check_docker_build () {
+    docker build -t docker.io/reanahub/reana-client .
+}
+
+check_docker_run () {
+    docker run --rm -v "$PWD"/tests:/home/reana/tests --entrypoint /bin/bash docker.io/reanahub/reana-client -c 'pytest tests'
+}
+
 check_sphinx () {
     sphinx-build -qnNW docs docs/_build/html
     sphinx-build -qnNW -b doctest docs docs/_build/doctest
@@ -82,6 +94,9 @@ check_all() {
     check_manifest
     check_cli_cmds
     check_cli_api
+    check_dockerfile
+    check_docker_build
+    check_docker_run
     check_sphinx
     check_pytest
 }
@@ -101,6 +116,9 @@ case $arg in
     --check-manifest) check_manifest;;
     --check-cli-cmds) check_cli_cmds;;
     --check-cli-api) check_cli_api;;
+    --check-dockerfile) check_dockerfile;;
+    --check-docker-build) check_docker_build;;
+    --check-docker-run) check_docker_run;;
     --check-sphinx) check_sphinx;;
     --check-pytest) check_pytest;;
     *) echo "[ERROR] Invalid argument '$arg'. Exiting." && exit 1;;

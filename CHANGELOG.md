@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.4](https://github.com/reanahub/reana-client/compare/0.9.3...0.9.4) (2024-03-15)
+
+
+### Build
+
+* **docker:** create `reana-client` container image ([#710](https://github.com/reanahub/reana-client/issues/710)) ([2c99c5d](https://github.com/reanahub/reana-client/commit/2c99c5d1bd36e4303885875375085f7d714e8732)), closes [#709](https://github.com/reanahub/reana-client/issues/709)
+
 ## [0.9.3](https://github.com/reanahub/reana-client/compare/0.9.2...0.9.3) (2024-03-13)
 
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.95.0](https://github.com/reanahub/reana-client/compare/0.9.3...0.95.0) (2024-03-18)
+
+
+### Build
+
+* **docker:** create `reana-client` container image ([#710](https://github.com/reanahub/reana-client/issues/710)) ([2c99c5d](https://github.com/reanahub/reana-client/commit/2c99c5d1bd36e4303885875375085f7d714e8732)), closes [#709](https://github.com/reanahub/reana-client/issues/709)
+
+
+### Continuous integration
+
+* **actions:** update GitHub actions due to Node 16 deprecation ([#714](https://github.com/reanahub/reana-client/issues/714)) ([3465eb0](https://github.com/reanahub/reana-client/commit/3465eb0496dba6b4fb64fd6edd7872ae59ec5a98))
+
+
+### Chores
+
+* **master:** release 0.95.0a1 ([9a410cc](https://github.com/reanahub/reana-client/commit/9a410cc030bef6fb39ea5f0c35a93bbe8730297a))
+
 ## [0.9.3](https://github.com/reanahub/reana-client/compare/0.9.2...0.9.3) (2024-03-13)
 
 

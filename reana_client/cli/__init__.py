@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -11,10 +11,9 @@ import os
 import sys
 
 import click
-from urllib3 import disable_warnings
-
-from reana_client.cli import workflow, files, ping, secrets, quotas, retention_rules
+from reana_client.cli import files, ping, quotas, retention_rules, secrets, workflow
 from reana_client.utils import get_api_url
+from urllib3 import disable_warnings
 
 DEBUG_LOG_FORMAT = (
     "[%(asctime)s] p%(process)s "
@@ -41,6 +40,7 @@ class ReanaCLI(click.Group):
         ping.configuration_group,
         workflow.workflow_management_group,
         workflow.workflow_execution_group,
+        workflow.workflow_sharing_group,
         workflow.interactive_group,
         files.files_group,
         retention_rules.retention_rules_group,

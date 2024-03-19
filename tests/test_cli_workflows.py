@@ -17,12 +17,11 @@ import yaml
 from click.testing import CliRunner
 from mock import Mock, patch
 from pytest_reana.test_utils import make_mock_api_client
-from reana_commons.config import INTERACTIVE_SESSION_TYPES
-
 from reana_client.api.client import create_workflow_from_json
-from reana_client.config import RUN_STATUSES
 from reana_client.cli import cli
+from reana_client.config import RUN_STATUSES
 from reana_client.utils import get_workflow_status_change_msg
+from reana_commons.config import INTERACTIVE_SESSION_TYPES
 
 
 def test_workflows_server_not_connected():
@@ -486,6 +485,155 @@ def test_workflows_filter():
             assert len(json_response) == 1
             assert "status" in json_response[0]
             assert "running" in json_response[0]["status"]
+
+
+def test_workflows_shared():
+    """Test workflow list command with --shared flag."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "progress": {},
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(cli, ["list", "--shared", "-t", reana_token])
+            assert result.exit_code == 0
+            assert "SHARED_WITH" in result.output
+            assert "SHARED_BY" in result.output
+
+
+def test_workflows_shared_with():
+    """Test workflow list command with --shared-with flag."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "progress": {},
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli, ["list", "--shared-with", "anybody", "-t", reana_token]
+            )
+            assert result.exit_code == 0
+            assert "SHARED_WITH" in result.output
+            assert "SHARED_BY" not in result.output
+
+
+def test_workflows_shared_by():
+    """Test workflow list command with --shared-by flag."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "progress": {},
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli, ["list", "--shared-by", "anybody", "-t", reana_token]
+            )
+            assert result.exit_code == 0
+            assert "SHARED_WITH" not in result.output
+            assert "SHARED_BY" in result.output
+
+
+def test_workflows_shared_with_and_shared_by():
+    """Test workflow list command with --shared-with and --shared-by flags."""
+    response = {
+        "items": [
+            {
+                "status": "running",
+                "created": "2018-06-13T09:47:35.66097",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "name": "mytest.1",
+                "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "progress": {},
+            }
+        ]
+    }
+    status_code = 200
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "list",
+                    "--shared-with",
+                    "anybody",
+                    "--shared-by",
+                    "anybody",
+                    "-t",
+                    reana_token,
+                ],
+            )
+            assert result.exit_code == 1
+            assert (
+                "Please provide either --shared-by or --shared-with, not both"
+                in result.output
+            )
 
 
 def test_workflow_create_failed():
@@ -1011,3 +1159,110 @@ def test_run_with_no_inputs(spec_without_inputs):
         cli_workflow_start.assert_called()
         get_workflow_specification.assert_called()
         upload_to_server.assert_not_called()
+
+
+def test_share_add_workflow():
+    """Test share-add workflows."""
+    status_code = 200
+    response = {
+        "message": "is now read-only shared with",
+        "workflow_id": "string",
+        "workflow_name": "string",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-add",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "bob@.cern.ch",
+                    "--message",
+                    "Test message",
+                    "--valid-until",
+                    "2024-01-01",
+                ],
+            )
+            assert result.exit_code == 0
+            assert response["message"] in result.output
+
+
+def test_share_remove_workflow():
+    """Test share-remove workflows."""
+    status_code = 200
+    response = {
+        "message": "is no longer shared with",
+        "workflow_id": "string",
+        "workflow_name": "string",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-remove",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "bob@.cern.ch",
+                ],
+            )
+            assert result.exit_code == 0
+            assert response["message"] in result.output
+
+
+def test_share_status_workflow():
+    """Test share-status workflows."""
+    status_code = 200
+    response = {
+        "message": "is not shared with anyone",
+        "workflow_id": "string",
+        "workflow_name": "string",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-status",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                ],
+            )
+            assert result.exit_code == 0
+            assert response["message"] in result.output

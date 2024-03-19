@@ -15,12 +15,8 @@ import time
 import traceback
 
 import click
-from jsonschema.exceptions import ValidationError
-from reana_commons.config import INTERACTIVE_SESSION_TYPES, REANA_COMPUTE_BACKENDS
-from reana_commons.errors import REANAValidationError
-from reana_commons.validation.operational_options import validate_operational_options
 import yaml
-
+from jsonschema.exceptions import ValidationError
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (
     add_access_token_options,
@@ -51,6 +47,9 @@ from reana_client.validation.utils import (
     validate_input_parameters,
     validate_workflow_name_parameter,
 )
+from reana_commons.config import INTERACTIVE_SESSION_TYPES, REANA_COMPUTE_BACKENDS
+from reana_commons.errors import REANAValidationError
+from reana_commons.validation.operational_options import validate_operational_options
 
 
 @click.group(help="Workflow management commands")
@@ -64,6 +63,13 @@ def workflow_management_group(ctx):
 @click.pass_context
 def workflow_execution_group(ctx):
     """Top level wrapper for execution related interaction."""
+    logging.debug(ctx.info_name)
+
+
+@click.group(help="Workflow sharing commands")
+@click.pass_context
+def workflow_sharing_group(ctx):
+    """Top level wrapper for workflow sharing."""
     logging.debug(ctx.info_name)
 
 
@@ -151,6 +157,25 @@ def workflow_execution_group(ctx):
     default=False,
     help="Include deleted workflows in the output.",
 )
+@click.option(
+    "--shared",
+    "shared",
+    is_flag=True,
+    default=False,
+    help="List all shared (owned and unowned) workflows.",
+)
+@click.option(
+    "--shared-by",
+    "shared_by",
+    default=None,
+    help="List workflows shared by the specified user(s).",
+)
+@click.option(
+    "--shared-with",
+    "shared_with",
+    default=None,
+    help="List workflows shared with the specified user(s).",
+)
 @add_access_token_options
 @add_pagination_options
 @check_connection
@@ -173,20 +198,41 @@ def workflows_list(  # noqa: C901
     include_progress,
     include_workspace_size,
     show_deleted_runs: bool,
+    shared,
+    shared_by,
+    shared_with,
 ):  # noqa: D301
     """List all workflows and sessions.
 
     The ``list`` command lists workflows and sessions. By default, the list of
     workflows is returned. If you would like to see the list of your open
     interactive sessions, you need to pass the ``--sessions`` command-line
-    option.
+    option. If you would like to see the list of all workflows, including those
+    shared with you, you need to pass the ``--shared`` command-line option.
 
-    Example:\n
+    Along with specific user emails, you can pass the following special values
+    to the ``--shared-by`` and ``--shared-with`` command-line options:\n
+    \t - ``--shared-by anybody``: list workflows shared with you by anybody.\n
+    \t - ``--shared-with anybody``: list your shared workflows exclusively.\n
+    \t - ``--shared-with nobody``: list your unshared workflows exclusively.\n
+    \t - ``--shared-with bob@cern.ch,cecile@cern.ch``: list workflows shared with either bob@cern.ch or cecile@cern.ch
+
+    Examples:\n
     \t $ reana-client list --all\n
     \t $ reana-client list --sessions\n
-    \t $ reana-client list --verbose --bytes
+    \t $ reana-client list --verbose --bytes\n
+    \t $ reana-client list --shared\n
+    \t $ reana-client list --shared-by bob@cern.ch\n
+    \t $ reana-client list --shared-with anybody
     """
     from reana_client.api.client import get_workflows
+
+    if shared_by and shared_with:
+        display_message(
+            "Please provide either --shared-by or --shared-with, not both.",
+            msg_type="error",
+        )
+        sys.exit(1)
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -218,13 +264,23 @@ def workflows_list(  # noqa: C901
             include_progress=include_progress,
             include_workspace_size=include_workspace_size,
             workflow=workflow,
+            shared=shared,
+            shared_by=shared_by,
+            shared_with=shared_with,
         )
         verbose_headers = ["id", "user"]
         workspace_size_header = ["size"]
         progress_header = ["progress"]
         duration_header = ["duration"]
         headers = {
-            "batch": ["name", "run_number", "created", "started", "ended", "status"],
+            "batch": [
+                "name",
+                "run_number",
+                "created",
+                "started",
+                "ended",
+                "status",
+            ],
             "interactive": [
                 "name",
                 "run_number",
@@ -242,6 +298,14 @@ def workflows_list(  # noqa: C901
             headers[type] += progress_header
         if verbose or include_duration:
             headers[type] += duration_header
+
+        if shared:
+            headers[type] += ["shared_with", "shared_by"]
+        else:
+            if shared_with:
+                headers[type] += ["shared_with"]
+            if shared_by:
+                headers[type] += ["shared_by"]
 
         data = []
         for workflow in response:
@@ -265,6 +329,10 @@ def workflows_list(  # noqa: C901
                         "run_started_at" if header == "started" else "run_finished_at"
                     )
                     value = workflow.get("progress", {}).get(_key) or "-"
+                if header == "shared_by":
+                    value = workflow.get("owner_email")
+                if header == "shared_with":
+                    value = workflow.get("shared_with")
                 if not value:
                     value = workflow.get(header)
                 row.append(value)
@@ -451,12 +519,12 @@ def workflow_start(
     \t $ reana-client start -w myanalysis.42 -p sleeptime=10 -p myparam=4\n
     \t $ reana-client start -w myanalysis.42 -p myparam1=myvalue1 -o CACHE=off
     """
-    from reana_client.utils import get_api_url
     from reana_client.api.client import (
         get_workflow_parameters,
         get_workflow_status,
         start_workflow,
     )
+    from reana_client.utils import get_api_url
 
     def display_status(workflow: str, current_status: str):
         """Display the current status of the workflow."""
@@ -586,12 +654,12 @@ def workflow_restart(
     \t $ reana-client restart -w myanalysis.42 -o TARGET=gendata\n
     \t $ reana-client restart -w myanalysis.42 -o FROM=fitdata
     """
-    from reana_client.utils import get_api_url
     from reana_client.api.client import (
         get_workflow_parameters,
         get_workflow_status,
         start_workflow,
     )
+    from reana_client.utils import get_api_url
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
@@ -1372,7 +1440,7 @@ def workflow_open_interactive_session(
     Examples:\n
     \t $ reana-client open -w myanalysis.42 jupyter
     """
-    from reana_client.api.client import open_interactive_session, info
+    from reana_client.api.client import info, open_interactive_session
 
     if workflow:
         try:
@@ -1457,3 +1525,211 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
             sys.exit(1)
     else:
         display_message("Cannot find workflow {} ".format(workflow), msg_type="error")
+
+
+@workflow_sharing_group.command("share-add")
+@check_connection
+@add_workflow_option
+@add_access_token_options
+@click.option(
+    "-u",
+    "--user",
+    "users",
+    multiple=True,
+    help="Users to share the workflow with.",
+    required=True,
+)
+@click.option(
+    "-m",
+    "--message",
+    help="Optional message that is sent to the user(s) with the sharing invitation.",
+)
+@click.option(
+    "--valid-until",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="Optional date when access to the workflow will expire for the given user(s) (format: YYYY-MM-DD).",
+)
+@click.pass_context
+def workflow_share_add(
+    ctx, workflow, access_token, users, message, valid_until
+):  # noqa D412
+    """Share a workflow with other users (read-only).
+
+    The `share-add` command allows sharing a workflow with other users. The
+    users will be able to view the workflow but not modify it.
+
+    Examples:
+
+    \t $ reana-client share-add -w myanalysis.42 --user bob@example.org
+
+    \t $ reana-client share-add -w myanalysis.42 --user bob@example.org --user cecile@example.org --message "Please review my analysis" --valid-until 2025-12-31
+    """
+    from reana_client.api.client import share_workflow
+
+    share_errors = []
+    shared_users = []
+
+    if valid_until:
+        valid_until = valid_until.strftime("%Y-%m-%d")
+
+    for user in users:
+        try:
+            logging.info(f"Sharing workflow {workflow} with user {user}")
+            share_workflow(
+                workflow,
+                user,
+                access_token,
+                message=message,
+                valid_until=valid_until,
+            )
+            shared_users.append(user)
+        except Exception as e:
+            share_errors.append(f"Failed to share {workflow} with {user}: {str(e)}")
+            logging.debug(traceback.format_exc())
+
+    if shared_users:
+        display_message(
+            f"{workflow} is now read-only shared with {', '.join(shared_users)}",
+            msg_type="success",
+        )
+
+    for error in share_errors:
+        display_message(error, msg_type="error")
+
+    if share_errors:
+        sys.exit(1)
+
+
+@workflow_sharing_group.command("share-remove")
+@check_connection
+@add_workflow_option
+@add_access_token_options
+@click.option(
+    "-u",
+    "--user",
+    "users",
+    multiple=True,
+    help="Users to unshare the workflow with.",
+    required=True,
+)
+@click.pass_context
+def share_workflow_remove(ctx, workflow, access_token, users):  # noqa D412
+    """Unshare a workflow.
+
+    The `share-remove` command allows for unsharing a workflow. The workflow
+    will no longer be visible to the users with whom it was shared.
+
+    Example:
+
+    $ reana-client share-remove -w myanalysis.42 --user bob@example.org
+    """
+    from reana_client.api.client import unshare_workflow
+
+    unshare_errors = []
+    unshared_users = []
+
+    if workflow:
+        try:
+            for user in users:
+                try:
+                    logging.info(f"Unsharing workflow {workflow} with user {user}")
+                    unshare_workflow(workflow, user, access_token)
+                    unshared_users.append(user)
+                except Exception as e:
+                    unshare_errors.append(
+                        f"Failed to unshare {workflow} with {user}: {str(e)}"
+                    )
+                    logging.debug(traceback.format_exc())
+        except Exception as e:
+            logging.debug(traceback.format_exc())
+            logging.debug(str(e))
+            display_message(
+                "An error occurred while unsharing workflow:\n{}".format(str(e)),
+                msg_type="error",
+            )
+
+        if unshared_users:
+            display_message(
+                f"{workflow} is no longer shared with {', '.join(unshared_users)}",
+                msg_type="success",
+            )
+        if unshare_errors:
+            for error in unshare_errors:
+                display_message(error, msg_type="error")
+
+    else:
+        display_message(f"Cannot find workflow {workflow}", msg_type="error")
+
+
+@workflow_sharing_group.command("share-status")
+@check_connection
+@add_workflow_option
+@add_access_token_options
+@click.option(
+    "--format",
+    "_format",
+    multiple=True,
+    default=None,
+    help="Format output according to column titles or column "
+    "values. Use <columm_name>=<column_value> format.",
+)
+@click.option(
+    "--json",
+    "output_format",
+    flag_value="json",
+    default=None,
+    help="Get output in JSON format.",
+)
+@click.pass_context
+def share_workflow_status(
+    ctx, workflow, _format, output_format, access_token
+):  # noqa D412
+    """Show with whom a workflow is shared.
+
+    The `share-status` command allows for checking with whom a workflow is
+    shared.
+
+    Example:
+
+    $ reana-client share-status -w myanalysis.42
+    """
+    from reana_client.api.client import get_workflow_sharing_status
+
+    try:
+        sharing_status = get_workflow_sharing_status(workflow, access_token)
+
+        if sharing_status:
+            shared_with = sharing_status.get("shared_with", [])
+
+            if shared_with:
+                headers = ["user_email", "valid_until"]
+                data = [
+                    [
+                        entry["user_email"],
+                        (
+                            entry["valid_until"]
+                            if entry["valid_until"] is not None
+                            else "-"
+                        ),
+                    ]
+                    for entry in shared_with
+                ]
+
+                display_formatted_output(data, headers, _format, output_format)
+            else:
+                display_message(
+                    f"Workflow {workflow} is not shared with anyone.", msg_type="info"
+                )
+        else:
+            display_message(
+                f"Workflow {workflow} is not shared with anyone.", msg_type="info"
+            )
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        display_message(
+            "An error occurred while checking workflow sharing status:\n{}".format(
+                str(e)
+            ),
+            msg_type="error",
+        )

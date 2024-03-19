@@ -30,6 +30,11 @@ Workflow execution commands:
   stop      Stop a running workflow.
   validate  Validate workflow specification file.
 
+Workflow sharing commands:
+  share-add     Share a workflow with other users (read-only).
+  share-remove  Unshare a workflow.
+  share-status  Show with whom a workflow is shared.
+
 Workspace interactive commands:
   close  Close an interactive session.
   open   Open an interactive session inside the workspace.

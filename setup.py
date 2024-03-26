@@ -50,7 +50,6 @@ install_requires = [
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",
-    "swagger_spec_validator>=2.4.0,<3.0.0; python_version<'3.7'",
 ]
 
 packages = find_packages()
@@ -82,7 +81,7 @@ setup(
             "reana-cwl-runner = reana_client.cli.cwl_runner:cwl_runner",
         ],
     },
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     extras_require=extras_require,
     install_requires=install_requires,
     setup_requires=setup_requires,
@@ -94,8 +93,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",

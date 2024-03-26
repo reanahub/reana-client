@@ -139,10 +139,6 @@ def get_workflow_duration(workflow: Dict) -> Optional[int]:
         time is not present.
     """
 
-    # FIXME: Use datetime.fromisoformat when moving to Python 3.7 or higher
-    def fromisoformat(date_string):
-        return datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S")
-
     progress = workflow.get("progress", {})
     run_started_at = progress.get("run_started_at")
     run_finished_at = progress.get("run_finished_at")
@@ -150,11 +146,11 @@ def get_workflow_duration(workflow: Dict) -> Optional[int]:
 
     duration = None
     if run_started_at:
-        start_time = fromisoformat(run_started_at)
+        start_time = datetime.fromisoformat(run_started_at)
         if run_finished_at:
-            end_time = fromisoformat(run_finished_at)
+            end_time = datetime.fromisoformat(run_finished_at)
         elif run_stopped_at:
-            end_time = fromisoformat(run_stopped_at)
+            end_time = datetime.fromisoformat(run_stopped_at)
         else:
             end_time = datetime.utcnow()
         duration = round((end_time - start_time).total_seconds())

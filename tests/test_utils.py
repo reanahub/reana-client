@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2022 CERN.
+# Copyright (C) 2022, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
 """REANA client utils tests."""
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from datetime import datetime
 
 from reana_client.utils import get_workflow_duration
@@ -52,9 +52,7 @@ def test_duration_running_workflow():
             "run_finished_at": None,
         }
     }
-    with patch("reana_client.utils.datetime") as mock_datetime:
-        mock_datetime.utcnow.return_value = datetime(2022, 7, 16, 14, 43, 22)
-        mock_datetime.strptime.side_effect = lambda *args, **kw: datetime.strptime(
-            *args, **kw
-        )
+    mock_datetime = Mock(wraps=datetime)
+    mock_datetime.utcnow.return_value = datetime(2022, 7, 16, 14, 43, 22)
+    with patch("reana_client.utils.datetime", mock_datetime):
         assert get_workflow_duration(workflow) == 60 + 11

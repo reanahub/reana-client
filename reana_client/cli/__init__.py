@@ -13,7 +13,7 @@ import sys
 import click
 from urllib3 import disable_warnings
 
-from reana_client.cli import workflow, files, ping, secrets, quotas, retention_rules
+from reana_client.cli import workflow, files, ping, secrets, quotas, retention_rules, test
 from reana_client.utils import get_api_url
 
 DEBUG_LOG_FORMAT = (
@@ -45,6 +45,7 @@ class ReanaCLI(click.Group):
         files.files_group,
         retention_rules.retention_rules_group,
         secrets.secrets_group,
+        test.test_group
     ]
 
     def __init__(self, name=None, commands=None, **attrs):

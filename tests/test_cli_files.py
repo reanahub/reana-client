@@ -240,6 +240,35 @@ def test_upload_file(create_yaml_workflow_schema):
                 assert message in result.output
 
 
+def test_upload_file_with_test_files_from_spec(
+    get_workflow_specification_with_directory,
+):
+    """Test upload file with test files from the specification, not from the command line."""
+    reana_token = "000000"
+    file = "upload-this-test.feature"
+    env = {"REANA_SERVER_URL": "http://localhost"}
+    runner = CliRunner(env=env)
+
+    with patch(
+        "reana_client.api.client.get_workflow_specification"
+    ) as mock_specification, patch("reana_client.api.client.requests.post"):
+        with runner.isolated_filesystem():
+            with open(file, "w") as f:
+                f.write("Scenario: Test scenario")
+
+            get_workflow_specification_with_directory["specification"]["tests"] = {
+                "files": [file]
+            }
+            mock_specification.return_value = get_workflow_specification_with_directory
+            result = runner.invoke(
+                cli, ["upload", "-t", reana_token, "--workflow", "test-workflow.1"]
+            )
+            assert result.exit_code == 0
+            assert (
+                "upload-this-test.feature was successfully uploaded." in result.output
+            )
+
+
 def test_upload_file_respect_gitignore(
     get_workflow_specification_with_directory,
 ):

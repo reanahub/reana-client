@@ -11,7 +11,15 @@ import os
 import sys
 
 import click
-from reana_client.cli import files, ping, quotas, retention_rules, secrets, workflow
+from reana_client.cli import (
+    files,
+    ping,
+    quotas,
+    retention_rules,
+    secrets,
+    test,
+    workflow,
+)
 from reana_client.utils import get_api_url
 from urllib3 import disable_warnings
 
@@ -45,6 +53,7 @@ class ReanaCLI(click.Group):
         files.files_group,
         retention_rules.retention_rules_group,
         secrets.secrets_group,
+        test.test_group,
     ]
 
     def __init__(self, name=None, commands=None, **attrs):

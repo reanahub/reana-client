@@ -326,10 +326,11 @@ def upload_files(  # noqa: C901
                 msg_type="error",
             )
             sys.exit(1)
-
+        filenames = []
+        if reana_spec.get("tests"):
+            for f in reana_spec["tests"].get("files") or []:
+                filenames.append(os.path.join(os.getcwd(), f))
         if reana_spec.get("inputs"):
-            filenames = []
-
             # collect all files in input.files
             for f in reana_spec["inputs"].get("files") or []:
                 # check for directories in files
@@ -340,7 +341,6 @@ def upload_files(  # noqa: C901
                     )
                     sys.exit(1)
                 filenames.append(os.path.join(os.getcwd(), f))
-
             # collect all files in input.directories
             files_from_directories = []
             directories = reana_spec["inputs"].get("directories") or []

@@ -50,3 +50,7 @@ Secret management commands:
   secrets-add     Add secrets from literal string or from file.
   secrets-delete  Delete user secrets by name.
   secrets-list    List user secrets.
+
+Workflow run test commands:
+  test  Test workflow execution, based on a given Gherkin file. 
+  

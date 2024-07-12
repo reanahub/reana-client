@@ -5,15 +5,13 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 
 # Use Ubuntu LTS base image
-FROM docker.io/library/ubuntu:20.04
+FROM docker.io/library/ubuntu:24.04
 
 # Use default answers in installation commands
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Use distutils provided by the standard Python library instead of the vendored one in
-# setuptools, so that editable installations are stored in the right directory.
-# See https://github.com/pypa/setuptools/issues/3301
-ENV SETUPTOOLS_USE_DISTUTILS=stdlib
+# Allow pip to install packages in the system site-packages dir
+ENV PIP_BREAK_SYSTEM_PACKAGES=true
 
 # Add sources to `/code` and work there
 WORKDIR /code
@@ -24,23 +22,26 @@ COPY . /code
 RUN apt-get update -y && \
     apt-get install --no-install-recommends -y \
       gcc \
-      libpython3.8 \
+      libpython3.12 \
       python3-pip \
-      python3.8 \
-      python3.8-dev && \
-    # `pip3 install kubernetes` needed due to an old version of system pip3
-    pip3 install --no-cache-dir kubernetes '.[tests]' && \
+      python3.12 \
+      python3.12-dev && \
+    pip3 install --no-cache-dir '.[tests]' && \
     apt-get remove -y \
       gcc \
-      python3.8-dev && \
+      python3.12-dev && \
     apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /code /var/lib/apt/lists/*
 
+# Delete default `ubuntu` user, as its UID (1000) clashes with REANA's default one
+# See https://bugs.launchpad.net/cloud-images/+bug/2005129
+RUN userdel -r ubuntu
+
 # Run container as `reana` user with UID `1000`, which should match
 # current host user in most situations
 # hadolint ignore=DL3059
-RUN adduser --uid 1000  reana --gid 0 && \
+RUN useradd --uid 1000 --gid 0 --create-home reana && \
     chown -R reana:root /home/reana
 WORKDIR /home/reana
 

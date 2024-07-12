@@ -10,7 +10,7 @@ on: [push, pull_request]
 
 jobs:
   lint-commitlint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
           ./run-tests.sh --check-commitlint ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} ${{ github.event.pull_request.head.sha }} ${{ github.event.pull_request.number }}
 
   lint-shellcheck:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -46,14 +46,14 @@ jobs:
           ./run-tests.sh --check-shellcheck
 
   lint-black:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.12"
 
       - name: Install Python dependencies
         run: pip install black
@@ -62,7 +62,7 @@ jobs:
         run: ./run-tests.sh --check-black
 
   lint-flake8:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,7 +70,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.12"
 
       - name: Check compliance with pep8, pyflakes and circular complexity
         run: |
@@ -79,14 +79,14 @@ jobs:
           ./run-tests.sh --check-flake8
 
   lint-pydocstyle:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.12"
 
       - name: Install Python dependencies
         run: pip install pydocstyle
@@ -95,14 +95,14 @@ jobs:
         run: ./run-tests.sh --check-pydocstyle
 
   lint-check-manifest:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.12"
 
       - name: Install Python dependencies
         run: pip install check-manifest
@@ -111,7 +111,7 @@ jobs:
         run: ./run-tests.sh --check-manifest
 
   lint-dockerfile:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -120,7 +120,7 @@ jobs:
         run: ./run-tests.sh --check-dockerfile
 
   docker-build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -131,14 +131,14 @@ jobs:
           ./run-tests.sh --check-docker-run
 
   docs-cli-commands:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.12"
 
       - name: Install Python dependencies
         run: |
@@ -149,14 +149,14 @@ jobs:
         run: ./run-tests.sh --check-cli-cmds
 
   docs-cli-api:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.12"
 
       - name: Install Python dependencies
         run: |
@@ -167,14 +167,14 @@ jobs:
         run: ./run-tests.sh --check-cli-api
 
   docs-sphinx:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.12"
 
       - name: Install Python dependencies
         run: |
@@ -185,7 +185,7 @@ jobs:
         run: ./run-tests.sh --check-sphinx
 
   python-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         testenv: [lowest, release]
@@ -219,14 +219,14 @@ jobs:
         run: ./run-tests.sh --check-pytest
 
       - name: Codecov Coverage
-        if: matrix.python-version == '3.8'
+        if: matrix.python == '3.12'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
 
   release-docker:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     if: >
       vars.RELEASE_DOCKER == 'true' &&
       github.event_name == 'push' &&

@@ -213,6 +213,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install -r .${{ matrix.testenv }}-requirements.txt
+          pip install -e .[tests]
 
       - name: Run pytest
         run: ./run-tests.sh --check-pytest

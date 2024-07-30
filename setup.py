@@ -18,10 +18,6 @@ from setuptools import find_packages, setup
 readme = open("README.md").read()
 history = open("CHANGELOG.md").read()
 
-tests_require = [
-    "pytest-reana>=0.95.0a2,<0.96.0",
-]
-
 extras_require = {
     "docs": [
         "myst-parser",
@@ -29,7 +25,9 @@ extras_require = {
         "sphinx-rtd-theme>=0.1.9",
         "sphinx-click>=1.0.4",
     ],
-    "tests": tests_require,
+    "tests": [
+        "pytest-reana>=0.95.0a2,<0.96.0",
+    ],
 }
 
 extras_require["all"] = []
@@ -80,7 +78,6 @@ setup(
     python_requires=">=3.8",
     extras_require=extras_require,
     install_requires=install_requires,
-    tests_require=tests_require,
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Console",

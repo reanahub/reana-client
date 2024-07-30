@@ -38,10 +38,6 @@ for key, reqs in extras_require.items():
         continue
     extras_require["all"].extend(reqs)
 
-setup_requires = [
-    "pytest-runner>=2.7",
-]
-
 install_requires = [
     "click>=7",
     "pathspec==0.9.0",
@@ -84,7 +80,6 @@ setup(
     python_requires=">=3.8",
     extras_require=extras_require,
     install_requires=install_requires,
-    setup_requires=setup_requires,
     tests_require=tests_require,
     classifiers=[
         "Development Status :: 3 - Alpha",

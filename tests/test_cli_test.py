@@ -15,48 +15,13 @@ from unittest.mock import Mock, patch
 from pytest_reana.test_utils import make_mock_api_client
 from reana_commons.gherkin_parser.parser import AnalysisTestStatus
 from reana_commons.gherkin_parser.errors import FeatureFileError
-import os
-import yaml
 
 
-def test_test_no_reana_yaml():
-    """Test test command without reana.yaml file."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        result = runner.invoke(
-            cli,
-            ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
-        )
-        assert "No REANA specification file" in result.output
-        assert result.exit_code == 1
-
-
-def test_test_invalid_reana_yaml():
-    """Test test command with invalid reana.yaml file."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write("invalid")
-        result = runner.invoke(
-            cli,
-            ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
-        )
-        assert (
-            f"Error loading {os.path.join(os.getcwd(), 'reana.yml')} specification file"
-            in result.output
-        )
-        assert result.exit_code == 1
-
-
-def test_test_workflow_not_found(create_yaml_workflow_schema):
+def test_test_workflow_not_found():
     """Test test command when workflow is not found."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
         result = runner.invoke(
             cli,
             [
@@ -67,7 +32,6 @@ def test_test_workflow_not_found(create_yaml_workflow_schema):
                 "test_analysis.feature",
                 "-t",
                 "000000",
-                "--skip-validation",
             ],
         )
     assert "Could not find workflow ``myanalysis``." in result.output
@@ -77,20 +41,30 @@ def test_test_workflow_not_found(create_yaml_workflow_schema):
 @patch(
     "reana_client.api.client.current_rs_api_client",
     new_callable=lambda: make_mock_api_client("reana-server")(
-        {"status": "running", "id": "2718"}, Mock(status_code=200)
+        {
+            "status": "running",
+            "id": "31415",
+        },
+        Mock(status_code=200),
     ),
 )
-def test_test_workflow_not_finished(mock_api_client, create_yaml_workflow_schema):
+def test_test_workflow_not_finished(mock_api_client):
     """Test test command when workflow is not finished."""
 
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
+    with runner.isolation():
         result = runner.invoke(
             cli,
-            ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
+            [
+                "test",
+                "-w",
+                "myanalysis",
+                "-n",
+                "test_analysis.feature",
+                "-t",
+                "000000",
+            ],
         )
         assert (
             "``myanalysis`` is running. It must be finished to run tests."
@@ -105,13 +79,11 @@ def test_test_workflow_not_finished(mock_api_client, create_yaml_workflow_schema
         {"status": "deleted", "id": "31415"}, Mock(status_code=200)
     ),
 )
-def test_test_workflow_deleted(mock_api_client, create_yaml_workflow_schema):
+def test_test_workflow_deleted(mock_api_client):
     """Test test command when workflow is deleted."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
+    with runner.isolation():
         result = runner.invoke(
             cli,
             ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
@@ -123,16 +95,18 @@ def test_test_workflow_deleted(mock_api_client, create_yaml_workflow_schema):
         assert result.exit_code == 1
 
 
-def test_test_no_test_files(create_yaml_workflow_schema):
+@patch(
+    "reana_client.api.client.current_rs_api_client",
+    new_callable=lambda: make_mock_api_client("reana-server")(
+        {"status": "finished", "id": "1111"}, Mock(status_code=200)
+    ),
+)
+def test_test_no_test_files(mock_api_client):
     """Test test command when no test files are specified."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
-        result = runner.invoke(
-            cli, ["test", "-w", "myanalysis", "-t", "000000", "--skip-validation"]
-        )
+    with runner.isolation():
+        result = runner.invoke(cli, ["test", "-w", "myanalysis", "-t", "000000"])
         assert (
             "No test files specified in reana.yaml and no -n option provided."
             in result.output
@@ -146,15 +120,11 @@ def test_test_no_test_files(create_yaml_workflow_schema):
         {"status": "finished", "id": "496"}, Mock(status_code=200)
     ),
 )
-def test_test_no_test_files_with_test_file_option(
-    mock_api_client, create_yaml_workflow_schema
-):
-    """Test test command when no test files are specified in reana.yml and test file option is provided."""
+def test_test_no_test_files_with_test_file_option(mock_api_client):
+    """Test test command when no test files are specified in reana.yml and when the test file option is provided."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
+    with runner.isolation():
         result = runner.invoke(
             cli,
             [
@@ -163,7 +133,6 @@ def test_test_no_test_files_with_test_file_option(
                 "myanalysis",
                 "-t",
                 "000000",
-                "--skip-validation",
                 "-n",
                 "test_analysis.feature",
             ],
@@ -174,32 +143,21 @@ def test_test_no_test_files_with_test_file_option(
 @patch(
     "reana_client.api.client.current_rs_api_client",
     new_callable=lambda: make_mock_api_client("reana-server")(
-        {"status": "finished", "id": "28"}, Mock(status_code=200)
+        {
+            "status": "finished",
+            "id": "496",
+            "specification": {"tests": {"files": ["test1.feature", "test2.feature"]}},
+        },
+        Mock(status_code=200),
     ),
 )
-def test_test_multiple_test_files_with_test_file_option(
-    mock_api_client, create_yaml_workflow_schema
-):
+def test_test_multiple_test_files_with_test_file_option(mock_api_client):
     """Test test command when multiple test files are specified in reana.yml and test file option is provided.
-    In this case, the test file option should be used instead of the test files specified in reana.yml.
+    In this case, the test-file option should be used instead of the test files specified in reana.yml.
     """
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    test_files = {
-        "tests": {"files": ["test_analysis.feature", "test_analysis2.feature"]}
-    }
-    with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
-        with open("reana.yml", "r+") as reana_schema:
-            existing_reana_yaml = yaml.safe_load(reana_schema)
-            existing_reana_yaml.update(test_files)
-            reana_schema.seek(0)
-            yaml.dump(existing_reana_yaml, reana_schema)
-            reana_schema.truncate()
-
-        with open("reana.yml", "r") as reana_schema:
-            print(reana_schema.read())
+    with runner.isolation():
         result = runner.invoke(
             cli,
             [
@@ -208,7 +166,6 @@ def test_test_multiple_test_files_with_test_file_option(
                 "myanalysis",
                 "-t",
                 "000000",
-                "--skip-validation",
                 "-n",
                 "use_this.feature",
             ],
@@ -221,6 +178,39 @@ def test_test_multiple_test_files_with_test_file_option(
 @patch(
     "reana_client.api.client.current_rs_api_client",
     new_callable=lambda: make_mock_api_client("reana-server")(
+        {
+            "status": "finished",
+            "id": "496",
+            "specification": {"tests": {"files": ["use-me.feature", "me-too.feature"]}},
+        },
+        Mock(status_code=200),
+    ),
+)
+@patch(
+    "reana_client.cli.test.parse_and_run_tests",
+    return_value=(
+        "myanalysis",
+        [
+            {"scenario": "scenario1", "result": AnalysisTestStatus.passed},
+        ],
+    ),
+)
+def test_test_files_from_spec(mock_api_client, mock_parse_and_run_tests):
+    """Test test command when test files are specified in reana.yml."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        result = runner.invoke(
+            cli,
+            ["test", "-w", "myanalysis", "-t", "000000"],
+        )
+        assert "Using test file use-me.feature" in result.output
+        assert "Using test file me-too.feature" in result.output
+
+
+@patch(
+    "reana_client.api.client.current_rs_api_client",
+    new_callable=lambda: make_mock_api_client("reana-server")(
         {"status": "finished", "id": "28"}, Mock(status_code=200)
     ),
 )
@@ -228,15 +218,11 @@ def test_test_multiple_test_files_with_test_file_option(
     "reana_client.cli.test.parse_and_run_tests",
     side_effect=FeatureFileError,
 )
-def test_test_parser_error(
-    mock_api_client, mock_parse_and_run_tests, create_yaml_workflow_schema
-):
+def test_test_parser_error(mock_api_client, mock_parse_and_run_tests):
     """Test test command when parser error occurs."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
+    with runner.isolation():
         result = runner.invoke(
             cli,
             [
@@ -245,12 +231,42 @@ def test_test_parser_error(
                 "myanalysis",
                 "-t",
                 "000000",
-                "--skip-validation",
                 "-n",
                 "test_analysis.feature",
             ],
         )
         assert "Error parsing feature file test_analysis.feature" in result.output
+        assert result.exit_code == 1
+
+
+@patch(
+    "reana_client.api.client.current_rs_api_client",
+    new_callable=lambda: make_mock_api_client("reana-server")(
+        {"status": "finished", "id": "28"}, Mock(status_code=200)
+    ),
+)
+@patch(
+    "reana_client.cli.test.parse_and_run_tests",
+    side_effect=FileNotFoundError,
+)
+def test_test_test_file_not_found(mock_api_client, mock_parse_and_run_tests):
+    """Test test command when parser error occurs."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        result = runner.invoke(
+            cli,
+            [
+                "test",
+                "-w",
+                "myanalysis",
+                "-t",
+                "000000",
+                "-n",
+                "test_analysis.feature",
+            ],
+        )
+        assert "Test file test_analysis.feature not found." in result.output
         assert result.exit_code == 1
 
 
@@ -267,24 +283,11 @@ def test_test_parser_error(
         [{"scenario": "scenario1", "result": AnalysisTestStatus.passed}],
     ),
 )
-def test_test_multiple_test_files(
-    mock_api_client, mock_parse_and_run_tests, create_yaml_workflow_schema
-):
+def test_test_multiple_test_files(mock_api_client, mock_parse_and_run_tests):
     """Test test command when multiple test files are specified."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    test_files = {
-        "tests": {"files": ["test_analysis.feature", "test_analysis2.feature"]}
-    }
-    with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
-        with open("reana.yml", "r+") as reana_schema:
-            existing_reana_yaml = yaml.safe_load(reana_schema)
-            existing_reana_yaml.update(test_files)
-            reana_schema.seek(0)
-            yaml.dump(existing_reana_yaml, reana_schema)
-            reana_schema.truncate()
+    with runner.isolation():
         result = runner.invoke(
             cli,
             [
@@ -293,7 +296,10 @@ def test_test_multiple_test_files(
                 "myanalysis",
                 "-t",
                 "000000",
-                "--skip-validation",
+                "-n",
+                "test_analysis.feature",
+                "-n",
+                "test_analysis2.feature",
             ],
         )
         assert "Using test file test_analysis.feature" in result.output
@@ -316,15 +322,11 @@ def test_test_multiple_test_files(
         ],
     ),
 )
-def test_test_all_scenarios_pass(
-    mock_api_client, mock_parse_and_run_tests, create_yaml_workflow_schema
-):
+def test_test_all_scenarios_pass(mock_api_client, mock_parse_and_run_tests):
     """Test test command when tests pass."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
         result = runner.invoke(
             cli,
             ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
@@ -349,15 +351,11 @@ def test_test_all_scenarios_pass(
         ],
     ),
 )
-def test_test_all_scenarios_fail(
-    mock_api_client, mock_parse_and_run_tests, create_yaml_workflow_schema
-):
+def test_test_all_scenarios_fail(mock_api_client, mock_parse_and_run_tests):
     """Test test command when tests fail."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
+    with runner.isolation():
         result = runner.invoke(
             cli,
             ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
@@ -382,15 +380,11 @@ def test_test_all_scenarios_fail(
         ],
     ),
 )
-def test_test_some_scenarios_pass(
-    mock_api_client, mock_parse_and_run_tests, create_yaml_workflow_schema
-):
+def test_test_some_scenarios_pass(mock_api_client, mock_parse_and_run_tests):
     """Test test command when some tests pass and some fail."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
-        with open("reana.yml", "w") as reana_schema:
-            reana_schema.write(create_yaml_workflow_schema)
         result = runner.invoke(
             cli,
             ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],

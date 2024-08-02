@@ -13,14 +13,34 @@ from reana_client.cli import cli
 from unittest.mock import Mock, patch
 
 from pytest_reana.test_utils import make_mock_api_client
-from reana_commons.gherkin_parser.parser import AnalysisTestStatus
+from reana_commons.gherkin_parser.parser import AnalysisTestStatus, TestResult
 from reana_commons.gherkin_parser.errors import FeatureFileError
+from dataclasses import replace
+
+passed_test = TestResult(
+    scenario="scenario1",
+    error_log=None,
+    result=AnalysisTestStatus.passed,
+    failed_testcase=None,
+    analysis_run_id="1618",
+    feature="Run Duration",
+    checked_at="2024-01-01T00:00:00.000000",
+)
+
+failed_test = TestResult(
+    scenario="scenario2",
+    error_log="Test designed to fail",
+    result=AnalysisTestStatus.failed,
+    failed_testcase="Scenario to fail",
+    analysis_run_id="3000",
+    feature="Run Duration",
+    checked_at="2024-01-01T00:00:00.000000",
+)
 
 
 def test_test_workflow_not_found():
     """Test test command when workflow is not found."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolated_filesystem():
         result = runner.invoke(
             cli,
@@ -50,9 +70,7 @@ def test_test_workflow_not_found():
 )
 def test_test_workflow_not_finished(mock_api_client):
     """Test test command when workflow is not finished."""
-
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolation():
         result = runner.invoke(
             cli,
@@ -81,8 +99,7 @@ def test_test_workflow_not_finished(mock_api_client):
 )
 def test_test_workflow_deleted(mock_api_client):
     """Test test command when workflow is deleted."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolation():
         result = runner.invoke(
             cli,
@@ -103,8 +120,7 @@ def test_test_workflow_deleted(mock_api_client):
 )
 def test_test_no_test_files(mock_api_client):
     """Test test command when no test files are specified."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolation():
         result = runner.invoke(cli, ["test", "-w", "myanalysis", "-t", "000000"])
         assert (
@@ -122,8 +138,7 @@ def test_test_no_test_files(mock_api_client):
 )
 def test_test_no_test_files_with_test_file_option(mock_api_client):
     """Test test command when no test files are specified in reana.yml and when the test file option is provided."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolation():
         result = runner.invoke(
             cli,
@@ -155,8 +170,7 @@ def test_test_multiple_test_files_with_test_file_option(mock_api_client):
     """Test test command when multiple test files are specified in reana.yml and test file option is provided.
     In this case, the test-file option should be used instead of the test files specified in reana.yml.
     """
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolation():
         result = runner.invoke(
             cli,
@@ -190,9 +204,7 @@ def test_test_multiple_test_files_with_test_file_option(mock_api_client):
     "reana_client.cli.test.parse_and_run_tests",
     return_value=(
         "myanalysis",
-        [
-            {"scenario": "scenario1", "result": AnalysisTestStatus.passed},
-        ],
+        [passed_test],
     ),
 )
 def test_test_files_from_spec(mock_api_client, mock_parse_and_run_tests):
@@ -220,8 +232,7 @@ def test_test_files_from_spec(mock_api_client, mock_parse_and_run_tests):
 )
 def test_test_parser_error(mock_api_client, mock_parse_and_run_tests):
     """Test test command when parser error occurs."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolation():
         result = runner.invoke(
             cli,
@@ -251,8 +262,7 @@ def test_test_parser_error(mock_api_client, mock_parse_and_run_tests):
 )
 def test_test_test_file_not_found(mock_api_client, mock_parse_and_run_tests):
     """Test test command when parser error occurs."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolation():
         result = runner.invoke(
             cli,
@@ -280,13 +290,12 @@ def test_test_test_file_not_found(mock_api_client, mock_parse_and_run_tests):
     "reana_client.cli.test.parse_and_run_tests",
     return_value=(
         "myanalysis",
-        [{"scenario": "scenario1", "result": AnalysisTestStatus.passed}],
+        [passed_test],
     ),
 )
 def test_test_multiple_test_files(mock_api_client, mock_parse_and_run_tests):
     """Test test command when multiple test files are specified."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolation():
         result = runner.invoke(
             cli,
@@ -316,16 +325,12 @@ def test_test_multiple_test_files(mock_api_client, mock_parse_and_run_tests):
     "reana_client.cli.test.parse_and_run_tests",
     return_value=(
         "myanalysis",
-        [
-            {"scenario": "scenario1", "result": AnalysisTestStatus.passed},
-            {"scenario": "scenario2", "result": AnalysisTestStatus.passed},
-        ],
+        [passed_test, replace(passed_test, scenario="scenario2")],
     ),
 )
 def test_test_all_scenarios_pass(mock_api_client, mock_parse_and_run_tests):
     """Test test command when tests pass."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolated_filesystem():
         result = runner.invoke(
             cli,
@@ -345,16 +350,12 @@ def test_test_all_scenarios_pass(mock_api_client, mock_parse_and_run_tests):
     "reana_client.cli.test.parse_and_run_tests",
     return_value=(
         "myanalysis",
-        [
-            {"scenario": "scenario1", "result": AnalysisTestStatus.failed},
-            {"scenario": "scenario2", "result": AnalysisTestStatus.failed},
-        ],
+        [replace(failed_test, scenario="scenario1"), failed_test],
     ),
 )
 def test_test_all_scenarios_fail(mock_api_client, mock_parse_and_run_tests):
     """Test test command when tests fail."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolation():
         result = runner.invoke(
             cli,
@@ -374,16 +375,12 @@ def test_test_all_scenarios_fail(mock_api_client, mock_parse_and_run_tests):
     "reana_client.cli.test.parse_and_run_tests",
     return_value=(
         "myanalysis",
-        [
-            {"scenario": "scenario1", "result": AnalysisTestStatus.passed},
-            {"scenario": "scenario2", "result": AnalysisTestStatus.failed},
-        ],
+        [passed_test, failed_test],
     ),
 )
 def test_test_some_scenarios_pass(mock_api_client, mock_parse_and_run_tests):
     """Test test command when some tests pass and some fail."""
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
+    runner = CliRunner()
     with runner.isolated_filesystem():
         result = runner.invoke(
             cli,

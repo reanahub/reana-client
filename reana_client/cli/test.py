@@ -10,7 +10,6 @@
 import sys
 import click
 from reana_client.cli.utils import add_access_token_options, check_connection
-
 from reana_commons.gherkin_parser.parser import (
     parse_and_run_tests,
     AnalysisTestStatus,
@@ -138,12 +137,8 @@ def test(ctx, workflow, test_files, access_token):
 
         click.secho(f"Summary of {test_file}:", bold=True)
         for scenario in results[1]:
-            click.echo(f"Tested {scenario['scenario']}: ", nl=False)
+            click.echo(f"Tested {scenario.scenario}: ", nl=False)
             click.secho(
-                f"{scenario['result'].name}",
-                fg=(
-                    "green"
-                    if scenario["result"] == AnalysisTestStatus.passed
-                    else "red"
-                ),
+                f"{scenario.result.name}",
+                fg=("green" if scenario.result == AnalysisTestStatus.passed else "red"),
             )

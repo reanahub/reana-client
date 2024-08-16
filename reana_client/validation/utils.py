@@ -34,6 +34,14 @@ def validate_reana_spec(
     pull_environment_image=False,
     server_capabilities=False,
 ):
+
+    # Send to server's api for validation
+    from reana_client.api.client import validate_workflow
+    answer = validate_workflow(reana_yaml)
+    print("\nResponse from server:")
+    print(answer)
+    print("")
+
     """Validate REANA specification file."""
     if "options" in reana_yaml.get("inputs", {}):
         workflow_type = reana_yaml["workflow"]["type"]

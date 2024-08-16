@@ -1280,3 +1280,33 @@ def prune_workspace(workflow, include_inputs, include_outputs, access_token):
             )
         )
         raise Exception(e.response.json()["message"])
+
+def validate_workflow(reana_yaml):
+    """Validate a reana yaml file in the server.
+
+    :param reana_yaml: the reana yaml file that will be submitted for validation to the server.
+
+    :return: a response from the server which is in a JSON format TODO: add more
+    """
+    try:
+        print("\nSending:")
+        print(json.loads(json.dumps(reana_yaml, sort_keys=True)))
+        (response, http_response) = current_rs_api_client.api.validate_workflow(reana_yaml=json.loads(json.dumps(reana_yaml, sort_keys=True))).result()
+
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(status_code=http_response.status_code)
+            )
+
+    except HTTPError as e:
+        logging.debug(
+            "Workflow could not be validated: "
+            "\nStatus: {}\nReason: {}\n"
+            "Message: {}".format(
+                e.response.status_code, e.response.reason, e.response.json()["message"]
+            )
+        )
+        raise Exception(e.response.json()["message"])

@@ -35,11 +35,63 @@ def validate_reana_spec(
     server_capabilities=False,
 ):
 
+    display_message(
+        f"Verifying REANA specification file... {filepath}",
+        msg_type="info",
+    )
+
     # Send to server's api for validation
     from reana_client.api.client import validate_workflow
-    answer = validate_workflow(reana_yaml)
+    response = validate_workflow(reana_yaml)
     print("\nResponse from server:")
-    print(answer)
+    print(response)
+    print("")
+
+    validation_warnings = response["message"]["warnings"]
+    if validation_warnings:
+        display_message(
+            "The REANA specification appears valid, but some warnings were found.",
+            msg_type="warning",
+            indented=True,
+        )
+    for warning_key, warning_values in validation_warnings.items():
+        if warning_key == "additional_properties":
+            # warning_values is a list of unexpected properties
+            messages = [
+                f"'{value['property']}'"
+                + (f" (at {value['path']})" if value["path"] else "")
+                for value in warning_values
+            ]
+            message = (
+                f"Unexpected properties found in REANA specification file: "
+                f"{', '.join(messages)}."
+            )
+        else:
+            # warning_values is a list of dictionaries with 'message' and 'path'
+            messages = [
+                f"{value['message']}"
+                + (f" (at {value['path']})" if value["path"] else "")
+                for value in warning_values
+            ]
+            message = f"{'; '.join(messages)}."
+        display_message(
+            message,
+            msg_type="warning",
+            indented=True,
+        )
+    if validation_warnings:
+        display_message(
+            "Please make sure that the REANA specification file is correct.",
+            msg_type="warning",
+            indented=True,
+        )
+    else:
+        display_message(
+            "Valid REANA specification file.",
+            msg_type="success",
+            indented=True,
+        )
+
     print("")
 
     """Validate REANA specification file."""

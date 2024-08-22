@@ -35,10 +35,7 @@ def validate_reana_spec(
     server_capabilities=False,
 ):
 
-    display_message(
-        f"Verifying REANA specification file... {filepath}",
-        msg_type="info",
-    )
+
 
     # Send to server's api for validation
     from reana_client.api.client import validate_workflow
@@ -46,6 +43,23 @@ def validate_reana_spec(
     print("\nResponse from server:")
     print(response)
     print("")
+
+    display_message(
+        f"Verifying REANA specification parameters...",
+        msg_type="info",
+    )
+    validation_parameter_warnings = response["message"]["validation_parameters"]
+    if validation_parameter_warnings:
+            display_message(
+                validation_parameter_warnings[0]["message"],
+                msg_type=validation_parameter_warnings[0]["type"],
+                indented=True,
+            )
+
+    display_message(
+        f"Verifying REANA specification file... {filepath}",
+        msg_type="info",
+    )
 
     validation_warnings = response["message"]["warnings"]
     if validation_warnings:

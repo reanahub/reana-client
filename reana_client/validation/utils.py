@@ -45,18 +45,6 @@ def validate_reana_spec(
     print("")
 
     display_message(
-        f"Verifying REANA specification parameters...",
-        msg_type="info",
-    )
-    validation_parameter_warnings = response["message"]["validation_parameters"]
-    if validation_parameter_warnings:
-            display_message(
-                validation_parameter_warnings[0]["message"],
-                msg_type=validation_parameter_warnings[0]["type"],
-                indented=True,
-            )
-
-    display_message(
         f"Verifying REANA specification file... {filepath}",
         msg_type="info",
     )
@@ -105,6 +93,25 @@ def validate_reana_spec(
             msg_type="success",
             indented=True,
         )
+
+    display_message(
+        f"Verifying REANA specification parameters...",
+        msg_type="info",
+    )
+    validation_parameter_warnings = response["message"]["reana_spec_params"]
+    if validation_parameter_warnings:
+            for warnings in validation_parameter_warnings:
+                display_message(
+                    warnings["message"],
+                    msg_type=warnings["type"],
+                    indented=True,
+                )
+    else:
+            display_message(
+                "REANA specification parameters appear valid.",
+                msg_type="success",
+                indented=True,
+            )
 
     print("")
 

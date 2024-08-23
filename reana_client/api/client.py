@@ -1293,13 +1293,7 @@ def validate_workflow(reana_yaml):
         print(json.loads(json.dumps(reana_yaml, sort_keys=True)))
         (response, http_response) = current_rs_api_client.api.validate_workflow(reana_yaml=json.loads(json.dumps(reana_yaml, sort_keys=True))).result()
 
-        if http_response.status_code == 200:
-            return response
-        else:
-            raise Exception(
-                "Expected status code 200 but replied with "
-                "{status_code}".format(status_code=http_response.status_code)
-            )
+        return response, http_response
 
     except HTTPError as e:
         logging.debug(

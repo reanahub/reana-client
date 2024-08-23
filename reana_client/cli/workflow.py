@@ -1022,7 +1022,7 @@ def workflow_validate(
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
         display_message(
-            "Something went wrong when trying to validate {}".format(file),
+            "An error occured when trying to validate {}".format(file) + "\n" + str(e),
             msg_type="error",
         )
         sys.exit(1)

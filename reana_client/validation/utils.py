@@ -12,6 +12,7 @@ import sys
 from typing import Dict, NoReturn, Union
 
 import click
+import json
 
 from reana_commons.errors import REANAValidationError
 from reana_commons.validation.operational_options import validate_operational_options
@@ -24,6 +25,39 @@ from reana_client.validation.environments import validate_environment
 from reana_client.validation.parameters import validate_parameters
 from reana_client.validation.workspace import _validate_workspace
 
+def display_reana_params_warnings(validator) -> None:
+    """Display REANA specification parameter validation warnings."""
+    _display_messages_type(
+        info_msg="Verifying REANA specification parameters... ",
+        success_msg="REANA specification parameters appear valid.",
+        messages=validator["reana_params_warnings"],
+    )
+
+
+def display_workflow_params_warnings(validator) -> None:
+    """Display REANA workflow parameter and command validation warnings."""
+    _display_messages_type(
+        info_msg="Verifying workflow parameters and commands... ",
+        success_msg="Workflow parameters and commands appear valid.",
+        messages=validator["workflow_params_warnings"],
+    )
+
+
+def display_operations_warnings(validator) -> None:
+    """Display dangerous workflow operation warnings."""
+    _display_messages_type(
+        info_msg="Verifying dangerous workflow operations... ",
+        success_msg="Workflow operations appear valid.",
+        messages=validator["operations_warnings"],
+    )
+
+
+def _display_messages_type(info_msg, success_msg, messages) -> None:
+    display_message(info_msg, msg_type="info")
+    for msg in messages:
+        display_message(msg["message"], msg_type=msg["type"], indented=True)
+    if not messages:
+        display_message(success_msg, msg_type="success", indented=True)
 
 def validate_reana_spec(
     reana_yaml,
@@ -39,9 +73,9 @@ def validate_reana_spec(
 
     # Send to server's api for validation
     from reana_client.api.client import validate_workflow
-    response = validate_workflow(reana_yaml)
+    response, http_response = validate_workflow(reana_yaml)
     print("\nResponse from server:")
-    print(response)
+    print(response, http_response)
     print("")
 
     display_message(
@@ -94,24 +128,11 @@ def validate_reana_spec(
             indented=True,
         )
 
-    display_message(
-        f"Verifying REANA specification parameters...",
-        msg_type="info",
-    )
-    validation_parameter_warnings = response["message"]["reana_spec_params"]
-    if validation_parameter_warnings:
-            for warnings in validation_parameter_warnings:
-                display_message(
-                    warnings["message"],
-                    msg_type=warnings["type"],
-                    indented=True,
-                )
-    else:
-            display_message(
-                "REANA specification parameters appear valid.",
-                msg_type="success",
-                indented=True,
-            )
+
+    validation_parameter_warnings = json.loads(response["message"]["reana_spec_params"])
+    display_reana_params_warnings(validation_parameter_warnings)
+    display_workflow_params_warnings(validation_parameter_warnings)
+    display_operations_warnings(validation_parameter_warnings)
 
     print("")
 

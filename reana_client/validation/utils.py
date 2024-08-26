@@ -219,7 +219,7 @@ def server_validation(
         msg_type="info",
     )
 
-    validation_warnings = response["message"]["warnings"]
+    validation_warnings = response["message"]["reana_spec_file_warnings"]
     if validation_warnings:
         display_message(
             "The REANA specification appears valid, but some warnings were found.",
@@ -265,7 +265,7 @@ def server_validation(
         )
 
 
-    validation_parameter_warnings = json.loads(response["message"]["reana_spec_params"])
+    validation_parameter_warnings = json.loads(response["message"]["reana_spec_params_warnings"])
     display_reana_params_warnings(validation_parameter_warnings)
     display_workflow_params_warnings(validation_parameter_warnings)
     display_operations_warnings(validation_parameter_warnings)

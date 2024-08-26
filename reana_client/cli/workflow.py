@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -168,13 +168,13 @@ def workflow_sharing_group(ctx):
     "--shared-by",
     "shared_by",
     default=None,
-    help="List workflows shared by the specified user(s).",
+    help="List workflows shared by the specified user.",
 )
 @click.option(
     "--shared-with",
     "shared_with",
     default=None,
-    help="List workflows shared with the specified user(s).",
+    help="List workflows shared with the specified user.",
 )
 @add_access_token_options
 @add_pagination_options
@@ -215,7 +215,7 @@ def workflows_list(  # noqa: C901
     \t - ``--shared-by anybody``: list workflows shared with you by anybody.\n
     \t - ``--shared-with anybody``: list your shared workflows exclusively.\n
     \t - ``--shared-with nobody``: list your unshared workflows exclusively.\n
-    \t - ``--shared-with bob@cern.ch,cecile@cern.ch``: list workflows shared with either bob@cern.ch or cecile@cern.ch
+    \t - ``--shared-with bob@cern.ch``: list workflows shared with bob@cern.ch
 
     Examples:\n
     \t $ reana-client list --all\n
@@ -332,7 +332,7 @@ def workflows_list(  # noqa: C901
                 if header == "shared_by":
                     value = workflow.get("owner_email")
                 if header == "shared_with":
-                    value = workflow.get("shared_with")
+                    value = ", ".join(workflow.get("shared_with", []))
                 if not value:
                     value = workflow.get(header)
                 row.append(value)
@@ -1621,44 +1621,31 @@ def share_workflow_remove(ctx, workflow, access_token, users):  # noqa D412
 
     Example:
 
-    $ reana-client share-remove -w myanalysis.42 --user bob@example.org
+        $ reana-client share-remove -w myanalysis.42 --user bob@example.org
     """
     from reana_client.api.client import unshare_workflow
 
     unshare_errors = []
     unshared_users = []
 
-    if workflow:
+    for user in users:
         try:
-            for user in users:
-                try:
-                    logging.info(f"Unsharing workflow {workflow} with user {user}")
-                    unshare_workflow(workflow, user, access_token)
-                    unshared_users.append(user)
-                except Exception as e:
-                    unshare_errors.append(
-                        f"Failed to unshare {workflow} with {user}: {str(e)}"
-                    )
-                    logging.debug(traceback.format_exc())
+            logging.info(f"Unsharing workflow {workflow} with user {user}")
+            unshare_workflow(workflow, user, access_token)
+            unshared_users.append(user)
         except Exception as e:
+            unshare_errors.append(f"Failed to unshare {workflow} with {user}: {str(e)}")
             logging.debug(traceback.format_exc())
-            logging.debug(str(e))
-            display_message(
-                "An error occurred while unsharing workflow:\n{}".format(str(e)),
-                msg_type="error",
-            )
 
-        if unshared_users:
-            display_message(
-                f"{workflow} is no longer shared with {', '.join(unshared_users)}",
-                msg_type="success",
-            )
-        if unshare_errors:
-            for error in unshare_errors:
-                display_message(error, msg_type="error")
-
-    else:
-        display_message(f"Cannot find workflow {workflow}", msg_type="error")
+    if unshared_users:
+        display_message(
+            f"{workflow} is no longer shared with {', '.join(unshared_users)}",
+            msg_type="success",
+        )
+    if unshare_errors:
+        for error in unshare_errors:
+            display_message(error, msg_type="error")
+        sys.exit(1)
 
 
 @workflow_sharing_group.command("share-status")
@@ -1667,7 +1654,7 @@ def share_workflow_remove(ctx, workflow, access_token, users):  # noqa D412
 @add_access_token_options
 @click.option(
     "--format",
-    "_format",
+    "format_",
     multiple=True,
     default=None,
     help="Format output according to column titles or column "
@@ -1682,7 +1669,7 @@ def share_workflow_remove(ctx, workflow, access_token, users):  # noqa D412
 )
 @click.pass_context
 def share_workflow_status(
-    ctx, workflow, _format, output_format, access_token
+    ctx, workflow, format_, output_format, access_token
 ):  # noqa D412
     """Show with whom a workflow is shared.
 
@@ -1691,39 +1678,12 @@ def share_workflow_status(
 
     Example:
 
-    $ reana-client share-status -w myanalysis.42
+        $ reana-client share-status -w myanalysis.42
     """
     from reana_client.api.client import get_workflow_sharing_status
 
     try:
         sharing_status = get_workflow_sharing_status(workflow, access_token)
-
-        if sharing_status:
-            shared_with = sharing_status.get("shared_with", [])
-
-            if shared_with:
-                headers = ["user_email", "valid_until"]
-                data = [
-                    [
-                        entry["user_email"],
-                        (
-                            entry["valid_until"]
-                            if entry["valid_until"] is not None
-                            else "-"
-                        ),
-                    ]
-                    for entry in shared_with
-                ]
-
-                display_formatted_output(data, headers, _format, output_format)
-            else:
-                display_message(
-                    f"Workflow {workflow} is not shared with anyone.", msg_type="info"
-                )
-        else:
-            display_message(
-                f"Workflow {workflow} is not shared with anyone.", msg_type="info"
-            )
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -1732,4 +1692,22 @@ def share_workflow_status(
                 str(e)
             ),
             msg_type="error",
+        )
+        sys.exit(1)
+
+    shared_with = sharing_status.get("shared_with", [])
+    if shared_with:
+        headers = ["user_email", "valid_until"]
+        data = [
+            [
+                entry["user_email"],
+                (entry["valid_until"] if entry["valid_until"] is not None else "-"),
+            ]
+            for entry in shared_with
+        ]
+
+        display_formatted_output(data, headers, format_, output_format)
+    else:
+        display_message(
+            f"Workflow {workflow} is not shared with anyone.", msg_type="info"
         )

@@ -1306,9 +1306,7 @@ def share_workflow(
     """
     try:
         share_params = {
-            "workflow_id_or_name": workflow,
             "user_email_to_share_with": user_email_to_share_with,
-            "access_token": access_token,
         }
 
         if message:
@@ -1318,7 +1316,9 @@ def share_workflow(
             share_params["valid_until"] = valid_until
 
         (response, http_response) = current_rs_api_client.api.share_workflow(
-            **share_params
+            workflow_id_or_name=workflow,
+            share_details=share_params,
+            access_token=access_token,
         ).result()
 
         if http_response.status_code == 200:

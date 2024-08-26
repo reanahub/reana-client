@@ -22,6 +22,7 @@ COPY . /code
 RUN apt-get update -y && \
     apt-get install --no-install-recommends -y \
       gcc \
+      git \
       libpython3.12 \
       python3-pip \
       python3.12 \

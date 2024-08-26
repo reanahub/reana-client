@@ -1289,8 +1289,9 @@ def validate_workflow(reana_yaml):
     :return: a response from the server which is in a JSON format TODO: add more
     """
     try:
-        print("\nSending:")
-        print(json.loads(json.dumps(reana_yaml, sort_keys=True)))
+        #TODO: remove
+        #print("\nSending:")
+        #print(json.loads(json.dumps(reana_yaml, sort_keys=True)))
         (response, http_response) = current_rs_api_client.api.validate_workflow(reana_yaml=json.loads(json.dumps(reana_yaml, sort_keys=True))).result()
 
         return response, http_response

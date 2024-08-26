@@ -342,7 +342,7 @@ def workflows_list(  # noqa: C901
 @add_access_token_options
 @check_connection
 @click.pass_context
-def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D301
+def workflow_create(ctx, file, name, skip_validation, access_token, parameters):  # noqa: D301
     """Create a new workflow.
 
     The ``create`` command allows to create a new workflow from reana.yaml
@@ -377,6 +377,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
             access_token=access_token,
             skip_validation=skip_validation,
             server_capabilities=True,
+            parameters=parameters
         )
         logging.info("Connecting to {0}".format(get_api_url()))
         response = create_workflow(reana_specification, name, access_token)
@@ -1155,6 +1156,7 @@ def workflow_run(
         name=name,
         skip_validation=skip_validation,
         access_token=access_token,
+        parameters=parameters,
     )
     display_message("Uploading files...", msg_type="info")
     ctx.invoke(

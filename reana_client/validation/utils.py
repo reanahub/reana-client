@@ -67,74 +67,47 @@ def validate_reana_spec(
     skip_validate_environments=True,
     pull_environment_image=False,
     server_capabilities=False,
+    parameters=False,
 ):
-
-
-
-    # Send to server's api for validation
-    from reana_client.api.client import validate_workflow
-    response, http_response = validate_workflow(reana_yaml)
-    print("\nResponse from server:")
-    print(response, http_response)
-    print("")
-
-    display_message(
-        f"Verifying REANA specification file... {filepath}",
-        msg_type="info",
+ 
+    local_validation(
+        reana_yaml,
+        filepath,
+        access_token=None,
+        skip_validation=False,
+        skip_validate_environments=True,
+        pull_environment_image=False,
+        server_capabilities=False,
+        parameters=False
     )
 
-    validation_warnings = response["message"]["warnings"]
-    if validation_warnings:
-        display_message(
-            "The REANA specification appears valid, but some warnings were found.",
-            msg_type="warning",
-            indented=True,
-        )
-    for warning_key, warning_values in validation_warnings.items():
-        if warning_key == "additional_properties":
-            # warning_values is a list of unexpected properties
-            messages = [
-                f"'{value['property']}'"
-                + (f" (at {value['path']})" if value["path"] else "")
-                for value in warning_values
-            ]
-            message = (
-                f"Unexpected properties found in REANA specification file: "
-                f"{', '.join(messages)}."
-            )
-        else:
-            # warning_values is a list of dictionaries with 'message' and 'path'
-            messages = [
-                f"{value['message']}"
-                + (f" (at {value['path']})" if value["path"] else "")
-                for value in warning_values
-            ]
-            message = f"{'; '.join(messages)}."
-        display_message(
-            message,
-            msg_type="warning",
-            indented=True,
-        )
-    if validation_warnings:
-        display_message(
-            "Please make sure that the REANA specification file is correct.",
-            msg_type="warning",
-            indented=True,
-        )
-    else:
-        display_message(
-            "Valid REANA specification file.",
-            msg_type="success",
-            indented=True,
-        )
+    server_validation(
+        reana_yaml,
+        filepath,
+        access_token=None,
+        skip_validation=False,
+        skip_validate_environments=True,
+        pull_environment_image=False,
+        server_capabilities=False,
+        parameters=False
+    )
 
-
-    validation_parameter_warnings = json.loads(response["message"]["reana_spec_params"])
-    display_reana_params_warnings(validation_parameter_warnings)
-    display_workflow_params_warnings(validation_parameter_warnings)
-    display_operations_warnings(validation_parameter_warnings)
-
+def local_validation(
+    reana_yaml,
+    filepath,
+    access_token=None,
+    skip_validation=False,
+    skip_validate_environments=True,
+    pull_environment_image=False,
+    server_capabilities=False,
+    parameters=False,
+):
+    
     print("")
+    display_message(
+        f"Results from local validation",
+        msg_type="info",
+    )
 
     """Validate REANA specification file."""
     if "options" in reana_yaml.get("inputs", {}):
@@ -210,6 +183,94 @@ def validate_reana_spec(
         )
         validate_environment(reana_yaml, pull=pull_environment_image)
 
+def server_validation(
+    reana_yaml,
+    filepath,
+    access_token=None,
+    skip_validation=False,
+    skip_validate_environments=True,
+    pull_environment_image=False,
+    server_capabilities=False,
+    parameters=False,
+):
+   
+    print("")
+    display_message(
+        f"Results from server side validation",
+        msg_type="info",
+    )
+
+    reana_yaml = json.loads(json.dumps(reana_yaml))
+
+    # Add runtime_parameters if they exist
+    if parameters:
+        reana_yaml['runtime_parameters'] = parameters
+
+    # Send to server's api for validation
+    from reana_client.api.client import validate_workflow
+    response, http_response = validate_workflow(reana_yaml)
+    #TODO: remove
+    #print("\nResponse from server:")
+    #print(response, http_response)
+    #print("")
+
+    display_message(
+        f"Verifying REANA specification file... {filepath}",
+        msg_type="info",
+    )
+
+    validation_warnings = response["message"]["warnings"]
+    if validation_warnings:
+        display_message(
+            "The REANA specification appears valid, but some warnings were found.",
+            msg_type="warning",
+            indented=True,
+        )
+    for warning_key, warning_values in validation_warnings.items():
+        if warning_key == "additional_properties":
+            # warning_values is a list of unexpected properties
+            messages = [
+                f"'{value['property']}'"
+                + (f" (at {value['path']})" if value["path"] else "")
+                for value in warning_values
+            ]
+            message = (
+                f"Unexpected properties found in REANA specification file: "
+                f"{', '.join(messages)}."
+            )
+        else:
+            # warning_values is a list of dictionaries with 'message' and 'path'
+            messages = [
+                f"{value['message']}"
+                + (f" (at {value['path']})" if value["path"] else "")
+                for value in warning_values
+            ]
+            message = f"{'; '.join(messages)}."
+        display_message(
+            message,
+            msg_type="warning",
+            indented=True,
+        )
+    if validation_warnings:
+        display_message(
+            "Please make sure that the REANA specification file is correct.",
+            msg_type="warning",
+            indented=True,
+        )
+    else:
+        display_message(
+            "Valid REANA specification file.",
+            msg_type="success",
+            indented=True,
+        )
+
+
+    validation_parameter_warnings = json.loads(response["message"]["reana_spec_params"])
+    display_reana_params_warnings(validation_parameter_warnings)
+    display_workflow_params_warnings(validation_parameter_warnings)
+    display_operations_warnings(validation_parameter_warnings)
+
+    print("")
 
 def _validate_server_capabilities(reana_yaml: Dict, access_token: str) -> None:
     """Validate server capabilities in REANA specification file.

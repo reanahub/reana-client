@@ -46,6 +46,7 @@ def load_validate_reana_spec(
     skip_validate_environments=True,
     pull_environment_image=False,
     server_capabilities=False,
+    parameters=False,
 ):
     """Load and validate reana specification file.
 
@@ -64,6 +65,7 @@ def load_validate_reana_spec(
             skip_validate_environments=skip_validate_environments,
             pull_environment_image=pull_environment_image,
             server_capabilities=server_capabilities,
+            parameters=parameters,
         )
 
         if reana_yaml["workflow"]["type"] == "yadage":

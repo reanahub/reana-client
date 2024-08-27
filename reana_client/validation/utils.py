@@ -89,7 +89,7 @@ def validate_reana_spec(
         skip_validate_environments=True,
         pull_environment_image=False,
         server_capabilities=False,
-        parameters=False
+        parameters=parameters
     )
 
 def local_validation(
@@ -203,8 +203,7 @@ def server_validation(
     reana_yaml = json.loads(json.dumps(reana_yaml))
 
     # Add runtime_parameters if they exist
-    if parameters:
-        reana_yaml['runtime_parameters'] = parameters
+    reana_yaml['runtime_parameters'] = parameters
 
     # Send to server's api for validation
     from reana_client.api.client import validate_workflow
@@ -264,11 +263,23 @@ def server_validation(
             indented=True,
         )
 
-
     validation_parameter_warnings = json.loads(response["message"]["reana_spec_params_warnings"])
     display_reana_params_warnings(validation_parameter_warnings)
     display_workflow_params_warnings(validation_parameter_warnings)
     display_operations_warnings(validation_parameter_warnings)
+
+    display_message(
+        f"Validating runtime parameters...",
+        msg_type="info",
+    )
+    runtime_params_warnings = response["message"]["runtime_params_warnings"]
+    if runtime_params_warnings:
+        for warning_message in runtime_params_warnings:
+            display_message(
+                warning_message,
+                msg_type="warning",
+                indented=True,
+            )
 
     print("")
 

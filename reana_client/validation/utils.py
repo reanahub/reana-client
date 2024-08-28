@@ -281,6 +281,23 @@ def server_validation(
                 indented=True,
             )
 
+    runtime_params_errors = response["message"]["runtime_params_errors"]
+    if runtime_params_errors:
+        for error_message in runtime_params_errors:
+            display_message(
+                error_message,
+                msg_type="error",
+                indented=True,
+            )
+            sys.exit(1)
+
+    if not runtime_params_warnings:
+        display_message(
+            "Runtime paramters appear valid.",
+            msg_type="success",
+            indented=True,
+        )
+
     print("")
 
 def _validate_server_capabilities(reana_yaml: Dict, access_token: str) -> None:
@@ -311,10 +328,10 @@ def validate_input_parameters(live_parameters, original_parameters):
     for parameter in parsed_input_parameters.keys():
         if parameter not in original_parameters:
             display_message(
-                "Given parameter - {0}, is not in reana.yaml".format(parameter),
-                msg_type="error",
+                'Command-line parameter "{0}" is not defined in reana.yaml'.format(parameter),
+                msg_type='error',
             )
-            del live_parameters[parameter]
+            sys.exit(1)
     return live_parameters
 
 

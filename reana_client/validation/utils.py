@@ -73,22 +73,22 @@ def validate_reana_spec(
     local_validation(
         reana_yaml,
         filepath,
-        access_token=None,
-        skip_validation=False,
-        skip_validate_environments=True,
-        pull_environment_image=False,
-        server_capabilities=False,
-        parameters=False
+        access_token=access_token,
+        skip_validation=skip_validation,
+        skip_validate_environments=skip_validate_environments,
+        pull_environment_image=pull_environment_image,
+        server_capabilities=server_capabilities,
+        parameters=parameters
     )
 
     server_validation(
         reana_yaml,
         filepath,
-        access_token=None,
-        skip_validation=False,
-        skip_validate_environments=True,
-        pull_environment_image=False,
-        server_capabilities=False,
+        access_token=access_token,
+        skip_validation=skip_validation,
+        skip_validate_environments=skip_validate_environments,
+        pull_environment_image=pull_environment_image,
+        server_capabilities=server_capabilities,
         parameters=parameters
     )
 

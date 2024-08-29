@@ -202,6 +202,9 @@ def server_validation(
 
     reana_yaml = json.loads(json.dumps(reana_yaml))
 
+    # Instruct server to also check server capanilities if needed
+    reana_yaml['server_capabilities'] = server_capabilities
+
     # Add runtime_parameters if they exist
     reana_yaml['runtime_parameters'] = parameters
 
@@ -297,6 +300,10 @@ def server_validation(
             msg_type="success",
             indented=True,
         )
+
+    server_capabilities = response["message"]["server_capabilities"]
+    if server_capabilities:
+        print(server_capabilities)
 
     print("")
 

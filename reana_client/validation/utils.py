@@ -303,7 +303,17 @@ def server_validation(
 
     server_capabilities = response["message"]["server_capabilities"]
     if server_capabilities:
-        print(server_capabilities)
+        display_message(
+            f"Verifying compute backends in REANA specification file...",
+            msg_type="info",
+        )
+        for message in server_capabilities:
+            if message:
+                display_message(
+                    message["message"],
+                    msg_type=message["msg_type"],
+                    indented=True,
+                )
 
     print("")
 

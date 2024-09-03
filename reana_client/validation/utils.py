@@ -208,6 +208,9 @@ def server_validation(
     # Add runtime_parameters if they exist
     reana_yaml['runtime_parameters'] = parameters
 
+    # Also check environments if needed
+    reana_yaml['skip_validate_environments'] = skip_validate_environments
+
     # Send to server's api for validation
     from reana_client.api.client import validate_workflow
     response, http_response = validate_workflow(reana_yaml)
@@ -315,6 +318,13 @@ def server_validation(
                     msg_type=message["msg_type"],
                     indented=True,
                 )
+
+    if not skip_validate_environments:
+        display_message(
+            "Verifying environments in REANA specification file...",
+            msg_type="info",
+        )
+        #validate_environment(reana_yaml, pull=pull_environment_image)
 
     print("")
 

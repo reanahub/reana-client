@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.9.4](https://github.com/reanahub/reana-client/compare/0.9.3...0.9.4) (2024-09-03)
+
+
+### Build
+
+* **docker:** create `reana-client` container image ([#710](https://github.com/reanahub/reana-client/issues/710)) ([2c99c5d](https://github.com/reanahub/reana-client/commit/2c99c5d1bd36e4303885875375085f7d714e8732)), closes [#709](https://github.com/reanahub/reana-client/issues/709)
+
+
+### Continuous integration
+
+* **actions:** pin setuptools 70 ([#728](https://github.com/reanahub/reana-client/issues/728)) ([0a4bcc7](https://github.com/reanahub/reana-client/commit/0a4bcc79af33dd00a6a03216be32d10000bb432b))
+
+
+### Documentation
+
+* **cli:** fix `open` command documentation typo ([#728](https://github.com/reanahub/reana-client/issues/728)) ([c822dd6](https://github.com/reanahub/reana-client/commit/c822dd6570d5474e535be83d0ee4beb44ecee85b))
+
 ## [0.9.3](https://github.com/reanahub/reana-client/compare/0.9.2...0.9.3) (2024-03-13)
 
 

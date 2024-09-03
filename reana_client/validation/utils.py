@@ -271,35 +271,36 @@ def server_validation(
     display_workflow_params_warnings(validation_parameter_warnings)
     display_operations_warnings(validation_parameter_warnings)
 
-    display_message(
-        f"Validating runtime parameters...",
-        msg_type="info",
-    )
-    runtime_params_warnings = response["message"]["runtime_params_warnings"]
-    if runtime_params_warnings:
-        for warning_message in runtime_params_warnings:
-            display_message(
-                warning_message,
-                msg_type="warning",
-                indented=True,
-            )
-
-    runtime_params_errors = response["message"]["runtime_params_errors"]
-    if runtime_params_errors:
-        for error_message in runtime_params_errors:
-            display_message(
-                error_message,
-                msg_type="error",
-                indented=True,
-            )
-            sys.exit(1)
-
-    if not runtime_params_warnings:
+    if parameters:
         display_message(
-            "Runtime paramters appear valid.",
-            msg_type="success",
-            indented=True,
+            f"Validating runtime parameters...",
+            msg_type="info",
         )
+        runtime_params_warnings = response["message"]["runtime_params_warnings"]
+        if runtime_params_warnings:
+            for warning_message in runtime_params_warnings:
+                display_message(
+                    warning_message,
+                    msg_type="warning",
+                    indented=True,
+                )
+
+        runtime_params_errors = response["message"]["runtime_params_errors"]
+        if runtime_params_errors:
+            for error_message in runtime_params_errors:
+                display_message(
+                    error_message,
+                    msg_type="error",
+                    indented=True,
+                )
+                sys.exit(1)
+
+        if not runtime_params_warnings:
+            display_message(
+                "Runtime paramters appear valid.",
+                msg_type="success",
+                indented=True,
+            )
 
     server_capabilities = response["message"]["server_capabilities"]
     if server_capabilities:

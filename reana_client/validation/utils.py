@@ -324,7 +324,14 @@ def server_validation(
             "Verifying environments in REANA specification file...",
             msg_type="info",
         )
-        #validate_environment(reana_yaml, pull=pull_environment_image)
+        environments_warnings = response["message"]["environments_warnings"]
+        for message in environments_warnings:
+            if message:
+                display_message(
+                    message["message"],
+                    msg_type=message["type"],
+                    indented=True,
+                )        
 
     print("")
 

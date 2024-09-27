@@ -77,3 +77,9 @@ JOB_STATUS_TO_MSG_COLOR = {
 
 STD_OUTPUT_CHAR = "-"
 """Character used to refer to the standard output."""
+
+CLI_LOGS_FOLLOW_MIN_INTERVAL = 1
+"""Minimum interval between log requests in seconds."""
+
+CLI_LOGS_FOLLOW_DEFAULT_INTERVAL = 10
+"""Default interval between log requests in seconds."""

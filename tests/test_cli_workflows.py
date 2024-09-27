@@ -8,6 +8,7 @@
 
 """REANA client workflow tests."""
 
+import copy
 import json
 import sys
 from typing import List
@@ -21,6 +22,7 @@ from reana_client.api.client import create_workflow_from_json
 from reana_client.cli import cli
 from reana_client.config import RUN_STATUSES
 from reana_client.utils import get_workflow_status_change_msg
+from reana_commons.api_client import BaseAPIClient
 from reana_commons.config import INTERACTIVE_SESSION_TYPES
 
 
@@ -938,6 +940,179 @@ def test_get_workflow_status_ok():
             assert isinstance(json_response, list)
             assert len(json_response) == 1
             assert json_response[0]["name"] in response["name"]
+
+
+def test_get_workflow_logs():
+    """Test workflow logs."""
+    status_code = 200
+    response = {
+        "logs": '{"workflow_logs": "workflow logs test"}',
+        "user": "00000000-0000-0000-0000-000000000000",
+        "workflow_id": "26a55924-83c9-493b-841b-8fd7629e25c9",
+        "workflow_name": "helloworld-serial-kubernetes0.3",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response, mock_response = Mock(), Mock()
+    mock_http_response.status_code = status_code
+    mock_response = response
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(mock_response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                ["logs", "-t", reana_token, "--json", "-w", response["workflow_name"]],
+            )
+            json_response = json.loads(result.output)
+            assert result.exit_code == 0
+            assert isinstance(json_response, dict)
+            assert json_response["workflow_logs"] in "workflow logs test"
+
+
+def test_follow_job_logs():
+    """Test follow job logs."""
+    logs = {
+        "workflow_logs": "workflow logs test",
+        "job_logs": {
+            "job_id": {
+                "workflow_uuid": "26a55924-83c9-493b-841b-8fd7629e25c9",
+                "job_name": "hello1",
+                "compute_backend": "Kubernetes",
+                "backend_job_id": "reana-run-job-42532a36-4a41-4acf-a3b0-d61655030f43",
+                "docker_img": "docker.io/library/python:3.8-slim",
+                "cmd": "python",
+                "status": "running",
+                "logs": "job test logs\n",
+                "started_at": "2024-09-26T09:02:36",
+                "finished_at": None,
+            }
+        },
+    }
+    logs_next = copy.deepcopy(logs)
+    logs_next["job_logs"]["job_id"]["status"] = "stopped"
+    logs_next["job_logs"]["job_id"]["logs"] = "job test logs\nmore job logs\n"
+
+    response = {
+        "logs": json.dumps(logs),
+        "user": "00000000-0000-0000-0000-000000000000",
+        "workflow_id": "26a55924-83c9-493b-841b-8fd7629e25c9",
+        "workflow_name": "helloworld-serial-kubernetes0.3",
+        "live_logs_enabled": True,
+    }
+    response_next = copy.deepcopy(response)
+    response_next["logs"] = json.dumps(logs_next)
+
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response = Mock()
+    mock_http_response.status_code = 200
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+
+    mock_http_client, mock_result = Mock(), Mock()
+    mock_result.result.side_effect = [
+        (response, mock_http_response),
+        (response_next, mock_http_response),
+    ]
+    mock_http_client.request.return_value = mock_result
+
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            BaseAPIClient("reana-server", http_client=mock_http_client)._client,
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "logs",
+                    "-t",
+                    reana_token,
+                    "--follow",
+                    "-i",
+                    1,
+                    "-w",
+                    "helloworld-serial-kubernetes0.3",
+                    "--filter",
+                    "step=hello1",
+                ],
+            )
+            assert result.exit_code == 0
+            assert (
+                result.output
+                == """job test logs
+more job logs
+==> Job has completed, you might want to rerun the command without the --follow flag.
+"""
+            )
+
+
+def test_follow_live_logs_disabled():
+    """Test follow job logs when live logs are disabled."""
+    logs = {
+        "workflow_logs": "",
+        "job_logs": {
+            "job_id": {
+                "workflow_uuid": "26a55924-83c9-493b-841b-8fd7629e25c9",
+                "job_name": "hello1",
+                "compute_backend": "Kubernetes",
+                "backend_job_id": "reana-run-job-42532a36-4a41-4acf-a3b0-d61655030f43",
+                "docker_img": "docker.io/library/python:3.8-slim",
+                "cmd": "python",
+                "status": "running",
+                "logs": "",
+                "started_at": "2024-09-26T09:02:36",
+                "finished_at": None,
+            }
+        },
+    }
+
+    response = {
+        "logs": json.dumps(logs),
+        "user": "00000000-0000-0000-0000-000000000000",
+        "workflow_id": "26a55924-83c9-493b-841b-8fd7629e25c9",
+        "workflow_name": "helloworld-serial-kubernetes0.3",
+    }
+
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response = Mock()
+    mock_http_response.status_code = 200
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+
+    mock_http_client, mock_result = Mock(), Mock()
+    mock_result.result.side_effect = [
+        (response, mock_http_response),
+    ]
+    mock_http_client.request.return_value = mock_result
+
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            BaseAPIClient("reana-server", http_client=mock_http_client)._client,
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "logs",
+                    "-t",
+                    reana_token,
+                    "--follow",
+                    "-i",
+                    1,
+                    "-w",
+                    "helloworld-serial-kubernetes0.3",
+                    "--filter",
+                    "step=hello1",
+                ],
+            )
+            assert result.exit_code == 0
+            assert (
+                result.output
+                == """==> ERROR: Live logs are not enabled, please rerun the command without the --follow flag.
+"""
+            )
 
 
 @patch("reana_client.cli.workflow.workflow_create")

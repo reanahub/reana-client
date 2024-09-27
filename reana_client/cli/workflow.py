@@ -31,8 +31,15 @@ from reana_client.cli.utils import (
     key_value_to_dict,
     parse_filter_parameters,
     requires_environments,
+    retrieve_workflow_logs,
+    follow_workflow_logs,
 )
-from reana_client.config import ERROR_MESSAGES, RUN_STATUSES, TIMECHECK
+from reana_client.config import (
+    ERROR_MESSAGES,
+    RUN_STATUSES,
+    TIMECHECK,
+    CLI_LOGS_FOLLOW_DEFAULT_INTERVAL,
+)
 from reana_client.printer import display_message
 from reana_client.utils import (
     get_reana_yaml_file_path,
@@ -886,6 +893,20 @@ def workflow_status(  # noqa: C901
     multiple=True,
     help="Filter job logs to include only those steps that match certain filtering criteria. Use --filter name=value pairs. Available filters are compute_backend, docker_img, status and step.",
 )
+@click.option(
+    "--follow",
+    "follow",
+    is_flag=True,
+    default=False,
+    help="Follow the logs of a running workflow or job (similar to tail -f).",
+)
+@click.option(
+    "-i",
+    "--interval",
+    "interval",
+    default=CLI_LOGS_FOLLOW_DEFAULT_INTERVAL,
+    help=f"Sleep time in seconds between log polling if log following is enabled. [default={CLI_LOGS_FOLLOW_DEFAULT_INTERVAL}]",
+)
 @add_pagination_options
 @check_connection
 @click.pass_context
@@ -894,22 +915,31 @@ def workflow_logs(
     workflow,
     access_token,
     json_format,
-    steps=None,
+    follow,
+    interval,
     filters=None,
     page=None,
     size=None,
 ):  # noqa: D301
     """Get workflow logs.
 
-    The ``logs`` command allows to retrieve logs of running workflow. Note that
-    only finished steps of the workflow are returned, the logs of the currently
-    processed step is not returned until it is finished.
+    The ``logs`` command allows to retrieve logs of a running workflow.
 
     Examples:\n
-    \t $ reana-client logs -w myanalysis.42
-    \t $ reana-client logs -w myanalysis.42 -s 1st_step
+    \t $ reana-client logs -w myanalysis.42\n
+    \t $ reana-client logs -w myanalysis.42 --json\n
+    \t $ reana-client logs -w myanalysis.42 --filter status=running\n
+    \t $ reana-client logs -w myanalysis.42 --filter step=myfit --follow\n
     """
-    from reana_client.api.client import get_workflow_logs
+    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
+    for p in ctx.params:
+        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+
+    if json_format and follow:
+        display_message(
+            "Ignoring --json as it cannot be used together with --follow.",
+            msg_type="warning",
+        )
 
     available_filters = {
         "step": "job_name",
@@ -920,89 +950,72 @@ def workflow_logs(
     steps = []
     chosen_filters = dict()
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
-    if workflow:
-        if filters:
-            try:
-                for f in filters:
-                    key, value = f.split("=")
-                    if key not in available_filters:
-                        display_message(
-                            "Filter '{}' is not valid.\n"
-                            "Available filters are '{}'.".format(
-                                key,
-                                "' '".join(sorted(available_filters.keys())),
-                            ),
-                            msg_type="error",
-                        )
-                        sys.exit(1)
-                    elif key == "step":
-                        steps.append(value)
-                    else:
-                        # Case insensitive for compute backends
-                        if (
-                            key == "compute_backend"
-                            and value.lower() in REANA_COMPUTE_BACKENDS
-                        ):
-                            value = REANA_COMPUTE_BACKENDS[value.lower()]
-                        elif key == "status" and value not in RUN_STATUSES:
-                            display_message(
-                                "Input status value {} is not valid. ".format(value),
-                                msg_type="error",
-                            ),
-                            sys.exit(1)
-                        chosen_filters[key] = value
-            except Exception as e:
-                logging.debug(traceback.format_exc())
-                logging.debug(str(e))
-                display_message(
-                    "Please provide complete --filter name=value pairs, "
-                    "for example --filter status=running.\n"
-                    "Available filters are '{}'.".format(
-                        "' '".join(sorted(available_filters.keys()))
-                    ),
-                    msg_type="error",
-                )
-                sys.exit(1)
+    if filters:
         try:
-            response = get_workflow_logs(
-                workflow,
-                access_token,
-                steps=None if not steps else list(set(steps)),
-                page=page,
-                size=size,
-            )
-            workflow_logs = json.loads(response["logs"])
-            if filters:
-                for key, value in chosen_filters.items():
-                    unwanted_steps = [
-                        k
-                        for k, v in workflow_logs["job_logs"].items()
-                        if v[available_filters[key]] != value
-                    ]
-                    for job_id in unwanted_steps:
-                        del workflow_logs["job_logs"][job_id]
-
-            if json_format:
-                display_message(json.dumps(workflow_logs, indent=2))
-                sys.exit(0)
-            else:
-                from reana_client.cli.utils import output_user_friendly_logs
-
-            output_user_friendly_logs(
-                workflow_logs, None if not steps else list(set(steps))
-            )
+            for f in filters:
+                key, value = f.split("=")
+                if key not in available_filters:
+                    display_message(
+                        "Filter '{}' is not valid.\n"
+                        "Available filters are '{}'.".format(
+                            key,
+                            "' '".join(sorted(available_filters.keys())),
+                        ),
+                        msg_type="error",
+                    )
+                    sys.exit(1)
+                elif key == "step":
+                    steps.append(value)
+                else:
+                    # Case insensitive for compute backends
+                    if (
+                        key == "compute_backend"
+                        and value.lower() in REANA_COMPUTE_BACKENDS
+                    ):
+                        value = REANA_COMPUTE_BACKENDS[value.lower()]
+                    elif key == "status" and value not in RUN_STATUSES:
+                        display_message(
+                            "Input status value {} is not valid. ".format(value),
+                            msg_type="error",
+                        ),
+                        sys.exit(1)
+                    chosen_filters[key] = value
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
             display_message(
-                "Cannot retrieve the logs of a workflow {}: \n"
-                "{}".format(workflow, str(e)),
+                "Please provide complete --filter name=value pairs, "
+                "for example --filter status=running.\n"
+                "Available filters are '{}'.".format(
+                    "' '".join(sorted(available_filters.keys()))
+                ),
                 msg_type="error",
             )
             sys.exit(1)
+
+    try:
+        if follow:
+            follow_workflow_logs(workflow, access_token, interval, steps)
+        else:
+            retrieve_workflow_logs(
+                workflow,
+                access_token,
+                json_format,
+                filters,
+                steps,
+                chosen_filters,
+                available_filters,
+                page,
+                size,
+            )
+    except Exception as e:
+        logging.debug(traceback.format_exc())
+        logging.debug(str(e))
+        display_message(
+            "Cannot retrieve logs for workflow {}: \n{}".format(workflow, str(e)),
+            msg_type="error",
+        )
+        sys.exit(1)
 
 
 @workflow_execution_group.command("validate")

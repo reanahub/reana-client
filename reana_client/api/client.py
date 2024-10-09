@@ -7,7 +7,6 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA REST API client."""
 
-import cgi
 import json
 import logging
 import os
@@ -17,6 +16,7 @@ from urllib.parse import urljoin
 
 import requests
 from bravado.exception import HTTPError
+from reana_client.api.utils import get_content_disposition_filename
 from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import is_regular_path, is_uuid_v4
@@ -500,9 +500,9 @@ def download_file(workflow, file_name, access_token):
             verify=False,
         )
         if "Content-Disposition" in http_response.headers:
-            content_disposition = http_response.headers.get("Content-Disposition")
-            value, params = cgi.parse_header(content_disposition)
-            file_name = params.get("filename", "downloaded_file")
+            file_name = get_content_disposition_filename(
+                http_response.headers.get("Content-Disposition")
+            )
 
         # A zip archive is downloaded if multiple files are requested
         multiple_files_zipped = (

@@ -12,6 +12,7 @@ import json
 import os
 import shlex
 import sys
+import time
 from typing import Callable, NoReturn, Optional, List, Tuple, Union
 
 import click
@@ -409,3 +410,103 @@ def output_user_friendly_logs(workflow_logs, steps):
                     f"Step {job_name_or_id} emitted no logs.",
                     msg_type="info",
                 )
+
+
+def retrieve_workflow_logs(
+    workflow,
+    access_token,
+    json_format,
+    filters,
+    steps,
+    chosen_filters,
+    available_filters,
+    page=None,
+    size=None,
+):  # noqa: D301
+    """Retrieve workflow logs."""
+    from reana_client.api.client import get_workflow_logs
+
+    response = get_workflow_logs(
+        workflow,
+        access_token,
+        steps=None if not steps else list(set(steps)),
+        page=page,
+        size=size,
+    )
+    workflow_logs = json.loads(response["logs"])
+    if filters:
+        for key, value in chosen_filters.items():
+            unwanted_steps = [
+                k
+                for k, v in workflow_logs["job_logs"].items()
+                if v[available_filters[key]] != value
+            ]
+            for job_id in unwanted_steps:
+                del workflow_logs["job_logs"][job_id]
+
+    if json_format:
+        display_message(json.dumps(workflow_logs, indent=2))
+        sys.exit(0)
+    else:
+        from reana_client.cli.utils import output_user_friendly_logs
+
+    output_user_friendly_logs(workflow_logs, None if not steps else list(set(steps)))
+
+
+def follow_workflow_logs(
+    workflow,
+    access_token,
+    interval,
+    steps,
+):  # noqa: D301
+    """Continuously poll for workflow or job logs."""
+    from reana_client.api.client import get_workflow_logs, get_workflow_status
+
+    if len(steps) > 1:
+        display_message(
+            "Only one step can be followed at a time, ignoring additional steps.",
+            "warning",
+        )
+    step = steps[0] if steps else None
+
+    msg = f"Following logs for workflow: {workflow}"
+    if step:
+        msg += f", step: {step}"
+    display_message(msg, "info")
+
+    previous_logs = ""
+
+    while True:
+        response = get_workflow_logs(
+            workflow,
+            access_token,
+            steps=None if not step else [step],
+        ).get("logs")
+        json_response = json.loads(response)
+
+        if step:
+            jobs = json_response["job_logs"]
+
+            if not jobs:
+                raise Exception(f"Step data not found: {step}")
+
+            job = next(iter(jobs.values()))  # get values of the first job
+            logs = job["logs"]
+            status = job["status"]
+        else:
+            logs = json_response["workflow_logs"]
+            status = get_workflow_status(workflow, access_token).get("status")
+
+        previous_lines = previous_logs.splitlines()
+        new_lines = logs.splitlines()
+
+        diff = "\n".join([x for x in new_lines if x not in previous_lines])
+        if diff != "" and diff != "\n":
+            display_message(diff)
+
+        if status in ["finished", "failed", "stopped", "deleted"]:
+            display_message("")
+            display_message(f"Finished, status: {status}", "info")
+            return
+        previous_logs = logs
+        time.sleep(interval)

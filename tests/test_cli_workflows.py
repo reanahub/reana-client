@@ -12,6 +12,7 @@ import copy
 import json
 import sys
 from typing import List
+from pathlib import Path
 
 import pytest
 import yaml
@@ -759,7 +760,7 @@ def test_create_snakemake_workflow_from_json_parameters(
                 access_token=reana_token,
                 parameters=workflow_json["inputs"],
                 workflow_engine="snakemake",
-                workspace_path=str(tmp_path),
+                workspace_path=Path(tmp_path),
             )
             assert response["workflow_name"] == result["workflow_name"]
             assert response["message"] == result["message"]

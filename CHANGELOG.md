@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.95.0](https://github.com/reanahub/reana-client/compare/0.9.3...0.95.0) (2024-11-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **python:** drop support for Python 3.6 and 3.7
+
+### Build
+
+* **docker:** create `reana-client` container image ([#710](https://github.com/reanahub/reana-client/issues/710)) ([2c99c5d](https://github.com/reanahub/reana-client/commit/2c99c5d1bd36e4303885875375085f7d714e8732)), closes [#709](https://github.com/reanahub/reana-client/issues/709)
+* **docker:** upgrade to Ubuntu 24.04 and Python 3.12 ([#721](https://github.com/reanahub/reana-client/issues/721)) ([4662ad6](https://github.com/reanahub/reana-client/commit/4662ad6ef875a7914772654f6be776ad91647e54))
+* **python:** add minimal `pyproject.toml` ([#725](https://github.com/reanahub/reana-client/issues/725)) ([166ced7](https://github.com/reanahub/reana-client/commit/166ced7ef826564289e650c82fb5b33d0e6d205a))
+* **python:** add support for Python 3.13 ([#732](https://github.com/reanahub/reana-client/issues/732)) ([80d88dc](https://github.com/reanahub/reana-client/commit/80d88dc1cb33057f1ce2354fc56e3517fd4d1259))
+* **python:** drop support for Python 3.6 and 3.7 ([#715](https://github.com/reanahub/reana-client/issues/715)) ([822a538](https://github.com/reanahub/reana-client/commit/822a5387acacb40d53ebe951b7f2332e26f0c5dc))
+* **python:** remove deprecated `pytest-runner` ([#725](https://github.com/reanahub/reana-client/issues/725)) ([d6232a5](https://github.com/reanahub/reana-client/commit/d6232a552d81470803478dda36dd368d2b485ab5))
+* **python:** use optional deps instead of `tests_require` ([#725](https://github.com/reanahub/reana-client/issues/725)) ([3397c7e](https://github.com/reanahub/reana-client/commit/3397c7e9f494180a8c15457084da0a700147d84c))
+
+
+### Features
+
+* **cli:** add test command ([#724](https://github.com/reanahub/reana-client/issues/724)) ([79d0483](https://github.com/reanahub/reana-client/commit/79d0483112480570664381b8ffa3c3642b8bc363)), closes [#719](https://github.com/reanahub/reana-client/issues/719)
+* **worfklow:** enrich list command with share-related arguments ([#692](https://github.com/reanahub/reana-client/issues/692)) ([5e4d12b](https://github.com/reanahub/reana-client/commit/5e4d12b809542b15b20b00e475ffa22fef4f8de5)), closes [#687](https://github.com/reanahub/reana-client/issues/687)
+* **workflow:** add `logs --follow` functionality ([#731](https://github.com/reanahub/reana-client/issues/731)) ([dda80d1](https://github.com/reanahub/reana-client/commit/dda80d15eedb5ac54bd5da112a0e6fb8a7749f26))
+* **workflow:** add share-add command ([#692](https://github.com/reanahub/reana-client/issues/692)) ([f7b53e7](https://github.com/reanahub/reana-client/commit/f7b53e7dd4d5ddbb1e76378afd027271e14a4249)), closes [#680](https://github.com/reanahub/reana-client/issues/680)
+* **workflow:** add share-remove command ([#692](https://github.com/reanahub/reana-client/issues/692)) ([20caca3](https://github.com/reanahub/reana-client/commit/20caca3028b2b57afae1f2546c00639c9c298995)), closes [#681](https://github.com/reanahub/reana-client/issues/681)
+* **workflow:** add share-status command ([#692](https://github.com/reanahub/reana-client/issues/692)) ([807ef40](https://github.com/reanahub/reana-client/commit/807ef4089dd72a4c46f7f1a05cca0c316115d131)), closes [#686](https://github.com/reanahub/reana-client/issues/686)
+
+
+### Bug fixes
+
+* **cli:** update workflow sharing commands after changes ([#692](https://github.com/reanahub/reana-client/issues/692)) ([5d0aca7](https://github.com/reanahub/reana-client/commit/5d0aca7c7c14278cc2a67c70197b8f97e99b747f))
+
+
+### Continuous integration
+
+* **actions:** update GitHub actions due to Node 16 deprecation ([#714](https://github.com/reanahub/reana-client/issues/714)) ([3465eb0](https://github.com/reanahub/reana-client/commit/3465eb0496dba6b4fb64fd6edd7872ae59ec5a98))
+* **commitlint:** improve checking of merge commits ([#721](https://github.com/reanahub/reana-client/issues/721)) ([67e4da3](https://github.com/reanahub/reana-client/commit/67e4da31a42bf7bc20049aa9d32c8ba912413b1e))
+* **pytest:** invoke `pytest` directly instead of `setup.py test` ([#725](https://github.com/reanahub/reana-client/issues/725)) ([c755d8a](https://github.com/reanahub/reana-client/commit/c755d8a91abb39ce4ef547b3fa844eb49d0fccb1))
+* **tox:** fix collecting code coverage information ([#727](https://github.com/reanahub/reana-client/issues/727)) ([cd45ad5](https://github.com/reanahub/reana-client/commit/cd45ad5ec13317f7796686b0de4c972ec8b8ca7f))
+
+
+### Documentation
+
+* **cli:** fix `open` command documentation typo ([#716](https://github.com/reanahub/reana-client/issues/716)) ([9a4dfc2](https://github.com/reanahub/reana-client/commit/9a4dfc2d5dccf6d3bc0290719f0ad6bb3dc3735a))
+
+
+### Chores
+
+* **master:** release 0.95.0a1 ([9a410cc](https://github.com/reanahub/reana-client/commit/9a410cc030bef6fb39ea5f0c35a93bbe8730297a))
+
 ## [0.9.3](https://github.com/reanahub/reana-client/compare/0.9.2...0.9.3) (2024-03-13)
 
 

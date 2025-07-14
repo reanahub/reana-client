@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2021, 2022, 2023, 2024, 2025 CERN.
+# Copyright (C) 2021, 2022, 2023, 2024, 2025, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -157,7 +157,7 @@ class EnvironmentValidatorBase:
     def _validate_environment_image(self, image, kubernetes_uid=None):
         """Validate image environment.
 
-        :param image: Full image name with tag if specified.
+        :param image: Full image name with tag if specified. E.g. `reanahub/reana-env-jupyter:2.0.0`.
         :param kubernetes_uid: Kubernetes UID defined in workflow spec.
         """
         if image not in self.validated_images:
@@ -523,10 +523,56 @@ class EnvironmentValidatorCWL(EnvironmentValidatorBase):
 class EnvironmentValidatorSnakemake(EnvironmentValidatorBase):
     """REANA Snakemake workflow environments validation."""
 
+    def __init__(self, **kwargs):
+        """Validate environments in REANA Snakemake workflow."""
+        super().__init__(**kwargs)
+        # Ordered set (dict keys) of rules whose container is resolved per job,
+        # reported as a single aggregated warning once validation is done.
+        self._dynamic_container_rules = {}
+
+    @staticmethod
+    def _is_dynamic_image(image):
+        """Return True when a container value is resolved per job by Snakemake.
+
+        A ``container:`` directive may be a callable or a wildcard-parameterised
+        string, in which case Snakemake only resolves it once the wildcards of a
+        concrete job are known (see ``Rule.expand_container_img``).  The rule-level
+        value is then not a usable image name and cannot be validated.
+        """
+        return not isinstance(image, str) or "{" in image
+
+    def _note_dynamic_container(self, rule_name):
+        """Record a rule whose container image is resolved per job.
+
+        A single ``container:`` directive at the top of a Snakefile applies to
+        every rule, so these are collected and reported once by
+        ``_warn_dynamic_containers()`` instead of warning per rule.
+        """
+        self._dynamic_container_rules[rule_name] = None
+
+    def _warn_dynamic_containers(self):
+        """Emit one aggregated warning for all rules with a dynamic container."""
+        rules = list(self._dynamic_container_rules)
+        if not rules:
+            return
+        max_listed = 5
+        listed = ", ".join(f"'{name}'" for name in rules[:max_listed])
+        if len(rules) > max_listed:
+            listed += f" and {len(rules) - max_listed} more"
+        self.messages.append(
+            {
+                "type": "warning",
+                "message": "Skipping image validation for {} {} with a dynamic "
+                "container directive: {}.".format(
+                    len(rules), "rule" if len(rules) == 1 else "rules", listed
+                ),
+            }
+        )
+
     def validate_environment(self):
         """Validate environments in REANA Snakemake workflow."""
         for step in self.workflow_steps:
-            image = step["environment"]
+            image = step.get("environment")
             if not image:
                 self.messages.append(
                     {
@@ -535,5 +581,10 @@ class EnvironmentValidatorSnakemake(EnvironmentValidatorBase):
                     }
                 )
                 continue
+            if self._is_dynamic_image(image):
+                self._note_dynamic_container(step.get("name"))
+                continue
             kubernetes_uid = step.get("kubernetes_uid")
             self._validate_environment_image(image, kubernetes_uid=kubernetes_uid)
+
+        self._warn_dynamic_containers()

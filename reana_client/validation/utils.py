@@ -106,7 +106,9 @@ def validate_reana_spec(
             "Verifying environments in REANA specification file...",
             msg_type="info",
         )
-        validate_environment(reana_yaml, pull=pull_environment_image)
+        validate_environment(
+            reana_yaml, pull=pull_environment_image, access_token=access_token
+        )
 
 
 def _validate_server_capabilities(reana_yaml: Dict, access_token: str) -> None:
@@ -129,6 +131,48 @@ def _validate_server_capabilities(reana_yaml: Dict, access_token: str) -> None:
     root_path = reana_yaml.get("workspace", {}).get("root_path")
     available_workspaces = info_response.get("workspaces_available", {}).get("value")
     _validate_workspace(root_path, available_workspaces)
+
+    _validate_vetted_images(reana_yaml, info_response)
+
+
+def _validate_vetted_images(reana_yaml: Dict, info_response: Dict) -> None:
+    """Validate container images against the server's vetted images allowlist.
+
+    :param reana_yaml: dictionary which represents REANA specification file.
+    :param info_response: info endpoint response from the server.
+    """
+    from reana_commons.validation.images import extract_images
+
+    vetting_info = info_response.get("vetted_container_images_enabled")
+    allowlist_info = info_response.get("vetted_container_images_allowlist")
+    if vetting_info is None or allowlist_info is None:
+        return  # Server predates vetting support
+    if not vetting_info["value"]:
+        return  # Container image vetting is disabled
+
+    allowlist = allowlist_info["value"]
+    display_message(
+        "Verifying container images in REANA specification file...",
+        msg_type="info",
+    )
+    disallowed_images = [
+        image
+        for image in extract_images(reana_yaml)
+        if image and image not in allowlist
+    ]
+    if disallowed_images:
+        for image in disallowed_images:
+            display_message(
+                f"Environment image is not allowed: {image}",
+                msg_type="error",
+                indented=True,
+            )
+        sys.exit(1)
+    display_message(
+        "Workflow container images appear to be valid.",
+        msg_type="success",
+        indented=True,
+    )
 
 
 def validate_input_parameters(live_parameters, original_parameters):

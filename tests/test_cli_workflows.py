@@ -694,6 +694,27 @@ def test_workflow_create_not_valid_name(create_yaml_workflow_schema):
     assert result.exit_code == 1
 
 
+def test_workflow_create_image_not_authorized(create_yaml_workflow_schema):
+    """Test that create exits with code 1 when the workflow image is not in the allowlist."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    mock_cluster_info = {
+        "compute_backends": {"value": ["kubernetes"]},
+        "vetted_container_images_enabled": {"value": True},
+        "vetted_container_images_allowlist": {"value": ["ubuntu:20.04"]},
+    }
+    runner = CliRunner(env=env)
+    with runner.isolated_filesystem():
+        with open("reana.yaml", "w") as f:
+            f.write(create_yaml_workflow_schema)
+        with patch("reana_client.api.client.info", return_value=mock_cluster_info):
+            result = runner.invoke(
+                cli, ["create", "-t", reana_token, "--file", "reana.yaml"]
+            )
+    assert result.exit_code == 1
+    assert "Environment image is not allowed" in result.output
+
+
 def test_create_workflow_from_json(create_yaml_workflow_schema):
     """Test create workflow from json specification."""
     status_code = 201
@@ -899,6 +920,42 @@ def test_workflows_validate(create_yaml_workflow_schema):
         )
         assert result.exit_code == 0
         assert message in result.output
+
+
+def test_workflows_validate_image_not_authorized(create_yaml_workflow_schema):
+    """Test that validate exits with code 1 when the workflow image is not in the allowlist."""
+    from reana_client.validation.environments import EnvironmentValidatorSerial
+
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    mock_cluster_info = {
+        "vetted_container_images_enabled": {"value": True},
+        "vetted_container_images_allowlist": {"value": ["ubuntu:20.04"]},
+    }
+    runner = CliRunner(env=env)
+    with runner.isolated_filesystem():
+        with open("reana.yaml", "w") as f:
+            f.write(create_yaml_workflow_schema)
+        with patch(
+            "reana_client.api.client.info", return_value=mock_cluster_info
+        ), patch.object(
+            EnvironmentValidatorSerial,
+            "_image_exists",
+            return_value=(False, True),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "validate",
+                    "--environments",
+                    "-t",
+                    reana_token,
+                    "--file",
+                    "reana.yaml",
+                ],
+            )
+        assert result.exit_code == 1
+        assert "Environment image is not allowed" in result.output
 
 
 def test_get_workflow_status_ok():

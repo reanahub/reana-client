@@ -20,7 +20,6 @@ from reana_commons.config import (
 )
 from reana_commons.utils import run_command
 
-
 from reana_client.errors import EnvironmentValidationError
 from reana_client.config import (
     DOCKER_REGISTRY_INDEX_URL,
@@ -28,11 +27,12 @@ from reana_client.config import (
     ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR,
     GITLAB_CERN_REGISTRY_INDEX_URL,
     GITLAB_CERN_REGISTRY_PREFIX,
+    ERROR_MESSAGES,
 )
 from reana_client.printer import display_message
 
 
-def validate_environment(reana_yaml, pull=False):
+def validate_environment(reana_yaml, pull=False, access_token=None):
     """Validate environments in REANA specification file according to workflow type.
 
     :param reana_yaml: Dictionary which represents REANA specification file.
@@ -43,17 +43,23 @@ def validate_environment(reana_yaml, pull=False):
         workflow_type = workflow["type"]
         if workflow_type == "serial":
             workflow_steps = workflow["specification"]["steps"]
-            return EnvironmentValidatorSerial(workflow_steps=workflow_steps, pull=pull)
+            return EnvironmentValidatorSerial(
+                workflow_steps=workflow_steps, pull=pull, access_token=access_token
+            )
         if workflow_type == "yadage":
             workflow_steps = workflow["specification"]["stages"]
-            return EnvironmentValidatorYadage(workflow_steps=workflow_steps, pull=pull)
+            return EnvironmentValidatorYadage(
+                workflow_steps=workflow_steps, pull=pull, access_token=access_token
+            )
         if workflow_type == "cwl":
             workflow_steps = workflow.get("specification", {}).get("$graph", workflow)
-            return EnvironmentValidatorCWL(workflow_steps=workflow_steps, pull=pull)
+            return EnvironmentValidatorCWL(
+                workflow_steps=workflow_steps, pull=pull, access_token=access_token
+            )
         if workflow_type == "snakemake":
             workflow_steps = workflow["specification"]["steps"]
             return EnvironmentValidatorSnakemake(
-                workflow_steps=workflow_steps, pull=pull
+                workflow_steps=workflow_steps, pull=pull, access_token=access_token
             )
 
     workflow = reana_yaml["workflow"]
@@ -65,7 +71,7 @@ def validate_environment(reana_yaml, pull=False):
 class EnvironmentValidatorBase:
     """REANA workflow environments validation base class."""
 
-    def __init__(self, workflow_steps=None, pull=False):
+    def __init__(self, workflow_steps=None, pull=False, access_token=None):
         """Validate environments in REANA workflow.
 
         :param workflow_steps: List of dictionaries which represents different steps involved in workflow.
@@ -73,8 +79,10 @@ class EnvironmentValidatorBase:
         """
         self.workflow_steps = workflow_steps
         self.pull = pull
+        self.access_token = access_token
         self.validated_images = set()
         self.messages = []
+        self._vetting_config = None  # cached (vetting_enabled, allowlist); False = skip
 
     def validate(self):
         """Validate REANA workflow environments."""
@@ -98,15 +106,63 @@ class EnvironmentValidatorBase:
                 indented=True,
             )
 
+    def check_image_authorized(self, image):
+        """Checks if an image is authorized for use in workflows.
+
+        :param image: Full image name with tag.
+        """
+        if self._vetting_config is False:
+            return  # There was no token or fetch error, skip
+
+        if not self.access_token:
+            self.messages.append(
+                {
+                    "type": "warning",
+                    "message": f'No access token provided - skipping container image authorisation check. {ERROR_MESSAGES["missing_access_token"]}',
+                }
+            )
+            self._vetting_config = False
+            return
+
+        if self._vetting_config is None:
+            # Vetting config has not been cached yet - fetch and cache
+            try:
+                from reana_client.api.client import info
+
+                cluster_info = info(self.access_token)
+                vetting = cluster_info.get("vetted_container_images_enabled")
+                allowlist = cluster_info.get("vetted_container_images_allowlist")
+                if vetting is None or allowlist is None:
+                    # Server predates vetting support (skip the image vetting check)
+                    self._vetting_config = False
+                    return
+                self._vetting_config = (vetting["value"], allowlist["value"])
+            except Exception as e:
+                self.messages.append(
+                    {
+                        "type": "warning",
+                        "message": f"Could not check if container images are authorised. Is the cluster running properly? Error: {e}",
+                    }
+                )
+                self._vetting_config = False
+                return
+
+        # Validate image against allowlist
+        vetting_enabled, allowlist = self._vetting_config
+        if vetting_enabled and image not in allowlist:
+            raise EnvironmentValidationError(
+                f"Environment image is not allowed: {image}"
+            )
+
     def _validate_environment_image(self, image, kubernetes_uid=None):
         """Validate image environment.
 
         :param image: Full image name with tag if specified.
         :param kubernetes_uid: Kubernetes UID defined in workflow spec.
         """
-
         if image not in self.validated_images:
             image_name, image_tag = self._validate_image_tag(image)
+            self.check_image_authorized(image)
             exists_locally, _ = self._image_exists(image_name, image_tag)
             if exists_locally or self.pull:
                 uid, gids = self._get_image_uid_gids(image_name, image_tag)
@@ -415,18 +471,9 @@ class EnvironmentValidatorYadage(EnvironmentValidatorBase):
 
     def _extract_steps_environments(self):
         """Extract environments yadage workflow steps."""
+        from reana_commons.validation.images import iter_yadage_environments
 
-        def traverse_yadage_workflow(stages):
-            environments = []
-            for stage in stages:
-                if "workflow" in stage["scheduler"]:
-                    nested_stages = stage["scheduler"]["workflow"].get("stages", {})
-                    environments += traverse_yadage_workflow(nested_stages)
-                else:
-                    environments.append(stage["scheduler"]["step"]["environment"])
-            return environments
-
-        return traverse_yadage_workflow(self.workflow_steps)
+        return list(iter_yadage_environments(self.workflow_steps))
 
     def validate_environment(self):
         """Validate environments in REANA yadage workflow."""
@@ -467,21 +514,10 @@ class EnvironmentValidatorCWL(EnvironmentValidatorBase):
 
     def validate_environment(self):
         """Validate environments in REANA CWL workflow."""
+        from reana_commons.validation.images import extract_cwl_images
 
-        def _validate_workflow_environment(workflow_steps):
-            """Validate environments in REANA CWL workflow steps."""
-            requirements = workflow_steps.get("requirements", [])
-            images = list(filter(lambda req: "dockerPull" in req, requirements))
-
-            for image in images:
-                self._validate_environment_image(image["dockerPull"])
-
-        workflow = self.workflow_steps
-        if isinstance(workflow, dict):
-            _validate_workflow_environment(workflow)
-        elif isinstance(workflow, list):
-            for wf in workflow:
-                _validate_workflow_environment(wf)
+        for image in extract_cwl_images(self.workflow_steps):
+            self._validate_environment_image(image)
 
 
 class EnvironmentValidatorSnakemake(EnvironmentValidatorBase):
@@ -498,6 +534,6 @@ class EnvironmentValidatorSnakemake(EnvironmentValidatorBase):
                         "message": f"Environment image not specified, using {REANA_DEFAULT_SNAKEMAKE_ENV_IMAGE}.",
                     }
                 )
-                image = REANA_DEFAULT_SNAKEMAKE_ENV_IMAGE
+                continue
             kubernetes_uid = step.get("kubernetes_uid")
             self._validate_environment_image(image, kubernetes_uid=kubernetes_uid)

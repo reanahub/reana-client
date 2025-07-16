@@ -81,3 +81,107 @@ def test_image_exists_in_dockerhub(full_image, expected_url):
     with patch("requests.get", get_mock):
         assert validator._image_exists_in_dockerhub(image, tag)
         get_mock.assert_called_once_with(expected_url)
+
+
+@pytest.mark.parametrize(
+    "access_token, vetting_enabled, allowlist, image, expected_message_type, expected_message_content, should_raise",
+    [
+        # Test case 1: No access token provided
+        (
+            None,
+            True,
+            ["python:3.8"],
+            "python:3.8",
+            "warning",
+            "No access token provided",
+            False,
+        ),
+        # Test case 2: Vetting enabled, image in allowlist
+        (
+            "test_token",
+            True,
+            ["python:3.8", "ubuntu:20.04"],
+            "python:3.8",
+            None,
+            None,
+            False,
+        ),
+        # Test case 3: Vetting enabled, image not in allowlist
+        (
+            "test_token",
+            True,
+            ["python:3.8", "ubuntu:20.04"],
+            "nginx:latest",
+            None,
+            "Environment image is not allowed: nginx:latest",
+            True,
+        ),
+        # Test case 4: Vetting disabled, image not in allowlist (should pass)
+        ("test_token", False, ["python:3.8"], "nginx:latest", None, None, False),
+        # Test case 5: Vetting enabled, empty allowlist
+        (
+            "test_token",
+            True,
+            [],
+            "python:3.8",
+            None,
+            "Environment image is not allowed: python:3.8",
+            True,
+        ),
+    ],
+)
+def test_check_vetting(
+    access_token,
+    vetting_enabled,
+    allowlist,
+    image,
+    expected_message_type,
+    expected_message_content,
+    should_raise,
+):
+    """Test the check_vetting function with various scenarios."""
+    validator = EnvironmentValidatorSerial(access_token=access_token)
+
+    mock_cluster_info = {
+        "vetted_container_images_enabled": {"value": vetting_enabled},
+        "vetted_container_images_allowlist": {"value": allowlist},
+    }
+
+    def _invoke():
+        if access_token:
+            with patch("reana_client.api.client.info", return_value=mock_cluster_info):
+                validator.check_image_authorized(image)
+        else:
+            validator.check_image_authorized(image)
+
+    if should_raise:
+        with pytest.raises(EnvironmentValidationError) as exc_info:
+            _invoke()
+        assert expected_message_content in str(exc_info.value)
+    else:
+        _invoke()
+        if expected_message_type is None:
+            assert len(validator.messages) == 0
+        else:
+            assert len(validator.messages) == 1
+            message = validator.messages[0]
+            assert message["type"] == expected_message_type
+            assert expected_message_content in message["message"]
+
+
+def test_check_vetting_api_error():
+    """Test check_vetting function when API call fails."""
+    validator = EnvironmentValidatorSerial(access_token="test_token")
+
+    # Mock the info function to raise an exception
+    with patch(
+        "reana_client.api.client.info", side_effect=Exception("API connection failed")
+    ):
+        validator.check_image_authorized("python:3.8")
+
+    # Check that a warning message was added
+    assert len(validator.messages) == 1
+    message = validator.messages[0]
+    assert message["type"] == "warning"
+    assert "Could not check if container images are authorised" in message["message"]
+    assert "API connection failed" in message["message"]

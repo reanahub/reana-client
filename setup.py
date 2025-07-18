@@ -38,6 +38,7 @@ for key, reqs in extras_require.items():
     extras_require["all"].extend(reqs)
 
 install_requires = [
+    "authlib>=1.6.0",
     "click>=7",
     "pathspec==0.9.0",
     "jsonpointer>=2.0",

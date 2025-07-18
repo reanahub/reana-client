@@ -13,6 +13,7 @@ import sys
 import click
 from reana_client.cli import (
     files,
+    auth,
     ping,
     quotas,
     retention_rules,
@@ -54,6 +55,8 @@ class ReanaCLI(click.Group):
         retention_rules.retention_rules_group,
         secrets.secrets_group,
         test.test_group,
+        auth.auth_group,
+        workflow.workflow_list_jwt_group
     ]
 
     def __init__(self, name=None, commands=None, **attrs):

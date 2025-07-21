@@ -39,6 +39,7 @@ from reana_client.config import (
     RUN_STATUSES,
     TIMECHECK,
     CLI_LOGS_FOLLOW_DEFAULT_INTERVAL,
+    JSON,
 )
 from reana_client.printer import display_message
 from reana_client.utils import (
@@ -1562,21 +1563,18 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
     type=click.DateTime(formats=["%Y-%m-%d"]),
     help="Optional date when access to the workflow will expire for the given user(s) (format: YYYY-MM-DD).",
 )
+@click.option(
+    "--json",
+    "output_format",
+    flag_value="json",
+    default=None,
+    help="Get output in JSON format.",
+)
 @click.pass_context
 def workflow_share_add(
-    ctx, workflow, access_token, users, message, valid_until
+    ctx, workflow, access_token, users, message, valid_until, output_format
 ):  # noqa D412
-    """Share a workflow with other users (read-only).
-
-    The `share-add` command allows sharing a workflow with other users. The
-    users will be able to view the workflow but not modify it.
-
-    Examples:
-
-    \t $ reana-client share-add -w myanalysis.42 --user bob@example.org
-
-    \t $ reana-client share-add -w myanalysis.42 --user bob@example.org --user cecile@example.org --message "Please review my analysis" --valid-until 2025-12-31
-    """
+    """Share a workflow with other users (read-only)."""
     from reana_client.api.client import share_workflow
 
     share_errors = []
@@ -1600,14 +1598,24 @@ def workflow_share_add(
             share_errors.append(f"Failed to share {workflow} with {user}: {str(e)}")
             logging.debug(traceback.format_exc())
 
-    if shared_users:
+    if output_format == JSON:
+        result = {
+            "workflow": workflow,
+            "shared_with": shared_users,
+            "errors": share_errors,
+        }
         display_message(
-            f"{workflow} is now read-only shared with {', '.join(shared_users)}",
-            msg_type="success",
+            json.dumps(result, indent=2),
         )
+    else:
+        if shared_users:
+            display_message(
+                f"{workflow} is now read-only shared with {', '.join(shared_users)}",
+                msg_type="success",
+            )
 
-    for error in share_errors:
-        display_message(error, msg_type="error")
+        for error in share_errors:
+            display_message(error, msg_type="error")
 
     if share_errors:
         sys.exit(1)
@@ -1625,17 +1633,18 @@ def workflow_share_add(
     help="Users to unshare the workflow with.",
     required=True,
 )
+@click.option(
+    "--json",
+    "output_format",
+    flag_value="json",
+    default=None,
+    help="Get output in JSON format.",
+)
 @click.pass_context
-def share_workflow_remove(ctx, workflow, access_token, users):  # noqa D412
-    """Unshare a workflow.
-
-    The `share-remove` command allows for unsharing a workflow. The workflow
-    will no longer be visible to the users with whom it was shared.
-
-    Example:
-
-        $ reana-client share-remove -w myanalysis.42 --user bob@example.org
-    """
+def share_workflow_remove(
+    ctx, workflow, access_token, users, output_format
+):  # noqa D412
+    """Unshare a workflow."""
     from reana_client.api.client import unshare_workflow
 
     unshare_errors = []
@@ -1650,14 +1659,25 @@ def share_workflow_remove(ctx, workflow, access_token, users):  # noqa D412
             unshare_errors.append(f"Failed to unshare {workflow} with {user}: {str(e)}")
             logging.debug(traceback.format_exc())
 
-    if unshared_users:
+    if output_format == JSON:
+        result = {
+            "workflow": workflow,
+            "unshared_with": unshared_users,
+            "errors": unshare_errors,
+        }
         display_message(
-            f"{workflow} is no longer shared with {', '.join(unshared_users)}",
-            msg_type="success",
+            json.dumps(result, indent=2),
         )
-    if unshare_errors:
+    else:
+        if unshared_users:
+            display_message(
+                f"{workflow} is no longer shared with {', '.join(unshared_users)}",
+                msg_type="success",
+            )
         for error in unshare_errors:
             display_message(error, msg_type="error")
+
+    if unshare_errors:
         sys.exit(1)
 
 

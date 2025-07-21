@@ -1574,7 +1574,15 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
 def workflow_share_add(
     ctx, workflow, access_token, users, message, valid_until, output_format
 ):  # noqa D412
-    """Share a workflow with other users (read-only)."""
+    """Share a workflow with other users (read-only).
+
+    The `share-add` command allows sharing a workflow with other users. The
+    users will be able to view the workflow but not modify it.
+
+    Examples:\n
+    \t $ reana-client share-add -w myanalysis.42 --user bob@example.org\n
+    \t $ reana-client share-add -w myanalysis.42 --user bob@example.org --user cecile@example.org --message "Please review my analysis" --valid-until 2025-12-31
+    """
     from reana_client.api.client import share_workflow
 
     share_errors = []
@@ -1644,7 +1652,14 @@ def workflow_share_add(
 def share_workflow_remove(
     ctx, workflow, access_token, users, output_format
 ):  # noqa D412
-    """Unshare a workflow."""
+    """Unshare a workflow.
+
+    The `share-remove` command allows for unsharing a workflow. The workflow
+    will no longer be visible to the users with whom it was shared.
+
+    Example:\n
+    \t $ reana-client share-remove -w myanalysis.42 --user bob@example.org
+    """
     from reana_client.api.client import unshare_workflow
 
     unshare_errors = []

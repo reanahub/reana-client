@@ -1496,3 +1496,368 @@ def test_share_status_workflow():
             )
             assert result.exit_code == 0
             assert response["message"] in result.output
+
+
+# ---------------------------
+# share-add JSON output tests
+# ---------------------------
+
+
+def test_share_add_workflow_json_success():
+    """Test share-add --json outputs valid JSON on success."""
+    status_code = 200
+    response = {
+        "message": "is now read-only shared with",
+        "workflow_id": "string",
+        "workflow_name": "string",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response = Mock()
+    mock_http_response.status_code = status_code
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-add",
+                    "--json",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "bob@example.org",
+                ],
+            )
+            assert result.exit_code == 0
+            parsed = json.loads(result.output)
+            assert parsed["workflow"] == "test-workflow.1"
+            assert parsed["shared_with"] == ["bob@example.org"]
+            assert parsed["errors"] == []
+
+
+def test_share_add_workflow_json_all_fail():
+    """Test share-add --json outputs errors and exits 1 when all shares fail."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.share_workflow",
+            side_effect=Exception("User not found"),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-add",
+                    "--json",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "nobody@example.org",
+                ],
+            )
+            assert result.exit_code == 1
+            parsed = json.loads(result.output)
+            assert parsed["workflow"] == "test-workflow.1"
+            assert parsed["shared_with"] == []
+            assert len(parsed["errors"]) == 1
+            assert "nobody@example.org" in parsed["errors"][0]
+
+
+def test_share_add_workflow_json_partial_failure():
+    """Test share-add --json reports partial results and exits 1 on any error."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.share_workflow",
+            side_effect=[None, Exception("User not found")],
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-add",
+                    "--json",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "bob@example.org",
+                    "--user",
+                    "nobody@example.org",
+                ],
+            )
+            assert result.exit_code == 1
+            parsed = json.loads(result.output)
+            assert parsed["shared_with"] == ["bob@example.org"]
+            assert len(parsed["errors"]) == 1
+            assert "nobody@example.org" in parsed["errors"][0]
+
+
+# ------------------------------
+# share-remove JSON output tests
+# ------------------------------
+
+
+def test_share_remove_workflow_json_success():
+    """Test share-remove --json outputs valid JSON on success."""
+    status_code = 200
+    response = {
+        "message": "is no longer shared with",
+        "workflow_id": "string",
+        "workflow_name": "string",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response = Mock()
+    mock_http_response.status_code = status_code
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-remove",
+                    "--json",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "bob@example.org",
+                ],
+            )
+            assert result.exit_code == 0
+            parsed = json.loads(result.output)
+            assert parsed["workflow"] == "test-workflow.1"
+            assert parsed["unshared_with"] == ["bob@example.org"]
+            assert parsed["errors"] == []
+
+
+def test_share_remove_workflow_json_all_fail():
+    """Test share-remove --json outputs errors and exits 1 when all unshares fail."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.unshare_workflow",
+            side_effect=Exception("Workflow not shared with user"),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-remove",
+                    "--json",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "nobody@example.org",
+                ],
+            )
+            assert result.exit_code == 1
+            parsed = json.loads(result.output)
+            assert parsed["workflow"] == "test-workflow.1"
+            assert parsed["unshared_with"] == []
+            assert len(parsed["errors"]) == 1
+            assert "nobody@example.org" in parsed["errors"][0]
+
+
+def test_share_remove_workflow_json_partial_failure():
+    """Test share-remove --json reports partial results and exits 1 on any error."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.unshare_workflow",
+            side_effect=[None, Exception("Workflow not shared with user")],
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-remove",
+                    "--json",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "bob@example.org",
+                    "--user",
+                    "nobody@example.org",
+                ],
+            )
+            assert result.exit_code == 1
+            parsed = json.loads(result.output)
+            assert parsed["unshared_with"] == ["bob@example.org"]
+            assert len(parsed["errors"]) == 1
+            assert "nobody@example.org" in parsed["errors"][0]
+
+
+# ------------------------------
+# share-status JSON output tests
+# ------------------------------
+
+
+def test_share_status_workflow_json_success():
+    """Test share-status --json outputs a JSON array when workflow is shared."""
+    status_code = 200
+    response = {
+        "shared_with": [
+            {"user_email": "bob@example.org", "valid_until": "2025-12-31"},
+            {"user_email": "alice@example.org", "valid_until": None},
+        ]
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response = Mock()
+    mock_http_response.status_code = status_code
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-status",
+                    "--json",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                ],
+            )
+            assert result.exit_code == 0
+            parsed = json.loads(result.output)
+            assert isinstance(parsed, list)
+            assert len(parsed) == 2
+            by_email = {row["user_email"]: row for row in parsed}
+            assert by_email["bob@example.org"]["valid_until"] == "2025-12-31"
+            assert by_email["alice@example.org"]["valid_until"] is None
+
+
+def test_share_status_workflow_json_empty():
+    """Test share-status --json outputs valid JSON when workflow is not shared."""
+    status_code = 200
+    response = {
+        "message": "is not shared with anyone",
+        "workflow_id": "string",
+        "workflow_name": "string",
+    }
+    env = {"REANA_SERVER_URL": "localhost"}
+    mock_http_response = Mock()
+    mock_http_response.status_code = status_code
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-status",
+                    "--json",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                ],
+            )
+            assert result.exit_code == 0
+            parsed = json.loads(result.output)
+            assert parsed == []
+
+
+def test_share_status_workflow_error_exits_nonzero():
+    """Test share-status exits 1 when the API call fails."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.get_workflow_sharing_status",
+            side_effect=Exception("Workflow not found"),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-status",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "nonexistent-workflow.1",
+                ],
+            )
+            assert result.exit_code == 1
+
+
+def test_share_add_workflow_text_error_exits_nonzero():
+    """Test share-add exits 1 (text mode) when the API call fails."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.share_workflow",
+            side_effect=Exception("User not found"),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-add",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "nobody@example.org",
+                ],
+            )
+            assert result.exit_code == 1
+            assert "nobody@example.org" in result.output
+
+
+def test_share_remove_workflow_text_error_exits_nonzero():
+    """Test share-remove exits 1 (text mode) when the API call fails."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.unshare_workflow",
+            side_effect=Exception("Workflow not shared with user"),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "share-remove",
+                    "-t",
+                    reana_token,
+                    "--workflow",
+                    "test-workflow.1",
+                    "--user",
+                    "nobody@example.org",
+                ],
+            )
+            assert result.exit_code == 1
+            assert "nobody@example.org" in result.output

@@ -1726,18 +1726,22 @@ def share_workflow_status(
         display_message(
             f"Workflow {workflow} is not shared with anyone.", msg_type="info"
         )
+
+
 @click.group(help="Workflow jwt list all commands")
 def workflow_list_jwt_group():
     """List REANA workflows commands."""
     pass
 
+
 @workflow_list_jwt_group.command("list-all-jwt")
 def list_all_jwt_workflows():
     """
-    List all REANA workflows (main case only).
+    List all REANA workflows (main case only).....
     """
     # Load server URL and token
     server_url = os.environ.get("REANA_SERVER_URL")
+
     token_file = Path.home() / ".reana" / "access_token.json"
     try:
         token = token_file.read_text().strip()
@@ -1760,7 +1764,7 @@ def list_all_jwt_workflows():
         sys.exit(1)
 
     # Display each workflow name
-    if not  "items" not in workflows:
+    if not "items" not in workflows:
         display_message("No workflows created yet.", msg_type="info")
         sys.exit(0)
     for wf in workflows["items"]:

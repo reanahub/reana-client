@@ -56,7 +56,7 @@ class ReanaCLI(click.Group):
         secrets.secrets_group,
         test.test_group,
         auth.auth_group,
-        workflow.workflow_list_jwt_group
+        workflow.workflow_list_jwt_group,
     ]
 
     def __init__(self, name=None, commands=None, **attrs):

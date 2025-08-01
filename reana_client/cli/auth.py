@@ -24,6 +24,7 @@ SCOPE = "openid profile email"
 
 TOKEN_STORE = Path.home() / ".reana" / "access_token.json"
 
+
 @click.group()
 def auth_group():
     pass
@@ -31,10 +32,13 @@ def auth_group():
 
 @auth_group.command("auth")
 def auth():
-    resp = requests.post(DEVICE_AUTHORIZATION_ENDPOINT, data={
-        "client_id": CLIENT_ID,
-        "scope": SCOPE,
-    })
+    resp = requests.post(
+        DEVICE_AUTHORIZATION_ENDPOINT,
+        data={
+            "client_id": CLIENT_ID,
+            "scope": SCOPE,
+        },
+    )
     resp.raise_for_status()
     device = resp.json()
 
@@ -93,3 +97,13 @@ def auth():
 
     display_message("Authentication timed out.", msg_type="error")
     sys.exit(1)
+
+
+def get_jwt_parameter():
+    token_file = Path.home() / ".reana" / "access_token.json"
+    try:
+        return "Bearer " + token_file.read_text().strip()
+    except FileNotFoundError:
+        raise Exception(
+            "Access token file not found. Please run `reana-client auth` first."
+        )

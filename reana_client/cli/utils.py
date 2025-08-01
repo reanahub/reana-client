@@ -52,7 +52,7 @@ def _access_token_option_decorator(func: Callable, required: bool) -> Callable:
 
 
 add_access_token_options = functools.partial(
-    _access_token_option_decorator, required=True
+    _access_token_option_decorator, required=False
 )
 add_access_token_options_not_required = functools.partial(
     _access_token_option_decorator, required=False

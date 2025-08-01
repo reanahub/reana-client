@@ -38,10 +38,26 @@ def auth():
     resp.raise_for_status()
     device = resp.json()
 
-    uri = device.get("verification_uri_complete") or device["verification_uri"]
-    click.echo(f"\n1) Go to: {uri}")
-    click.echo(f"2) Enter code: {device['user_code']}")
-    click.echo("\nWaiting for you to authorize…\n")
+    uri_complete = device.get("verification_uri_complete")
+    uri_base = device.get("verification_uri") or uri_complete
+
+    click.echo()
+
+    # ---------- Option A: link + code ----------
+    click.echo("1) Go to:")
+    click.echo(uri_base)
+    click.echo("2) Enter this code:")
+    click.echo(device["user_code"])
+    click.echo()
+
+    # ---------- Option B: direct, one-click URL ----------
+    if uri_complete and uri_complete != uri_base:
+        click.echo("Or open this link directly:")
+        click.echo(uri_complete)
+        click.echo()
+
+    click.echo("Waiting for you to authorize…")
+    click.echo()
 
     expires_at = time.time() + device.get("expires_in", 600)
     interval = device.get("interval", 5)

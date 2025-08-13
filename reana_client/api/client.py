@@ -18,8 +18,6 @@ from urllib.parse import urljoin
 import requests
 from bravado.exception import HTTPError
 from reana_client.api.utils import get_content_disposition_filename
-from reana_client.cli.auth import get_jwt_parameter
-from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import is_regular_path, is_uuid_v4
 from reana_commons.api_client import get_current_api_client
@@ -1411,34 +1409,6 @@ def unshare_workflow(workflow, user_email_to_unshare_with, access_token):
         )
         raise Exception(e.response.json()["message"])
 
-def get_openid_configuration():
-    """Get OpenID configuration.
-
-    :return: a dictionary containing the OpenID configuration.
-    """
-    try:
-        (response, http_response) = current_rs_api_client.api.get_openid_configuration().result()
-        if http_response.status_code == 200:
-            return response
-        else:
-            raise Exception(
-                "Expected status code 200 but replied with "
-                "{status_code}".format(status_code=http_response.status_code)
-            )
-
-    except HTTPError as e:
-        logging.debug(
-            "OpenID configuration could not be retrieved: "
-            "\nStatus: {}\nReason: {}\n"
-            "Message: {}".format(
-                e.response.status_code, e.response.reason, e.response.json()["message"]
-            )
-        )
-        raise Exception(e.response.json()["message"])
-    except Exception as e:
-        raise e
-
-
 def get_workflow_sharing_status(workflow, access_token):
     """Get the share status of a workflow.
 
@@ -1473,3 +1443,30 @@ def get_workflow_sharing_status(workflow, access_token):
             f"Message: {e.response.json()['message']}"
         )
         raise Exception(e.response.json()["message"])
+
+def get_openid_configuration():
+    """Get OpenID configuration.
+
+    :return: a dictionary containing the OpenID configuration.
+    """
+    try:
+        (response, http_response) = current_rs_api_client.api.get_openid_configuration().result()
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(status_code=http_response.status_code)
+            )
+
+    except HTTPError as e:
+        logging.debug(
+            "OpenID configuration could not be retrieved: "
+            "\nStatus: {}\nReason: {}\n"
+            "Message: {}".format(
+                e.response.status_code, e.response.reason, e.response.json()["message"]
+            )
+        )
+        raise Exception(e.response.json()["message"])
+    except Exception as e:
+        raise e

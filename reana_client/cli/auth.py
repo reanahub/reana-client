@@ -6,14 +6,14 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client login command using Device Code Flow (OAuth2)."""
-
+import os
 import sys
 import time
-from pathlib import Path
 
 import click
 import requests
-from reana_client.printer import display_message
+from reana_client.config_utils import set_server_config
+from reana_client.api.client import get_openid_configuration
 
 @click.group()
 def auth_group():
@@ -22,8 +22,6 @@ def auth_group():
 
 @auth_group.command("auth")
 def auth():
-    from reana_client.api.client import get_openid_configuration
-
     openid_configuration = get_openid_configuration()
 
     resp = requests.post(
@@ -54,13 +52,8 @@ def auth():
         click.echo(uri_complete)
         click.echo()
 
-    click.echo("Waiting for you to authorize…")
-    click.echo()
-
-    expires_at = time.time() + device.get("expires_in", 600)
-    interval = device.get("interval", 5)
-
-    while time.time() < expires_at:
+    click.echo("Waiting for authentication...")
+    while True:
         token_resp = requests.post(
             openid_configuration["token_endpoint"],
             data={
@@ -72,31 +65,27 @@ def auth():
         )
 
         if token_resp.status_code == 200:
-            token = token_resp.json()
-            TOKEN_STORE.parent.mkdir(parents=True, exist_ok=True)
-            TOKEN_STORE.write_text(token["access_token"])
-            display_message("Login successful – token saved.", msg_type="success")
-            return
+            token_data = token_resp.json()
+            access_token = token_data["access_token"]
+            server_url = os.environ.get("REANA_SERVER_URL")
 
-        error = token_resp.json().get("error")
-        if error == "authorization_pending":
-            time.sleep(interval)
-            continue
-        if error == "slow_down":
-            time.sleep(interval + 5)
-            continue
+            set_server_config(server_url, access_token)
 
-        display_message(f"Authentication failed: {error}", msg_type="error")
-        sys.exit(1)
+            click.echo("Successfully authenticated!")
+            click.echo(f"Access token has been stored for {server_url}")
+            break
 
-    display_message("Authentication timed out.", msg_type="error")
-    sys.exit(1)
-
-def get_jwt_parameter():
-    token_file = Path.home() / ".reana" / "access_token.json"
-    try:
-        return "Bearer " + token_file.read_text().strip()
-    except FileNotFoundError:
-        raise Exception(
-            "Access token file not found. Please run `reana-client auth` first."
-        )
+        if token_resp.status_code == 400:
+            error = token_resp.json().get("error")
+            if error == "authorization_pending":
+                time.sleep(device.get("interval", 5))
+                continue
+            elif error == "expired_token":
+                click.echo("Authentication timed out. Please try again.")
+                sys.exit(1)
+            else:
+                click.echo(f"Authentication failed: {error}")
+                sys.exit(1)
+        else:
+            click.echo("Authentication failed. Please try again.")
+            sys.exit(1)

@@ -69,7 +69,7 @@ def auth():
             access_token = token_data["access_token"]
             server_url = os.environ.get("REANA_SERVER_URL")
 
-            set_server_config(server_url, access_token)
+            set_server_config(access_token)
 
             click.echo("Successfully authenticated!")
             click.echo(f"Access token has been stored for {server_url}")

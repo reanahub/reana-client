@@ -12,12 +12,12 @@ import logging
 import os
 import traceback
 from functools import partial
-from pathlib import Path
 from urllib.parse import urljoin
 
 import requests
 from bravado.exception import HTTPError
 from reana_client.api.utils import get_content_disposition_filename
+from reana_client.config_utils import get_current_server_access_token
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import is_regular_path, is_uuid_v4
 from reana_commons.api_client import get_current_api_client
@@ -1470,3 +1470,11 @@ def get_openid_configuration():
         raise Exception(e.response.json()["message"])
     except Exception as e:
         raise e
+
+def get_jwt_parameter():
+    try:
+        return "Bearer " + get_current_server_access_token()
+    except FileNotFoundError:
+        raise Exception(
+            "Access token file not found. Please run `reana-client auth` first."
+        )

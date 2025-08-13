@@ -14,10 +14,7 @@ from typing import Dict, Optional
 import jsonschema
 
 CONFIG_DIR = os.path.expanduser("~/.reana")
-"""Directory where REANA client configuration is stored."""
-
 CONFIG_FILE_PATH = os.path.join(CONFIG_DIR, "config.json")
-"""Path to the REANA client configuration file."""
 
 CONFIG_SCHEMA = {
     "type": "object",
@@ -28,21 +25,17 @@ CONFIG_SCHEMA = {
                 "^.*$": {
                     "type": "object",
                     "properties": {
-                        "access_token": {"type": "string"},
+                        "jwt_access_token": {"type": "string"},
                     },
-                    "required": ["access_token"]
+                    "required": ["jwt_access_token"]
                 }
             }
         }
     },
     "required": ["servers"]
 }
-"""JSON schema for the configuration file."""
 
-DEFAULT_CONFIG = {
-    "servers": {}
-}
-"""Default configuration structure."""
+DEFAULT_CONFIG = {"servers": {}}
 
 
 def ensure_config_dir_exists() -> None:
@@ -52,11 +45,7 @@ def ensure_config_dir_exists() -> None:
 
 
 def load_config() -> dict:
-    """Load configuration from file.
-
-    Returns:
-        dict: Configuration dictionary.
-    """
+    """Load configuration from file."""
     ensure_config_dir_exists()
     if not os.path.exists(CONFIG_FILE_PATH):
         return DEFAULT_CONFIG.copy()
@@ -71,64 +60,49 @@ def load_config() -> dict:
 
 
 def save_config(config: dict) -> None:
-    """Save configuration to file.
-
-    Args:
-        config (dict): Configuration to save.
-    """
+    """Save configuration to file."""
     ensure_config_dir_exists()
     jsonschema.validate(instance=config, schema=CONFIG_SCHEMA)
     with open(CONFIG_FILE_PATH, 'w') as f:
         json.dump(config, f, indent=2)
 
 
-def get_server_config(server_url: str) -> Optional[Dict]:
-    """Get configuration for a specific server.
+def get_current_server_url() -> Optional[str]:
+    """Get the current REANA server URL from environment variables."""
+    return os.environ.get("REANA_SERVER_URL")
 
-    Args:
-        server_url (str): URL of the REANA server.
 
-    Returns:
-        Optional[Dict]: Server configuration if exists, None otherwise.
-    """
+def get_server_config() -> Optional[Dict]:
+    """Get configuration for the current server."""
+    server_url = get_current_server_url()
+    if not server_url:
+        return None
     config = load_config()
     return config["servers"].get(server_url)
 
 
-def set_server_config(server_url: str, access_token: str) -> None:
-    """Set or update configuration for a specific server.
-
-    Args:
-        server_url (str): URL of the REANA server.
-        access_token (str): Access token for the server.
-    """
+def set_server_config(jwt_access_token: str) -> None:
+    """Set or update configuration for the current server."""
+    server_url = get_current_server_url()
+    if not server_url:
+        raise ValueError("REANA_SERVER_URL environment variable is not set.")
     config = load_config()
-    config["servers"][server_url] = {
-        "access_token": access_token,
-    }
+    config["servers"][server_url] = {"jwt_access_token": jwt_access_token}
     save_config(config)
 
 
-def remove_server_config(server_url: str) -> None:
-    """Remove configuration for a specific server.
-
-    Args:
-        server_url (str): URL of the REANA server.
-    """
+def remove_server_config() -> None:
+    """Remove configuration for the current server."""
+    server_url = get_current_server_url()
+    if not server_url:
+        raise ValueError("REANA_SERVER_URL environment variable is not set.")
     config = load_config()
     if server_url in config["servers"]:
         del config["servers"][server_url]
         save_config(config)
 
 
-def get_current_server_access_token(server_url: str) -> Optional[str]:
-    """Get access token for a specific server.
-
-    Args:
-        server_url (str): URL of the REANA server.
-
-    Returns:
-        Optional[str]: Access token if exists, None otherwise.
-    """
-    server_config = get_server_config(server_url)
-    return server_config["access_token"] if server_config else None
+def get_current_server_access_token() -> Optional[str]:
+    """Get access token for the current server."""
+    server_config = get_server_config()
+    return server_config["jwt_access_token"] if server_config else None

@@ -523,3 +523,10 @@ def follow_workflow_logs(
             return
         previous_logs = logs
         time.sleep(interval)
+
+""" Auth utils """
+def get_token_path():
+    """Return path to the access token file."""
+    from pathlib import Path
+
+    return Path.home() / ".reana" / "config.json"

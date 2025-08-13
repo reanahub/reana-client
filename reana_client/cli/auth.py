@@ -7,7 +7,6 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client login command using Device Code Flow (OAuth2)."""
 
-
 import sys
 import time
 from pathlib import Path
@@ -16,15 +15,6 @@ import click
 import requests
 from reana_client.printer import display_message
 
-# IdP configuration
-DEVICE_AUTHORIZATION_ENDPOINT = "https://iam-escape.cloud.cnaf.infn.it/devicecode"
-TOKEN_ENDPOINT = "https://iam-escape.cloud.cnaf.infn.it/token"
-CLIENT_ID = "f671a136-8e92-45e5-83bd-05af1942e396"
-SCOPE = "openid profile email"
-
-TOKEN_STORE = Path.home() / ".reana" / "access_token.json"
-
-
 @click.group()
 def auth_group():
     pass
@@ -32,11 +22,15 @@ def auth_group():
 
 @auth_group.command("auth")
 def auth():
+    from reana_client.api.client import get_openid_configuration
+
+    openid_configuration = get_openid_configuration()
+
     resp = requests.post(
-        DEVICE_AUTHORIZATION_ENDPOINT,
+        openid_configuration["device_authorization_endpoint"],
         data={
-            "client_id": CLIENT_ID,
-            "scope": SCOPE,
+            "client_id": openid_configuration["reana_client_id"],
+            "scope": "openid profile email",
         },
     )
     resp.raise_for_status()
@@ -68,11 +62,11 @@ def auth():
 
     while time.time() < expires_at:
         token_resp = requests.post(
-            TOKEN_ENDPOINT,
+            openid_configuration["token_endpoint"],
             data={
                 "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
                 "device_code": device["device_code"],
-                "client_id": CLIENT_ID,
+                "client_id": openid_configuration["reana_client_id"],
             },
             headers={"Accept": "application/json"},
         )
@@ -97,7 +91,6 @@ def auth():
 
     display_message("Authentication timed out.", msg_type="error")
     sys.exit(1)
-
 
 def get_jwt_parameter():
     token_file = Path.home() / ".reana" / "access_token.json"

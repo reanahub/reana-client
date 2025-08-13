@@ -83,3 +83,4 @@ CLI_LOGS_FOLLOW_MIN_INTERVAL = 1
 
 CLI_LOGS_FOLLOW_DEFAULT_INTERVAL = 10
 """Default interval between log requests in seconds."""
+

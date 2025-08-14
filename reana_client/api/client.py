@@ -1478,6 +1478,7 @@ def get_openid_configuration():
 
 
 def get_jwt_parameter():
+    """Get JWT parameter for authentication with Bearer token prefix."""
     try:
         return "Bearer " + get_current_server_access_token()
     except FileNotFoundError:

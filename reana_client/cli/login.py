@@ -18,11 +18,13 @@ from reana_client.api.client import get_openid_configuration
 
 @click.group()
 def login_group():
+    """Login command group for REANA authentication."""
     pass
 
 
 @login_group.command("login")
 def login():
+    """Login to REANA using Device Code Flow (OAuth2)."""
     try:
         openid_configuration = get_openid_configuration()
     except Exception as e:

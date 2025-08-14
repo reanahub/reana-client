@@ -12,19 +12,36 @@ import time
 
 import click
 import requests
+
+from reana_client.cli.utils import check_connection
 from reana_client.config_utils import set_server_config
 from reana_client.api.client import get_openid_configuration
 
 
-@click.group()
+@click.group(help="REANA login commands")
 def login_group():
     """Login command group for REANA authentication."""
     pass
 
 
 @login_group.command("login")
+@check_connection
 def login():
-    """Login to REANA using Device Code Flow (OAuth2)."""
+    r"""
+    Login to REANA using Device Code Flow (OAuth2).
+
+    The ``login`` command authenticates users with REANA using the OAuth2 Device Code Flow.
+    This authentication method allows users to authenticate using a web browser on any device,
+    making it suitable for headless environments and remote access scenarios.
+
+    The command will:
+    1. Request a device code from the REANA server
+    2. Display a verification URL and user code
+    3. Wait for the user to complete authentication in their browser
+    4. Store the access token for future use
+
+    The REANA_SERVER_URL environment variable must be set before running this command.
+    """
     try:
         openid_configuration = get_openid_configuration()
     except Exception as e:

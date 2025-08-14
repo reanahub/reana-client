@@ -22,17 +22,25 @@ def login_group():
 
 @login_group.command("login")
 def login():
-    openid_configuration = get_openid_configuration()
+    try:
+        openid_configuration = get_openid_configuration()
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
-    resp = requests.post(
-        openid_configuration["device_authorization_endpoint"],
-        data={
-            "client_id": openid_configuration["reana_client_id"],
-            "scope": "openid profile email",
-        },
-    )
-    resp.raise_for_status()
-    device = resp.json()
+    try:
+        resp = requests.post(
+            openid_configuration["device_authorization_endpoint"],
+            data={
+                "client_id": openid_configuration["reana_client_id"],
+                "scope": "openid profile email",
+            },
+        )
+        resp.raise_for_status()
+        device = resp.json()
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
     uri_complete = device.get("verification_uri_complete")
     uri_base = device.get("verification_uri") or uri_complete

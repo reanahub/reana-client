@@ -8,10 +8,8 @@
 
 """REANA client login tests."""
 
-import json
 from unittest.mock import Mock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from reana_client.cli import cli
@@ -19,11 +17,12 @@ from reana_client.cli import cli
 
 def test_login_config_not_available():
     """Test login when OpenID configuration is not available."""
-    runner = CliRunner()
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
 
     mock_get_config = Mock(side_effect=Exception("Configuration not available"))
 
-    with patch("reana_client.api.client.get_openid_configuration", mock_get_config):
+    with patch("reana_client.cli.login.get_openid_configuration", mock_get_config):
         result = runner.invoke(cli, ["login"])
 
         assert result.exit_code == 1
@@ -32,7 +31,8 @@ def test_login_config_not_available():
 
 def test_login_device_authorization_failed():
     """Test login when device authorization request fails."""
-    runner = CliRunner()
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
 
     mock_config = {
         "device_authorization_endpoint": "https://auth.example.com/device",
@@ -42,8 +42,8 @@ def test_login_device_authorization_failed():
     mock_response = Mock()
     mock_response.raise_for_status.side_effect = Exception("Authorization failed")
 
-    with patch("reana_client.api.client.get_openid_configuration", return_value=mock_config), \
-            patch("requests.post", return_value=mock_response):
+    with patch("reana_client.cli.login.get_openid_configuration", return_value=mock_config), \
+            patch("reana_client.cli.login.requests.post", return_value=mock_response):
         result = runner.invoke(cli, ["login"])
 
         assert result.exit_code == 1
@@ -52,7 +52,8 @@ def test_login_device_authorization_failed():
 
 def test_login_token_request_expired():
     """Test login when token request returns expired token error."""
-    runner = CliRunner()
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
 
     mock_config = {
         "device_authorization_endpoint": "https://auth.example.com/device",
@@ -73,8 +74,8 @@ def test_login_token_request_expired():
     token_response.status_code = 400
     token_response.json = Mock(return_value={"error": "expired_token"})
 
-    with patch("reana_client.api.client.get_openid_configuration", return_value=mock_config), \
-            patch("requests.post") as mock_post:
+    with patch("reana_client.cli.login.get_openid_configuration", return_value=mock_config), \
+            patch("reana_client.cli.login.requests.post") as mock_post:
         mock_post.side_effect = [device_response, token_response]
         result = runner.invoke(cli, ["login"])
 
@@ -84,7 +85,8 @@ def test_login_token_request_expired():
 
 def test_login_token_request_other_error():
     """Test login when token request returns other error."""
-    runner = CliRunner()
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
 
     mock_config = {
         "device_authorization_endpoint": "https://auth.example.com/device",
@@ -105,8 +107,8 @@ def test_login_token_request_other_error():
     token_response.status_code = 400
     token_response.json = Mock(return_value={"error": "invalid_grant"})
 
-    with patch("reana_client.api.client.get_openid_configuration", return_value=mock_config), \
-            patch("requests.post") as mock_post:
+    with patch("reana_client.cli.login.get_openid_configuration", return_value=mock_config), \
+            patch("reana_client.cli.login.requests.post") as mock_post:
         mock_post.side_effect = [device_response, token_response]
         result = runner.invoke(cli, ["login"])
 
@@ -116,7 +118,7 @@ def test_login_token_request_other_error():
 
 def test_login_successful():
     """Test successful login flow."""
-    env = {"REANA_SERVER_URL": "https://reana.example.org"}
+    env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
 
     mock_config = {
@@ -139,13 +141,14 @@ def test_login_successful():
     token_response.status_code = 200
     token_response.json = Mock(return_value={"access_token": "access_token_123"})
 
-    with patch("reana_client.api.client.get_openid_configuration", return_value=mock_config), \
-            patch("requests.post") as mock_post, \
-            patch("reana_client.config_utils.set_server_config") as mock_set_config:
+    with patch("reana_client.cli.login.get_openid_configuration", return_value=mock_config), \
+            patch("reana_client.cli.login.requests.post") as mock_post, \
+            patch("reana_client.cli.login.set_server_config") as mock_set_config:
         mock_post.side_effect = [device_response, token_response]
         result = runner.invoke(cli, ["login"])
 
         mock_set_config.assert_called_once_with("access_token_123")
         assert result.exit_code == 0
         assert "Successfully authenticated" in result.output
-        assert "https://reana.example.org" in result.output
+        assert "localhost" in result.output
+

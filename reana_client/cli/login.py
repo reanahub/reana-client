@@ -16,12 +16,12 @@ from reana_client.config_utils import set_server_config
 from reana_client.api.client import get_openid_configuration
 
 @click.group()
-def auth_group():
+def login_group():
     pass
 
 
-@auth_group.command("auth")
-def auth():
+@login_group.command("login")
+def login():
     openid_configuration = get_openid_configuration()
 
     resp = requests.post(

@@ -27,12 +27,12 @@ CONFIG_SCHEMA = {
                     "properties": {
                         "jwt_access_token": {"type": "string"},
                     },
-                    "required": ["jwt_access_token"]
+                    "required": ["jwt_access_token"],
                 }
-            }
+            },
         }
     },
-    "required": ["servers"]
+    "required": ["servers"],
 }
 
 DEFAULT_CONFIG = {"servers": {}}
@@ -51,7 +51,7 @@ def load_config() -> dict:
         return DEFAULT_CONFIG.copy()
 
     try:
-        with open(CONFIG_FILE_PATH, 'r') as f:
+        with open(CONFIG_FILE_PATH, "r") as f:
             config = json.load(f)
             jsonschema.validate(instance=config, schema=CONFIG_SCHEMA)
             return config
@@ -63,7 +63,7 @@ def save_config(config: dict) -> None:
     """Save configuration to file."""
     ensure_config_dir_exists()
     jsonschema.validate(instance=config, schema=CONFIG_SCHEMA)
-    with open(CONFIG_FILE_PATH, 'w') as f:
+    with open(CONFIG_FILE_PATH, "w") as f:
         json.dump(config, f, indent=2)
 
 

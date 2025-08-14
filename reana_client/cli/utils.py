@@ -524,7 +524,10 @@ def follow_workflow_logs(
         previous_logs = logs
         time.sleep(interval)
 
+
 """ Auth utils """
+
+
 def get_token_path():
     """Return path to the access token file."""
     from pathlib import Path

@@ -315,9 +315,9 @@ def create_workflow_from_json(
             reana_yaml["outputs"] = outputs
         if workflow_file:
             reana_yaml["workflow"]["file"] = workflow_file
-            reana_yaml["workflow"]["specification"] = (
-                load_workflow_spec_from_reana_yaml(reana_yaml, workspace_path)
-            )
+            reana_yaml["workflow"][
+                "specification"
+            ] = load_workflow_spec_from_reana_yaml(reana_yaml, workspace_path)
         else:
             reana_yaml["workflow"]["specification"] = workflow_json
         # The function below loads the input parameters into the reana_yaml dictionary
@@ -1409,6 +1409,7 @@ def unshare_workflow(workflow, user_email_to_unshare_with, access_token):
         )
         raise Exception(e.response.json()["message"])
 
+
 def get_workflow_sharing_status(workflow, access_token):
     """Get the share status of a workflow.
 
@@ -1444,13 +1445,17 @@ def get_workflow_sharing_status(workflow, access_token):
         )
         raise Exception(e.response.json()["message"])
 
+
 def get_openid_configuration():
     """Get OpenID configuration.
 
     :return: a dictionary containing the OpenID configuration.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.get_openid_configuration().result()
+        (
+            response,
+            http_response,
+        ) = current_rs_api_client.api.get_openid_configuration().result()
         if http_response.status_code == 200:
             return response
         else:
@@ -1470,6 +1475,7 @@ def get_openid_configuration():
         raise Exception(e.response.json()["message"])
     except Exception as e:
         raise e
+
 
 def get_jwt_parameter():
     try:

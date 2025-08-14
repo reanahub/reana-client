@@ -36,14 +36,15 @@ def test_login_device_authorization_failed():
 
     mock_config = {
         "device_authorization_endpoint": "https://auth.example.com/device",
-        "reana_client_id": "client-id"
+        "reana_client_id": "client-id",
     }
 
     mock_response = Mock()
     mock_response.raise_for_status.side_effect = Exception("Authorization failed")
 
-    with patch("reana_client.cli.login.get_openid_configuration", return_value=mock_config), \
-            patch("reana_client.cli.login.requests.post", return_value=mock_response):
+    with patch(
+        "reana_client.cli.login.get_openid_configuration", return_value=mock_config
+    ), patch("reana_client.cli.login.requests.post", return_value=mock_response):
         result = runner.invoke(cli, ["login"])
 
         assert result.exit_code == 1
@@ -58,24 +59,27 @@ def test_login_token_request_expired():
     mock_config = {
         "device_authorization_endpoint": "https://auth.example.com/device",
         "token_endpoint": "https://auth.example.com/token",
-        "reana_client_id": "client-id"
+        "reana_client_id": "client-id",
     }
 
     device_response = Mock()
     device_response.raise_for_status = Mock()
-    device_response.json = Mock(return_value={
-        "device_code": "device_code_123",
-        "user_code": "USER123",
-        "verification_uri": "https://auth.example.com/verify",
-        "interval": 1
-    })
+    device_response.json = Mock(
+        return_value={
+            "device_code": "device_code_123",
+            "user_code": "USER123",
+            "verification_uri": "https://auth.example.com/verify",
+            "interval": 1,
+        }
+    )
 
     token_response = Mock()
     token_response.status_code = 400
     token_response.json = Mock(return_value={"error": "expired_token"})
 
-    with patch("reana_client.cli.login.get_openid_configuration", return_value=mock_config), \
-            patch("reana_client.cli.login.requests.post") as mock_post:
+    with patch(
+        "reana_client.cli.login.get_openid_configuration", return_value=mock_config
+    ), patch("reana_client.cli.login.requests.post") as mock_post:
         mock_post.side_effect = [device_response, token_response]
         result = runner.invoke(cli, ["login"])
 
@@ -91,24 +95,27 @@ def test_login_token_request_other_error():
     mock_config = {
         "device_authorization_endpoint": "https://auth.example.com/device",
         "token_endpoint": "https://auth.example.com/token",
-        "reana_client_id": "client-id"
+        "reana_client_id": "client-id",
     }
 
     device_response = Mock()
     device_response.raise_for_status = Mock()
-    device_response.json = Mock(return_value={
-        "device_code": "device_code_123",
-        "user_code": "USER123",
-        "verification_uri": "https://auth.example.com/verify",
-        "interval": 1
-    })
+    device_response.json = Mock(
+        return_value={
+            "device_code": "device_code_123",
+            "user_code": "USER123",
+            "verification_uri": "https://auth.example.com/verify",
+            "interval": 1,
+        }
+    )
 
     token_response = Mock()
     token_response.status_code = 400
     token_response.json = Mock(return_value={"error": "invalid_grant"})
 
-    with patch("reana_client.cli.login.get_openid_configuration", return_value=mock_config), \
-            patch("reana_client.cli.login.requests.post") as mock_post:
+    with patch(
+        "reana_client.cli.login.get_openid_configuration", return_value=mock_config
+    ), patch("reana_client.cli.login.requests.post") as mock_post:
         mock_post.side_effect = [device_response, token_response]
         result = runner.invoke(cli, ["login"])
 
@@ -124,26 +131,30 @@ def test_login_successful():
     mock_config = {
         "device_authorization_endpoint": "https://auth.example.com/device",
         "token_endpoint": "https://auth.example.com/token",
-        "reana_client_id": "client-id"
+        "reana_client_id": "client-id",
     }
 
     device_response = Mock()
     device_response.raise_for_status = Mock()
-    device_response.json = Mock(return_value={
-        "device_code": "device_code_123",
-        "user_code": "USER123",
-        "verification_uri": "https://auth.example.com/verify",
-        "verification_uri_complete": "https://auth.example.com/verify?code=USER123",
-        "interval": 1
-    })
+    device_response.json = Mock(
+        return_value={
+            "device_code": "device_code_123",
+            "user_code": "USER123",
+            "verification_uri": "https://auth.example.com/verify",
+            "verification_uri_complete": "https://auth.example.com/verify?code=USER123",
+            "interval": 1,
+        }
+    )
 
     token_response = Mock()
     token_response.status_code = 200
     token_response.json = Mock(return_value={"access_token": "access_token_123"})
 
-    with patch("reana_client.cli.login.get_openid_configuration", return_value=mock_config), \
-            patch("reana_client.cli.login.requests.post") as mock_post, \
-            patch("reana_client.cli.login.set_server_config") as mock_set_config:
+    with patch(
+        "reana_client.cli.login.get_openid_configuration", return_value=mock_config
+    ), patch("reana_client.cli.login.requests.post") as mock_post, patch(
+        "reana_client.cli.login.set_server_config"
+    ) as mock_set_config:
         mock_post.side_effect = [device_response, token_response]
         result = runner.invoke(cli, ["login"])
 
@@ -151,4 +162,3 @@ def test_login_successful():
         assert result.exit_code == 0
         assert "Successfully authenticated" in result.output
         assert "localhost" in result.output
-

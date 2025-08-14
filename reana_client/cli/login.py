@@ -15,6 +15,7 @@ import requests
 from reana_client.config_utils import set_server_config
 from reana_client.api.client import get_openid_configuration
 
+
 @click.group()
 def login_group():
     pass

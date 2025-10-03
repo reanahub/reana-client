@@ -26,8 +26,8 @@ extras_require = {
         "sphinx-click>=1.0.4",
     ],
     "tests": [
-        "pytest-reana>=0.95.0a4,<0.96.0",
-        "reana-commons[kubernetes]>=0.95.0a6,<0.96.0",
+        "pytest-reana>=0.95.0a5,<0.96.0",
+        "reana-commons[kubernetes]>=0.95.0a10,<0.96.0",
     ],
 }
 
@@ -92,6 +92,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python",
         "Topic :: Internet :: WWW/HTTP :: Dynamic Content",

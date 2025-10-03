@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -189,7 +189,7 @@ jobs:
     strategy:
       matrix:
         testenv: [lowest, release]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
 
@@ -197,6 +197,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true # Required for Python 3.14
 
       - name: Setup requirements builder
         run: |

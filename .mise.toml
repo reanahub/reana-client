@@ -5,4 +5,4 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 
 [tools]
-python = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14-dev"]
+python = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]

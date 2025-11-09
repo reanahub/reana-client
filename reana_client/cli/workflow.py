@@ -13,8 +13,10 @@ import os
 import sys
 import time
 import traceback
+from pathlib import Path
 
 import click
+import requests
 import yaml
 from jsonschema.exceptions import ValidationError
 from reana_client.cli.files import get_files, upload_files

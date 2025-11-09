@@ -17,7 +17,7 @@ from urllib.parse import urljoin
 import requests
 from bravado.exception import HTTPError
 from reana_client.api.utils import get_content_disposition_filename
-from reana_client.config import ERROR_MESSAGES
+from reana_client.config_utils import get_current_server_access_token
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import is_regular_path, is_uuid_v4
 from reana_commons.api_client import get_current_api_client
@@ -46,7 +46,8 @@ def ping(access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_you(
-            access_token=access_token
+            access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             response["status"] = "Connected"
@@ -82,7 +83,8 @@ def get_user_quota(access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_you(
-            access_token=access_token
+            access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response["quota"]
@@ -157,6 +159,7 @@ def get_workflows(
             shared=shared,
             shared_by=shared_by,
             shared_with=shared_with,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response.get("items")
@@ -230,6 +233,7 @@ def create_workflow(reana_specification, name, access_token):
             ),
             workflow_name=name,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 201:
             return response
@@ -292,8 +296,8 @@ def create_workflow_from_json(
     validate_workflow_name(name)
     if is_uuid_v4(name):
         raise ValueError("Workflow name cannot be a valid UUIDv4")
-    if not access_token:
-        raise Exception(ERROR_MESSAGES["missing_access_token"])
+    # if not access_token:
+    #     raise Exception(ERROR_MESSAGES["missing_access_token"])
     if os.environ.get("REANA_SERVER_URL") is None:
         raise Exception("Environment variable REANA_SERVER_URL is not set")
     workflow_engine = workflow_engine.lower()
@@ -311,9 +315,9 @@ def create_workflow_from_json(
             reana_yaml["outputs"] = outputs
         if workflow_file:
             reana_yaml["workflow"]["file"] = workflow_file
-            reana_yaml["workflow"]["specification"] = (
-                load_workflow_spec_from_reana_yaml(reana_yaml, workspace_path)
-            )
+            reana_yaml["workflow"][
+                "specification"
+            ] = load_workflow_spec_from_reana_yaml(reana_yaml, workspace_path)
         else:
             reana_yaml["workflow"]["specification"] = workflow_json
         # The function below loads the input parameters into the reana_yaml dictionary
@@ -329,6 +333,7 @@ def create_workflow_from_json(
             reana_specification=json.loads(json.dumps(reana_yaml, sort_keys=True)),
             workflow_name=name,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 201:
             return response
@@ -368,6 +373,7 @@ def start_workflow(workflow, access_token, parameters):
             workflow_id_or_name=workflow,
             access_token=access_token,
             parameters=parameters,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -405,7 +411,8 @@ def upload_file(workflow, file_, file_name, access_token):
 
     try:
         endpoint = current_rs_api_client.api.upload_file.operation.path_name.format(
-            workflow_id_or_name=workflow
+            workflow_id_or_name=workflow,
+            Authorization=get_jwt_parameter(),
         )
         http_response = requests.post(
             urljoin(get_api_url(), endpoint),
@@ -454,6 +461,7 @@ def get_workflow_logs(workflow, access_token, steps=None, page=None, size=None):
             access_token=access_token,
             page=page,
             size=size,
+            Authorization=get_jwt_parameter(),
         ).result()
 
         if http_response.status_code == 200:
@@ -492,7 +500,9 @@ def download_file(workflow, file_name, access_token):
 
         logging.getLogger("urllib3").setLevel(logging.CRITICAL)
         endpoint = current_rs_api_client.api.download_file.operation.path_name.format(
-            workflow_id_or_name=workflow, file_name=file_name
+            workflow_id_or_name=workflow,
+            file_name=file_name,
+            Authorization=get_jwt_parameter(),
         )
         http_response = requests.get(
             urljoin(get_api_url(), endpoint),
@@ -549,6 +559,7 @@ def delete_file(workflow, file_name, access_token):
             workflow_id_or_name=workflow,
             file_name=file_name,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200 and (
             response["deleted"] or response["failed"]
@@ -599,6 +610,7 @@ def list_files(
             page=page,
             size=size,
             search=search,
+            Authorization=get_jwt_parameter(),
         ).result()
 
         if http_response.status_code == 200:
@@ -711,7 +723,9 @@ def get_workflow_parameters(workflow, access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_parameters(
-            workflow_id_or_name=workflow, access_token=access_token
+            workflow_id_or_name=workflow,
+            access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -745,7 +759,9 @@ def get_workflow_specification(workflow, access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_specification(
-            workflow_id_or_name=workflow, access_token=access_token
+            workflow_id_or_name=workflow,
+            access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -797,6 +813,7 @@ def delete_workflow(workflow, all_runs: bool, workspace: bool, access_token: str
             status="deleted",
             access_token=access_token,
             parameters=parameters,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -837,6 +854,7 @@ def stop_workflow(workflow, force_stop, access_token):
             status="stop",
             access_token=access_token,
             parameters=parameters,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -881,6 +899,7 @@ def diff_workflows(workflow_id_a, workflow_id_b, brief, access_token, context_li
             brief=brief,
             context_lines=context_lines,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
 
         if http_response.status_code == 200:
@@ -924,6 +943,7 @@ def open_interactive_session(
             access_token=access_token,
             interactive_session_type=interactive_session_type,
             interactive_session_configuration=interactive_session_configuration,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response["path"]
@@ -957,6 +977,7 @@ def close_interactive_session(workflow, access_token):
         (response, http_response) = current_rs_api_client.api.close_interactive_session(
             workflow_id_or_name=workflow,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -995,6 +1016,7 @@ def mv_files(source, target, workflow, access_token):
             target=target,
             workflow_id_or_name=workflow,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
 
         if http_response.status_code == 200:
@@ -1040,6 +1062,7 @@ def get_workflow_disk_usage(workflow, parameters, access_token):
             workflow_id_or_name=workflow,
             parameters=parameters,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1080,7 +1103,10 @@ def add_secrets(secrets, overwrite, access_token):
     """
     try:
         (response, http_response) = current_rs_api_client.api.add_secrets(
-            secrets=secrets, access_token=access_token, overwrite=overwrite
+            secrets=secrets,
+            access_token=access_token,
+            overwrite=overwrite,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 201:
             return response
@@ -1116,7 +1142,9 @@ def delete_secrets(secrets, access_token):
     """
     try:
         (response, http_response) = current_rs_api_client.api.delete_secrets(
-            secrets=secrets, access_token=access_token
+            secrets=secrets,
+            access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1154,7 +1182,8 @@ def list_secrets(access_token):
     """
     try:
         (response, http_response) = current_rs_api_client.api.get_secrets(
-            access_token=access_token
+            access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1190,7 +1219,8 @@ def info(access_token):
     """
     try:
         (response, http_response) = current_rs_api_client.api.info(
-            access_token=access_token
+            access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1232,6 +1262,7 @@ def get_workflow_retention_rules(workflow, access_token):
         ) = current_rs_api_client.api.get_workflow_retention_rules(
             workflow_id_or_name=workflow,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1269,6 +1300,7 @@ def prune_workspace(workflow, include_inputs, include_outputs, access_token):
             include_inputs=include_inputs,
             include_outputs=include_outputs,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
 
         if http_response.status_code == 200:
@@ -1319,6 +1351,7 @@ def share_workflow(
             workflow_id_or_name=workflow,
             share_details=share_params,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
 
         if http_response.status_code == 200:
@@ -1356,7 +1389,8 @@ def unshare_workflow(workflow, user_email_to_unshare_with, access_token):
         }
 
         (response, http_response) = current_rs_api_client.api.unshare_workflow(
-            **unshare_params
+            **unshare_params,
+            Authorization=get_jwt_parameter(),
         ).result()
 
         if http_response.status_code == 200:
@@ -1392,6 +1426,7 @@ def get_workflow_sharing_status(workflow, access_token):
         ) = current_rs_api_client.api.get_workflow_share_status(
             workflow_id_or_name=workflow,
             access_token=access_token,
+            Authorization=get_jwt_parameter(),
         ).result()
 
         if http_response.status_code == 200:
@@ -1409,3 +1444,44 @@ def get_workflow_sharing_status(workflow, access_token):
             f"Message: {e.response.json()['message']}"
         )
         raise Exception(e.response.json()["message"])
+
+
+def get_openid_configuration():
+    """Get OpenID configuration.
+
+    :return: a dictionary containing the OpenID configuration.
+    """
+    try:
+        (
+            response,
+            http_response,
+        ) = current_rs_api_client.api.get_openid_configuration().result()
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(status_code=http_response.status_code)
+            )
+
+    except HTTPError as e:
+        logging.debug(
+            "OpenID configuration could not be retrieved: "
+            "\nStatus: {}\nReason: {}\n"
+            "Message: {}".format(
+                e.response.status_code, e.response.reason, e.response.json()["message"]
+            )
+        )
+        raise Exception(e.response.json()["message"])
+    except Exception as e:
+        raise e
+
+
+def get_jwt_parameter():
+    """Get JWT parameter for authentication with Bearer token prefix."""
+    try:
+        return "Bearer " + get_current_server_access_token()
+    except FileNotFoundError:
+        raise Exception(
+            "Access token file not found. Please run `reana-client auth` first."
+        )

@@ -58,3 +58,6 @@ Secret management commands:
 
 Workflow run test commands:
   test  Test workflow execution, based on a given Gherkin file.
+
+REANA login commands:
+  login  Login to REANA using Device Code Flow (OAuth2).

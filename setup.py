@@ -38,10 +38,11 @@ for key, reqs in extras_require.items():
     extras_require["all"].extend(reqs)
 
 install_requires = [
+    "authlib>=1.6.0",
     "click>=7",
     "pathspec==0.9.0",
     "jsonpointer>=2.0",
-    "reana-commons[yadage,snakemake,cwl]>=0.95.0a6,<0.96.0",
+    "reana-commons[yadage,snakemake,cwl] @ git+https://github.com/tomondre/reana-commons.git@jwt",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",

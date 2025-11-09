@@ -7,12 +7,12 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA command line interface client."""
 import logging
-import os
 import sys
 
 import click
 from reana_client.cli import (
     files,
+    login,
     ping,
     quotas,
     retention_rules,
@@ -54,6 +54,7 @@ class ReanaCLI(click.Group):
         retention_rules.retention_rules_group,
         secrets.secrets_group,
         test.test_group,
+        login.login_group,
     ]
 
     def __init__(self, name=None, commands=None, **attrs):

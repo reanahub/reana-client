@@ -52,7 +52,7 @@ def _access_token_option_decorator(func: Callable, required: bool) -> Callable:
 
 
 add_access_token_options = functools.partial(
-    _access_token_option_decorator, required=True
+    _access_token_option_decorator, required=False
 )
 add_access_token_options_not_required = functools.partial(
     _access_token_option_decorator, required=False
@@ -523,3 +523,13 @@ def follow_workflow_logs(
             return
         previous_logs = logs
         time.sleep(interval)
+
+
+""" Auth utils """
+
+
+def get_token_path():
+    """Return path to the access token file."""
+    from pathlib import Path
+
+    return Path.home() / ".reana" / "config.json"

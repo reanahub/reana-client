@@ -1,0 +1,50 @@
+# -*- coding: utf-8 -*-
+# This file is part of REANA.
+#
+# Copyright (C) 2025 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+
+# Bash completion for reana-client
+# Generated using Click shell completion (Click 8.x)
+#
+# Installation:
+#   Option 1: Source this file in your .bashrc:
+#     . /path/to/reana-client/etc/bash_completion.d/reana-client
+#
+#   Option 2: Copy to system completion directory:
+#     cp /path/to/reana-client/etc/bash_completion.d/reana-client \
+#        /etc/bash_completion.d/
+#
+#   Option 3: Generate dynamically (add to .bashrc):
+#     eval "$(_REANA_CLIENT_COMPLETE=bash_source reana-client)"
+
+_reana_client_completion() {
+    local IFS=$'\n'
+    local response
+
+    response=$(env COMP_WORDS="${COMP_WORDS[*]}" COMP_CWORD=$COMP_CWORD _REANA_CLIENT_COMPLETE=bash_complete $1)
+
+    for completion in $response; do
+        IFS=',' read type value <<< "$completion"
+
+        if [[ $type == 'dir' ]]; then
+            COMPREPLY=()
+            compopt -o dirnames
+        elif [[ $type == 'file' ]]; then
+            COMPREPLY=()
+            compopt -o default
+        elif [[ $type == 'plain' ]]; then
+            COMPREPLY+=($value)
+        fi
+    done
+
+    return 0
+}
+
+_reana_client_completion_setup() {
+    complete -o nosort -F _reana_client_completion reana-client
+}
+
+_reana_client_completion_setup;

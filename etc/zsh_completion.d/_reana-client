@@ -1,0 +1,62 @@
+#compdef reana-client
+# -*- coding: utf-8 -*-
+# This file is part of REANA.
+#
+# Copyright (C) 2025 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+
+# Zsh completion for reana-client
+# Generated using Click shell completion (Click 8.x)
+#
+# Installation:
+#   Option 1: Add directory to fpath in your .zshrc (before compinit):
+#     fpath=(/path/to/reana-client/etc/zsh_completion.d $fpath)
+#     autoload -Uz compinit && compinit
+#
+#   Option 2: Copy to system completion directory:
+#     cp /path/to/reana-client/etc/zsh_completion.d/_reana-client \
+#        /usr/local/share/zsh/site-functions/
+#
+#   Option 3: Generate dynamically (add to .zshrc):
+#     eval "$(_REANA_CLIENT_COMPLETE=zsh_source reana-client)"
+
+_reana_client_completion() {
+    local -a completions
+    local -a completions_with_descriptions
+    local -a response
+    (( ! $+commands[reana-client] )) && return 1
+
+    response=("${(@f)$(env COMP_WORDS="${words[*]}" COMP_CWORD=$((CURRENT-1)) _REANA_CLIENT_COMPLETE=zsh_complete reana-client)}")
+
+    for type key descr in ${response}; do
+        if [[ "$type" == "plain" ]]; then
+            if [[ "$descr" == "_" ]]; then
+                completions+=("$key")
+            else
+                completions_with_descriptions+=("$key":"$descr")
+            fi
+        elif [[ "$type" == "dir" ]]; then
+            _path_files -/
+        elif [[ "$type" == "file" ]]; then
+            _path_files -f
+        fi
+    done
+
+    if [ -n "$completions_with_descriptions" ]; then
+        _describe -V unsorted completions_with_descriptions -U
+    fi
+
+    if [ -n "$completions" ]; then
+        compadd -U -V unsorted -a completions
+    fi
+}
+
+if [[ $zsh_eval_context[-1] == loadautofunc ]]; then
+    # autoload from fpath, call function directly
+    _reana_client_completion "$@"
+else
+    # eval/source/. command, register function for later
+    compdef _reana_client_completion reana-client
+fi

@@ -27,6 +27,24 @@
    :show-nested:
 ```
 
+### Shell completion
+
+The `reana-client` supports shell completion for Bash and Zsh. To enable the
+auto-completion of commands and options, add the following to your shell
+configuration file:
+
+**Bash** (add to `~/.bashrc`):
+
+```bash
+eval "$(_REANA_CLIENT_COMPLETE=bash_source reana-client)"
+```
+
+**Zsh** (add to `~/.zshrc`):
+
+```bash
+eval "$(_REANA_CLIENT_COMPLETE=zsh_source reana-client)"
+```
+
 ## API docs
 
 ```{eval-rst}

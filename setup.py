@@ -39,7 +39,8 @@ for key, reqs in extras_require.items():
 
 install_requires = [
     "click>=7",
-    "pathspec==0.9.0",
+    "pathspec>=0.9.0,<1.0 ; python_version<'3.9'",
+    "pathspec>=0.9.0 ; python_version>='3.9'",
     "jsonpointer>=2.0",
     "reana-commons[yadage,snakemake,cwl]>=0.95.0a12,<0.96.0",
     "tablib>=0.12.1,<0.13",

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2017, 2018, 2020, 2021, 2022, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -141,16 +141,14 @@ def create_snakemake_yaml_external_input_workflow_schema():
 @pytest.fixture()
 def snakemake_workflow_spec_step_param():
     """Return dummy Snakemake workflow loaded spec."""
-    snakefile = textwrap.dedent(
-        """
+    snakefile = textwrap.dedent("""
         rule foo:
             params:
                 param1=config["param1"],
                 param2=config["param2"],
             output:
                 "foo.txt"
-    """
-    )
+    """)
     return snakefile
 
 

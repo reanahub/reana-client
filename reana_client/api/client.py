@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -224,7 +224,7 @@ def create_workflow(reana_specification, name, access_token):
              the ``workflow_id`` and ``workflow_name``, along with a ``message`` of success.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.create_workflow(
+        response, http_response = current_rs_api_client.api.create_workflow(
             reana_specification=json.loads(
                 json.dumps(reana_specification, sort_keys=True)
             ),
@@ -325,7 +325,7 @@ def create_workflow_from_json(
         if input_params is not None:
             reana_yaml["inputs"]["parameters"] = input_params
         validate_reana_yaml(reana_yaml)
-        (response, http_response) = current_rs_api_client.api.create_workflow(
+        response, http_response = current_rs_api_client.api.create_workflow(
             reana_specification=json.loads(json.dumps(reana_yaml, sort_keys=True)),
             workflow_name=name,
             access_token=access_token,
@@ -364,7 +364,7 @@ def start_workflow(workflow, access_token, parameters):
              along with a ``message`` of success.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.start_workflow(
+        response, http_response = current_rs_api_client.api.start_workflow(
             workflow_id_or_name=workflow,
             access_token=access_token,
             parameters=parameters,
@@ -448,7 +448,7 @@ def get_workflow_logs(workflow, access_token, steps=None, page=None, size=None):
              contains the requested logs.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.get_workflow_logs(
+        response, http_response = current_rs_api_client.api.get_workflow_logs(
             workflow_id_or_name=workflow,
             steps=steps,
             access_token=access_token,
@@ -545,7 +545,7 @@ def delete_file(workflow, file_name, access_token):
              name of the file as key and info about the size as value.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.delete_file(
+        response, http_response = current_rs_api_client.api.delete_file(
             workflow_id_or_name=workflow,
             file_name=file_name,
             access_token=access_token,
@@ -592,7 +592,7 @@ def list_files(
                 ``last-modified`` keys.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.get_files(
+        response, http_response = current_rs_api_client.api.get_files(
             workflow_id_or_name=workflow,
             access_token=access_token,
             file_name=file_name,
@@ -792,7 +792,7 @@ def delete_workflow(workflow, all_runs: bool, workspace: bool, access_token: str
             "all_runs": all_runs,
             "workspace": workspace,
         }
-        (response, http_response) = current_rs_api_client.api.set_workflow_status(
+        response, http_response = current_rs_api_client.api.set_workflow_status(
             workflow_id_or_name=workflow,
             status="deleted",
             access_token=access_token,
@@ -832,7 +832,7 @@ def stop_workflow(workflow, force_stop, access_token):
     """
     try:
         parameters = {"force_stop": force_stop}
-        (response, http_response) = current_rs_api_client.api.set_workflow_status(
+        response, http_response = current_rs_api_client.api.set_workflow_status(
             workflow_id_or_name=workflow,
             status="stop",
             access_token=access_token,
@@ -875,7 +875,7 @@ def diff_workflows(workflow_id_a, workflow_id_b, brief, access_token, context_li
         are the actual lines that differ.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.get_workflow_diff(
+        response, http_response = current_rs_api_client.api.get_workflow_diff(
             workflow_id_or_name_a=workflow_id_a,
             workflow_id_or_name_b=workflow_id_b,
             brief=brief,
@@ -919,7 +919,7 @@ def open_interactive_session(
     :return: the relative path to the interactive session.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.open_interactive_session(
+        response, http_response = current_rs_api_client.api.open_interactive_session(
             workflow_id_or_name=workflow,
             access_token=access_token,
             interactive_session_type=interactive_session_type,
@@ -954,7 +954,7 @@ def close_interactive_session(workflow, access_token):
     :return: the relative path to the interactive session.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.close_interactive_session(
+        response, http_response = current_rs_api_client.api.close_interactive_session(
             workflow_id_or_name=workflow,
             access_token=access_token,
         ).result()
@@ -990,7 +990,7 @@ def mv_files(source, target, workflow, access_token):
              and a ``message`` about the success of the operation.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.move_files(
+        response, http_response = current_rs_api_client.api.move_files(
             source=source,
             target=target,
             workflow_id_or_name=workflow,
@@ -1036,7 +1036,7 @@ def get_workflow_disk_usage(workflow, parameters, access_token):
              to a file, with the ``name`` and ``size`` keys.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.get_workflow_disk_usage(
+        response, http_response = current_rs_api_client.api.get_workflow_disk_usage(
             workflow_id_or_name=workflow,
             parameters=parameters,
             access_token=access_token,
@@ -1079,7 +1079,7 @@ def add_secrets(secrets, overwrite, access_token):
     :return: a dictionary containing the ``message`` key with a success message.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.add_secrets(
+        response, http_response = current_rs_api_client.api.add_secrets(
             secrets=secrets, access_token=access_token, overwrite=overwrite
         ).result()
         if http_response.status_code == 201:
@@ -1115,7 +1115,7 @@ def delete_secrets(secrets, access_token):
     :return: a list with the names of the deleted secrets.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.delete_secrets(
+        response, http_response = current_rs_api_client.api.delete_secrets(
             secrets=secrets, access_token=access_token
         ).result()
         if http_response.status_code == 200:
@@ -1153,7 +1153,7 @@ def list_secrets(access_token):
              ``name`` and ``type`` keys.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.get_secrets(
+        response, http_response = current_rs_api_client.api.get_secrets(
             access_token=access_token
         ).result()
         if http_response.status_code == 200:
@@ -1189,7 +1189,7 @@ def info(access_token):
              and ``maximum_interactive_session_inactivity_period``.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.info(
+        response, http_response = current_rs_api_client.api.info(
             access_token=access_token
         ).result()
         if http_response.status_code == 200:
@@ -1264,7 +1264,7 @@ def prune_workspace(workflow, include_inputs, include_outputs, access_token):
              a ``message`` key with the result of the operation.
     """
     try:
-        (response, http_response) = current_rs_api_client.api.prune_workspace(
+        response, http_response = current_rs_api_client.api.prune_workspace(
             workflow_id_or_name=workflow,
             include_inputs=include_inputs,
             include_outputs=include_outputs,
@@ -1315,7 +1315,7 @@ def share_workflow(
         if valid_until:
             share_params["valid_until"] = valid_until
 
-        (response, http_response) = current_rs_api_client.api.share_workflow(
+        response, http_response = current_rs_api_client.api.share_workflow(
             workflow_id_or_name=workflow,
             share_details=share_params,
             access_token=access_token,
@@ -1355,7 +1355,7 @@ def unshare_workflow(workflow, user_email_to_unshare_with, access_token):
             "access_token": access_token,
         }
 
-        (response, http_response) = current_rs_api_client.api.unshare_workflow(
+        response, http_response = current_rs_api_client.api.unshare_workflow(
             **unshare_params
         ).result()
 

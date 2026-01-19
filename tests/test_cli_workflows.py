@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -1040,13 +1040,10 @@ def test_follow_job_logs():
                 ],
             )
             assert result.exit_code == 0
-            assert (
-                result.output
-                == """job test logs
+            assert result.output == """job test logs
 more job logs
 ==> Job has completed, you might want to rerun the command without the --follow flag.
 """
-            )
 
 
 def test_follow_live_logs_disabled():

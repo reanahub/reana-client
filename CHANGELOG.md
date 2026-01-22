@@ -2,64 +2,54 @@
 
 ## [0.9.4](https://github.com/reanahub/reana-client/compare/0.9.3...0.9.4) (2024-11-29)
 
-
 ### Build
 
-* **docker:** create `reana-client` container image ([#710](https://github.com/reanahub/reana-client/issues/710)) ([2c99c5d](https://github.com/reanahub/reana-client/commit/2c99c5d1bd36e4303885875375085f7d714e8732)), closes [#709](https://github.com/reanahub/reana-client/issues/709)
-* **python:** add support for Python 3.13 ([#736](https://github.com/reanahub/reana-client/issues/736)) ([fd9b944](https://github.com/reanahub/reana-client/commit/fd9b9446d58f21cc6e57b343874d55433532c959))
-* **python:** bump shared REANA packages as of 2024-11-28 ([#736](https://github.com/reanahub/reana-client/issues/736)) ([778df03](https://github.com/reanahub/reana-client/commit/778df037dbeb1340478060e7f913dfff7c0235e5))
-
+- **docker:** create `reana-client` container image ([#710](https://github.com/reanahub/reana-client/issues/710)) ([2c99c5d](https://github.com/reanahub/reana-client/commit/2c99c5d1bd36e4303885875375085f7d714e8732)), closes [#709](https://github.com/reanahub/reana-client/issues/709)
+- **python:** add support for Python 3.13 ([#736](https://github.com/reanahub/reana-client/issues/736)) ([fd9b944](https://github.com/reanahub/reana-client/commit/fd9b9446d58f21cc6e57b343874d55433532c959))
+- **python:** bump shared REANA packages as of 2024-11-28 ([#736](https://github.com/reanahub/reana-client/issues/736)) ([778df03](https://github.com/reanahub/reana-client/commit/778df037dbeb1340478060e7f913dfff7c0235e5))
 
 ### Continuous integration
 
-* **actions:** pin setuptools 70 ([#728](https://github.com/reanahub/reana-client/issues/728)) ([0a4bcc7](https://github.com/reanahub/reana-client/commit/0a4bcc79af33dd00a6a03216be32d10000bb432b))
-
+- **actions:** pin setuptools 70 ([#728](https://github.com/reanahub/reana-client/issues/728)) ([0a4bcc7](https://github.com/reanahub/reana-client/commit/0a4bcc79af33dd00a6a03216be32d10000bb432b))
 
 ### Documentation
 
-* **cli:** fix `open` command documentation typo ([#728](https://github.com/reanahub/reana-client/issues/728)) ([c822dd6](https://github.com/reanahub/reana-client/commit/c822dd6570d5474e535be83d0ee4beb44ecee85b))
+- **cli:** fix `open` command documentation typo ([#728](https://github.com/reanahub/reana-client/issues/728)) ([c822dd6](https://github.com/reanahub/reana-client/commit/c822dd6570d5474e535be83d0ee4beb44ecee85b))
 
 ## [0.9.3](https://github.com/reanahub/reana-client/compare/0.9.2...0.9.3) (2024-03-13)
 
-
 ### Build
 
-* **appimage:** upgrade to Python 3.8.18 ([#704](https://github.com/reanahub/reana-client/issues/704)) ([783c17a](https://github.com/reanahub/reana-client/commit/783c17a97c265d0d3cfe97857dc414c6bd7c8b11))
-
+- **appimage:** upgrade to Python 3.8.18 ([#704](https://github.com/reanahub/reana-client/issues/704)) ([783c17a](https://github.com/reanahub/reana-client/commit/783c17a97c265d0d3cfe97857dc414c6bd7c8b11))
 
 ### Bug fixes
 
-* **status:** display correct duration of stopped workflows ([#701](https://github.com/reanahub/reana-client/issues/701)) ([b53def8](https://github.com/reanahub/reana-client/commit/b53def8dd3246b10d4da0f2367710af0911e284c)), closes [#699](https://github.com/reanahub/reana-client/issues/699)
-
+- **status:** display correct duration of stopped workflows ([#701](https://github.com/reanahub/reana-client/issues/701)) ([b53def8](https://github.com/reanahub/reana-client/commit/b53def8dd3246b10d4da0f2367710af0911e284c)), closes [#699](https://github.com/reanahub/reana-client/issues/699)
 
 ### Code refactoring
 
-* **docs:** move from reST to Markdown ([#703](https://github.com/reanahub/reana-client/issues/703)) ([c9c4d53](https://github.com/reanahub/reana-client/commit/c9c4d530eb3e1e3d6996fe71821116815c8eaba3))
-
+- **docs:** move from reST to Markdown ([#703](https://github.com/reanahub/reana-client/issues/703)) ([c9c4d53](https://github.com/reanahub/reana-client/commit/c9c4d530eb3e1e3d6996fe71821116815c8eaba3))
 
 ### Code style
 
-* **black:** format with black v24 ([#702](https://github.com/reanahub/reana-client/issues/702)) ([02dc830](https://github.com/reanahub/reana-client/commit/02dc83009a6477c1ae045f4e1a6ea9f9e66640fb))
-
+- **black:** format with black v24 ([#702](https://github.com/reanahub/reana-client/issues/702)) ([02dc830](https://github.com/reanahub/reana-client/commit/02dc83009a6477c1ae045f4e1a6ea9f9e66640fb))
 
 ### Test suite
 
-* **snakemake:** allow running Snakemake 7 tests on Python 3.11+ ([#700](https://github.com/reanahub/reana-client/issues/700)) ([8ad7ff1](https://github.com/reanahub/reana-client/commit/8ad7ff19e98d1f9231af65bf608d408031546a3e)), closes [#655](https://github.com/reanahub/reana-client/issues/655)
-
+- **snakemake:** allow running Snakemake 7 tests on Python 3.11+ ([#700](https://github.com/reanahub/reana-client/issues/700)) ([8ad7ff1](https://github.com/reanahub/reana-client/commit/8ad7ff19e98d1f9231af65bf608d408031546a3e)), closes [#655](https://github.com/reanahub/reana-client/issues/655)
 
 ### Continuous integration
 
-* **commitlint:** addition of commit message linter ([#695](https://github.com/reanahub/reana-client/issues/695)) ([2de7d61](https://github.com/reanahub/reana-client/commit/2de7d61db96693e8ee9c3ac555aef9dbfd7bb4bc))
-* **commitlint:** allow release commit style ([#708](https://github.com/reanahub/reana-client/issues/708)) ([f552752](https://github.com/reanahub/reana-client/commit/f55275296cd6cc72b4d21d89f51442842cb15d30))
-* **commitlint:** check for the presence of concrete PR number ([#698](https://github.com/reanahub/reana-client/issues/698)) ([fa5b7c7](https://github.com/reanahub/reana-client/commit/fa5b7c76eb25bfb1591e6fae4a142d975e14b937))
-* **pytest:** install `tests` package variant instead of `all` ([#703](https://github.com/reanahub/reana-client/issues/703)) ([fe0b00a](https://github.com/reanahub/reana-client/commit/fe0b00af1ad7b79ec607de7b810f597a3d6df93a))
-* **release-please:** initial configuration ([#695](https://github.com/reanahub/reana-client/issues/695)) ([5b278f1](https://github.com/reanahub/reana-client/commit/5b278f131b59d3ecfd3c7f129040a126cd01b60a))
-* **shellcheck:** fix exit code propagation ([#698](https://github.com/reanahub/reana-client/issues/698)) ([fe696ea](https://github.com/reanahub/reana-client/commit/fe696eae4cef119b29784ab80ec03d3f4cc089ea))
-
+- **commitlint:** addition of commit message linter ([#695](https://github.com/reanahub/reana-client/issues/695)) ([2de7d61](https://github.com/reanahub/reana-client/commit/2de7d61db96693e8ee9c3ac555aef9dbfd7bb4bc))
+- **commitlint:** allow release commit style ([#708](https://github.com/reanahub/reana-client/issues/708)) ([f552752](https://github.com/reanahub/reana-client/commit/f55275296cd6cc72b4d21d89f51442842cb15d30))
+- **commitlint:** check for the presence of concrete PR number ([#698](https://github.com/reanahub/reana-client/issues/698)) ([fa5b7c7](https://github.com/reanahub/reana-client/commit/fa5b7c76eb25bfb1591e6fae4a142d975e14b937))
+- **pytest:** install `tests` package variant instead of `all` ([#703](https://github.com/reanahub/reana-client/issues/703)) ([fe0b00a](https://github.com/reanahub/reana-client/commit/fe0b00af1ad7b79ec607de7b810f597a3d6df93a))
+- **release-please:** initial configuration ([#695](https://github.com/reanahub/reana-client/issues/695)) ([5b278f1](https://github.com/reanahub/reana-client/commit/5b278f131b59d3ecfd3c7f129040a126cd01b60a))
+- **shellcheck:** fix exit code propagation ([#698](https://github.com/reanahub/reana-client/issues/698)) ([fe696ea](https://github.com/reanahub/reana-client/commit/fe696eae4cef119b29784ab80ec03d3f4cc089ea))
 
 ### Documentation
 
-* **authors:** complete list of contributors ([#705](https://github.com/reanahub/reana-client/issues/705)) ([875997c](https://github.com/reanahub/reana-client/commit/875997c06e657d3e19e1af32324127caa2b1a9c5))
+- **authors:** complete list of contributors ([#705](https://github.com/reanahub/reana-client/issues/705)) ([875997c](https://github.com/reanahub/reana-client/commit/875997c06e657d3e19e1af32324127caa2b1a9c5))
 
 ## 0.9.2 (2023-12-19)
 
@@ -238,7 +228,7 @@
   files specified in `reana.yaml` in case no arguments are provided.
 - Fixes `status` command's JSON output mode.
 - Upgrades CWL reference implementation to version `1.0.20180912090223`.
-- Renames Serial workflow operational parameter from ``` CACHING``to ``CACHE ```.
+- Renames Serial workflow operational parameter from `CACHING``to ``CACHE`.
 - Adds support for Python 3.7.
 
 ## 0.3.0 (2018-08-10)
@@ -247,7 +237,6 @@
   [Serial workflows](http://reana-workflow-engine-serial.readthedocs.io/en/latest/).
 
 - CLI refactored to a flat design:
-
   - `inputs`/`outputs`/`code` removed, everything is a file managed
     : with upload/download/list commands.
   - Removes `workflow` command, workflows are managed with

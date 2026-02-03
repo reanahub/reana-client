@@ -13,7 +13,8 @@ import os
 import shlex
 import sys
 import time
-from typing import Callable, NoReturn, Optional, List, Tuple, Union
+import re
+from typing import Callable, NoReturn, Optional, List, Tuple, Union, Iterable
 
 import click
 import tablib
@@ -27,6 +28,7 @@ from reana_client.config import (
     JSON,
     CLI_LOGS_FOLLOW_MIN_INTERVAL,
     CLI_LOGS_FOLLOW_DEFAULT_INTERVAL,
+    MAX_RUN_LABELS_SHOWN,
 )
 from reana_client.printer import display_message
 from reana_client.utils import workflow_uuid_or_name
@@ -523,3 +525,85 @@ def follow_workflow_logs(
             return
         previous_logs = logs
         time.sleep(interval)
+
+
+# Helpers for deleting restarted workflows
+def parse_workflow_run_number(
+    full_name: str,
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    Parse a workflow run name into base name, run_number_major and run_number_minor.
+
+    Examples:
+        "name.7.1" -> ("name", "7", "1")
+        "name.7" -> ("name", "7", None)
+        "name.7.1.2" -> ("name", "7", "1.2")
+        "name" -> ("name", None, None)
+    """
+    if not full_name:
+        return None, None, None
+
+    parts = str(full_name).split(".")
+    i = len(parts) - 1
+    while i >= 0 and re.fullmatch(r"\d+", parts[i]):
+        i -= 1
+
+    base = ".".join(parts[: i + 1]) if i >= 0 else ""
+    numeric = parts[i + 1 :]
+
+    if not base:
+        base = None
+
+    if not numeric:
+        return base, None, None
+
+    run_number_major = numeric[0]
+    run_number_minor = ".".join(numeric[1:]) or None
+    return base, run_number_major, run_number_minor
+
+
+def get_run_number_major_key(full_name: str) -> Optional[str]:
+    """
+    Return a stable key for grouping restarted runs by run_number_major.
+
+    This returns "<base>.<run_number_major>" so that all restarts/minor runs
+    belonging to the same major run can be treated as a single group.
+
+    Examples:
+        "helloworld-demo.1" -> "helloworld-demo.1"
+        "helloworld-demo.1.1" -> "helloworld-demo.1"
+    """
+    base, major, _ = parse_workflow_run_number(full_name)
+    if not base or not major:
+        return None
+    return f"{base}.{major}"
+
+
+def format_run_number_label(full_name: str) -> str:
+    """
+    Format a user-facing label from a workflow run name.
+
+    Examples:
+        "name.7.1" -> "#7.1"
+        "name.7" -> "#7"
+    """
+    _, major, minor = parse_workflow_run_number(full_name)
+    if not major:
+        return str(full_name)
+    return f"#{major}.{minor}" if minor else f"#{major}"
+
+
+def format_run_label_list(
+    labels: Optional[Iterable[str]], max_labels: int = MAX_RUN_LABELS_SHOWN
+) -> str:
+    """
+    Format a list of run labels for compact CLI display.
+
+    Examples:
+        ["#7.1", "#7.2"] with max_labels=6 -> "#7.1, #7.2"
+        ["#1", "#2", "#3", "#4", "#5", "#6", "#7"] with max_labels=6 -> "#1, #2, #3, #4, #5, #6, +1 more"
+    """
+    xs = [x for x in (labels or []) if x]
+    shown = xs[:max_labels]
+    more = len(xs) - len(shown)
+    return f"{', '.join(shown)}, +{more} more" if more > 0 else ", ".join(shown)

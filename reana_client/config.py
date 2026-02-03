@@ -82,3 +82,9 @@ CLI_LOGS_FOLLOW_MIN_INTERVAL = 1
 
 CLI_LOGS_FOLLOW_DEFAULT_INTERVAL = 10
 """Default interval between log requests in seconds."""
+
+MAX_RUN_LABELS_SHOWN = 10
+"""Maximum number of run labels to print in CLI output, extra labels are collapsed as '+N more'."""
+
+CLI_WORKFLOWS_LIST_MAX_RESULTS = 1000
+"""Max number of workflow runs to fetch in a single API call (used when resolving restarts)."""

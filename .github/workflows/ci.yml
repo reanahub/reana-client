@@ -142,7 +142,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip setuptools py
+          pip install --upgrade pip 'setuptools<81' py
           pip install -e .[all]
 
       - name: Verify reana client commands list
@@ -160,7 +160,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip setuptools py
+          pip install --upgrade pip 'setuptools<81' py
           pip install -e .[all]
 
       - name: Verify reana client api docs
@@ -178,7 +178,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip setuptools py
+          pip install --upgrade pip 'setuptools<81' py
           pip install -e .[all]
 
       - name: Run Sphinx documentation with doctests
@@ -200,7 +200,7 @@ jobs:
 
       - name: Setup requirements builder
         run: |
-          pip install --upgrade pip setuptools py
+          pip install --upgrade pip 'setuptools<81' py
           pip install wheel
           pip install requirements-builder
           if [[ ${{ matrix.testenv }} == lowest ]]; then

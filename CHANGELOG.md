@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.9.5](https://github.com/reanahub/reana-client/compare/0.9.4...0.9.5) (2026-02-10)
+
+
+### Build
+
+* **python:** add support for Python 3.14 ([#753](https://github.com/reanahub/reana-client/issues/753)) ([191859d](https://github.com/reanahub/reana-client/commit/191859d83cdd953359ced997e631e55ca633fe5a))
+* **python:** bump shared REANA packages as of 2025-01-09 ([#757](https://github.com/reanahub/reana-client/issues/757)) ([1748ef5](https://github.com/reanahub/reana-client/commit/1748ef5aa85e76017938d405c4967f4976da70f7))
+* **python:** relax pathspec version constraint ([#758](https://github.com/reanahub/reana-client/issues/758)) ([d131a25](https://github.com/reanahub/reana-client/commit/d131a25880a9f97578e6a2c57177bec6a5034d4e))
+
+
+### Features
+
+* **etc:** add bash and zsh shell completion files ([#756](https://github.com/reanahub/reana-client/issues/756)) ([aa091f0](https://github.com/reanahub/reana-client/commit/aa091f0f28de46ba026040458408907ad2ed39e1))
+
+
+### Code style
+
+* **python:** adapt code base to the new black version ([#758](https://github.com/reanahub/reana-client/issues/758)) ([b6faeda](https://github.com/reanahub/reana-client/commit/b6faedab8a9089c3bbf42b91b90f34bf0afa2ffb))
+
+
+### Continuous integration
+
+* **commitlint:** fix local running of commit linter on macOS ([#746](https://github.com/reanahub/reana-client/issues/746)) ([ddf1eea](https://github.com/reanahub/reana-client/commit/ddf1eeacd5aa8bca8f6d9729fa21ebb3bf2fbf5d))
+* **python:** pin setuptools below 81 ([#760](https://github.com/reanahub/reana-client/issues/760)) ([57cd676](https://github.com/reanahub/reana-client/commit/57cd676e40508a86d8984092704b870e4bf9c77c))
+* **runners:** upgrade CI runners to Ubuntu 22.04 ([#741](https://github.com/reanahub/reana-client/issues/741)) ([22c74e5](https://github.com/reanahub/reana-client/commit/22c74e5955f60b3fca900462626d3b948e1ee010))
+* **runners:** upgrade CI runners to Ubuntu 22.04 ([#741](https://github.com/reanahub/reana-client/issues/741)) ([639992a](https://github.com/reanahub/reana-client/commit/639992a3c13a3b601541f0a04c48afd33008ac62))
+
+
+### Documentation
+
+* **usage:** add shell completion instructions ([#756](https://github.com/reanahub/reana-client/issues/756)) ([03d2270](https://github.com/reanahub/reana-client/commit/03d22708f4ad831d2bc4058f4f75077b0db8988f))
+
 ## [0.9.4](https://github.com/reanahub/reana-client/compare/0.9.3...0.9.4) (2024-11-29)
 
 

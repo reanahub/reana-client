@@ -12,8 +12,10 @@ import sys
 from typing import Dict, NoReturn, Union
 
 import click
+from pip._internal.utils.misc import strtobool
 
 from reana_commons.errors import REANAValidationError
+from reana_commons.validation.kubernetes_queues import validate_kubernetes_queues
 from reana_commons.validation.operational_options import validate_operational_options
 from reana_commons.validation.utils import validate_reana_yaml, validate_workflow_name
 
@@ -97,6 +99,7 @@ def validate_reana_spec(
             )
 
         validate_parameters(reana_yaml)
+        _validate_kubernetes_queues(reana_yaml, access_token)
 
         if server_capabilities:
             _validate_server_capabilities(reana_yaml, access_token)
@@ -129,6 +132,53 @@ def _validate_server_capabilities(reana_yaml: Dict, access_token: str) -> None:
     root_path = reana_yaml.get("workspace", {}).get("root_path")
     available_workspaces = info_response.get("workspaces_available", {}).get("value")
     _validate_workspace(root_path, available_workspaces)
+
+
+def _validate_kubernetes_queues(reana_yaml: Dict, access_token: str) -> None:
+    """Validate Kubernetes queues in REANA specification file.
+
+    :param reana_yaml: dictionary which represents REANA specification file.
+    :param access_token: access token of the current user.
+    """
+    from reana_client.api.client import info
+
+    info_response = info(access_token)
+
+    kueue_enabled = bool(
+        strtobool(info_response.get("kueue_enabled", {}).get("value", "False"))
+    )
+    if not kueue_enabled:
+        display_message(
+            "Kueue is not enabled. Skipping Kubernetes queues validation...",
+            msg_type="info",
+        )
+        return
+
+    display_message(
+        "Verifying Kubernetes queues in REANA specification file...",
+        msg_type="info",
+    )
+
+    available_queues = info_response.get("kueue_available_queues", {}).get("value")
+    default_queue = info_response.get("kueue_default_queue", {}).get("value")
+
+    try:
+        validate_kubernetes_queues(
+            reana_yaml, kueue_enabled, available_queues, default_queue
+        )
+    except REANAValidationError as e:
+        display_message(
+            str(e),
+            msg_type="error",
+            indented=True,
+        )
+        sys.exit(1)
+
+    display_message(
+        "Kubernetes queues appear to be valid.",
+        msg_type="success",
+        indented=True,
+    )
 
 
 def validate_input_parameters(live_parameters, original_parameters):

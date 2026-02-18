@@ -106,7 +106,9 @@ def validate_reana_spec(
             "Verifying environments in REANA specification file...",
             msg_type="info",
         )
-        validate_environment(reana_yaml, pull=pull_environment_image)
+        validate_environment(
+            reana_yaml, pull=pull_environment_image, access_token=access_token
+        )
 
 
 def _validate_server_capabilities(reana_yaml: Dict, access_token: str) -> None:

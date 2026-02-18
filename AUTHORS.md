@@ -7,6 +7,7 @@ The list of contributors in alphabetical order:
 - [Alp Tuna](https://orcid.org/0009-0001-1915-3993)
 - [Anton Khodak](https://orcid.org/0000-0003-3263-4553)
 - [Audrius Mecionis](https://orcid.org/0000-0002-3759-1663)
+- [Cameron McClymont](https://orcid.org/0009-0002-0176-5251)
 - [Camila Diaz](https://orcid.org/0000-0001-5543-797X)
 - [Clemens Lange](https://orcid.org/0000-0002-3632-3157)
 - [Daan Rosendal](https://orcid.org/0000-0002-3447-9000)

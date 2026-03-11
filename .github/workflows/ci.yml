@@ -4,11 +4,92 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
-name: CI
+name: ci
 
 on: [push, pull_request]
 
 jobs:
+  docker-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          ./run-tests.sh --docker-build
+          ./run-tests.sh --docker-run
+
+  docs-cli-api:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip 'setuptools<81' py
+          pip install -e .[all]
+
+      - name: Verify reana client api docs
+        run: ./run-tests.sh --docs-cli-api
+
+  docs-cli-commands:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip 'setuptools<81' py
+          pip install -e .[all]
+
+      - name: Verify reana client commands list
+        run: ./run-tests.sh --docs-cli-commands
+
+  docs-sphinx:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip 'setuptools<81' py
+          pip install -e .[all]
+
+      - name: Run Sphinx documentation with doctests
+        run: ./run-tests.sh --docs-sphinx
+
+  format-black:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install black
+
+      - name: Check Python code formatting
+        run: ./run-tests.sh --format-black
+
   lint-commitlint:
     runs-on: ubuntu-24.04
     steps:
@@ -28,38 +109,12 @@ jobs:
       - name: Check commit message compliance of the recently pushed commit
         if: github.event_name == 'push'
         run: |
-          ./run-tests.sh --check-commitlint HEAD~1 HEAD
+          ./run-tests.sh --lint-commitlint HEAD~1 HEAD
 
       - name: Check commit message compliance of the pull request
         if: github.event_name == 'pull_request'
         run: |
-          ./run-tests.sh --check-commitlint ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} ${{ github.event.pull_request.number }}
-
-  lint-shellcheck:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Runs shell script static analysis
-        run: |
-          sudo apt-get install shellcheck
-          ./run-tests.sh --check-shellcheck
-
-  lint-black:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Python dependencies
-        run: pip install black
-
-      - name: Check Python code formatting
-        run: ./run-tests.sh --check-black
+          ./run-tests.sh --lint-commitlint ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} ${{ github.event.pull_request.number }}
 
   lint-flake8:
     runs-on: ubuntu-24.04
@@ -76,7 +131,32 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install flake8
-          ./run-tests.sh --check-flake8
+          ./run-tests.sh --lint-flake8
+
+  lint-hadolint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Dockerfile compliance
+        run: ./run-tests.sh --lint-hadolint
+
+  lint-manifest:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install check-manifest
+
+      - name: Check Python manifest completeness
+        run: ./run-tests.sh --lint-manifest
 
   lint-pydocstyle:
     runs-on: ubuntu-24.04
@@ -92,97 +172,17 @@ jobs:
         run: pip install pydocstyle
 
       - name: Check compliance with Python docstring conventions
-        run: ./run-tests.sh --check-pydocstyle
+        run: ./run-tests.sh --lint-pydocstyle
 
-  lint-check-manifest:
+  lint-shellcheck:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Python dependencies
-        run: pip install check-manifest
-
-      - name: Check Python manifest completeness
-        run: ./run-tests.sh --check-manifest
-
-  lint-dockerfile:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check Dockerfile compliance
-        run: ./run-tests.sh --check-dockerfile
-
-  docker-build:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Build Docker image
+      - name: Runs shell script static analysis
         run: |
-          ./run-tests.sh --check-docker-build
-          ./run-tests.sh --check-docker-run
-
-  docs-cli-commands:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip 'setuptools<81' py
-          pip install -e .[all]
-
-      - name: Verify reana client commands list
-        run: ./run-tests.sh --check-cli-cmds
-
-  docs-cli-api:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip 'setuptools<81' py
-          pip install -e .[all]
-
-      - name: Verify reana client api docs
-        run: ./run-tests.sh --check-cli-api
-
-  docs-sphinx:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip 'setuptools<81' py
-          pip install -e .[all]
-
-      - name: Run Sphinx documentation with doctests
-        run: ./run-tests.sh --check-sphinx
+          sudo apt-get install shellcheck
+          ./run-tests.sh --lint-shellcheck
 
   python-tests:
     runs-on: ubuntu-24.04
@@ -216,7 +216,7 @@ jobs:
           pip install -e .[tests]
 
       - name: Run pytest
-        run: ./run-tests.sh --check-pytest
+        run: ./run-tests.sh --python-tests
 
       - name: Codecov Coverage
         if: matrix.python == '3.12'
@@ -232,14 +232,15 @@ jobs:
       github.event_name == 'push' &&
       startsWith(github.ref, 'refs/tags/')
     needs:
+      - docker-build
       - docs-cli-api
       - docs-cli-commands
       - docs-sphinx
-      - lint-black
-      - lint-check-manifest
+      - format-black
       - lint-commitlint
-      - lint-dockerfile
       - lint-flake8
+      - lint-hadolint
+      - lint-manifest
       - lint-pydocstyle
       - lint-shellcheck
       - python-tests

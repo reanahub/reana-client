@@ -142,6 +142,20 @@ jobs:
       - name: Check Dockerfile compliance
         run: ./run-tests.sh --lint-hadolint
 
+  lint-jsonlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+
+      - name: Lint JSON files
+        run: |
+          npm install jsonlint --global
+          ./run-tests.sh --lint-jsonlint
+
   lint-manifest:
     runs-on: ubuntu-24.04
     steps:
@@ -240,6 +254,7 @@ jobs:
       - lint-commitlint
       - lint-flake8
       - lint-hadolint
+      - lint-jsonlint
       - lint-manifest
       - lint-pydocstyle
       - lint-shellcheck

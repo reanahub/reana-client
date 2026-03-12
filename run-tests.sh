@@ -90,20 +90,20 @@ lint_flake8() {
     flake8 .
 }
 
-lint_jsonlint() {
-    find . -name "*.json" -exec jsonlint -q {} \+
-}
-
 lint_hadolint() {
     docker run -i --rm docker.io/hadolint/hadolint:v2.12.0 <Dockerfile
 }
 
-lint_markdownlint() {
-    markdownlint-cli2 "**/*.md"
+lint_jsonlint() {
+    find . -name "*.json" -exec jsonlint -q {} \+
 }
 
 lint_manifest() {
     check-manifest
+}
+
+lint_markdownlint() {
+    markdownlint-cli2 "**/*.md"
 }
 
 lint_pydocstyle() {
@@ -129,13 +129,14 @@ all() {
     docs_cli_commands
     docs_sphinx
     format_black
+    format_prettier
     format_shfmt
     lint_commitlint
     lint_flake8
     lint_hadolint
     lint_jsonlint
-    lint_markdownlint
     lint_manifest
+    lint_markdownlint
     lint_pydocstyle
     lint_shellcheck
     lint_yamllint
@@ -152,14 +153,15 @@ help() {
     echo "  --docs-cli-commands    Check CLI commands list"
     echo "  --docs-sphinx          Check Sphinx docs build"
     echo "  --format-black         Check formatting of Python code"
+    echo "  --format-prettier      Check formatting of Markdown etc files"
     echo "  --format-shfmt         Check formatting of shell scripts"
     echo "  --help                 Display this help message"
     echo "  --lint-commitlint      Check linting of commit messages"
     echo "  --lint-flake8          Check linting of Python code"
     echo "  --lint-hadolint        Check linting of Dockerfiles"
     echo "  --lint-jsonlint        Check linting of JSON files"
-    echo "  --lint-markdownlint    Check linting of Markdown files"
     echo "  --lint-manifest        Check linting of Python manifest"
+    echo "  --lint-markdownlint    Check linting of Markdown files"
     echo "  --lint-pydocstyle      Check linting of Python docstrings"
     echo "  --lint-shellcheck      Check linting of shell scripts"
     echo "  --lint-yamllint        Check linting of YAML files"
@@ -181,13 +183,14 @@ case $arg in
 --docs-cli-commands) docs_cli_commands ;;
 --docs-sphinx) docs_sphinx ;;
 --format-black) format_black ;;
+--format-prettier) format_prettier ;;
 --format-shfmt) format_shfmt ;;
 --lint-commitlint) lint_commitlint "$@" ;;
 --lint-flake8) lint_flake8 ;;
 --lint-hadolint) lint_hadolint ;;
 --lint-jsonlint) lint_jsonlint ;;
---lint-markdownlint) lint_markdownlint ;;
 --lint-manifest) lint_manifest ;;
+--lint-markdownlint) lint_markdownlint ;;
 --lint-pydocstyle) lint_pydocstyle ;;
 --lint-shellcheck) lint_shellcheck ;;
 --lint-yamllint) lint_yamllint ;;

@@ -90,6 +90,20 @@ jobs:
       - name: Check Python code formatting
         run: ./run-tests.sh --format-black
 
+  format-prettier:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+
+      - name: Check Prettier code formatting
+        run: |
+          npm install prettier --global
+          ./run-tests.sh --format-prettier
+
   format-shfmt:
     runs-on: ubuntu-24.04
     steps:
@@ -167,20 +181,6 @@ jobs:
           npm install jsonlint --global
           ./run-tests.sh --lint-jsonlint
 
-  lint-markdownlint:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-
-      - name: Lint Markdown files
-        run: |
-          npm install markdownlint-cli2 --global
-          ./run-tests.sh --lint-markdownlint
-
   lint-manifest:
     runs-on: ubuntu-24.04
     steps:
@@ -196,6 +196,20 @@ jobs:
 
       - name: Check Python manifest completeness
         run: ./run-tests.sh --lint-manifest
+
+  lint-markdownlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+
+      - name: Lint Markdown files
+        run: |
+          npm install markdownlint-cli2 --global
+          ./run-tests.sh --lint-markdownlint
 
   lint-pydocstyle:
     runs-on: ubuntu-24.04
@@ -285,8 +299,7 @@ jobs:
   release-docker:
     runs-on: ubuntu-24.04
     if: >
-      vars.RELEASE_DOCKER == 'true' &&
-      github.event_name == 'push' &&
+      vars.RELEASE_DOCKER == 'true' && github.event_name == 'push' &&
       startsWith(github.ref, 'refs/tags/')
     needs:
       - docker-build
@@ -294,13 +307,14 @@ jobs:
       - docs-cli-commands
       - docs-sphinx
       - format-black
+      - format-prettier
       - format-shfmt
       - lint-commitlint
       - lint-flake8
       - lint-hadolint
       - lint-jsonlint
-      - lint-markdownlint
       - lint-manifest
+      - lint-markdownlint
       - lint-pydocstyle
       - lint-shellcheck
       - lint-yamllint

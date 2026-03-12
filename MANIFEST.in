@@ -11,6 +11,7 @@ include *.toml
 include *.txt
 include *.yaml
 include *.yml
+include .editorconfig
 include .flake8
 include .yamllint.yaml
 include Dockerfile

@@ -20,13 +20,13 @@ docker_run() {
 docs_cli_api() {
     cli_docs_url=https://raw.githubusercontent.com/reanahub/docs.reana.io/master/docs/reference/reana-client-cli-api/index.md
     docs_differ_error_msg='Current reana-client differs with the documentation. Please update http://docs.reana.io/reference/reana-client-cli-api/.'
-    python scripts/generate_cli_api.py > cli_api.md
-    (diff -q -w  cli_api.md <(curl -s $cli_docs_url) || (echo "$docs_differ_error_msg" && exit 1))
+    python scripts/generate_cli_api.py >cli_api.md
+    (diff -q -w cli_api.md <(curl -s $cli_docs_url) || (echo "$docs_differ_error_msg" && exit 1))
     rm cli_api.md
 }
 
 docs_cli_commands() {
-    reana-client --help > cmd_list.txt
+    reana-client --help >cmd_list.txt
     diff -q -w docs/cmd_list.txt cmd_list.txt
     rm cmd_list.txt
 }
@@ -38,6 +38,14 @@ docs_sphinx() {
 
 format_black() {
     black --check .
+}
+
+format_prettier() {
+    prettier -c .
+}
+
+format_shfmt() {
+    shfmt -d .
 }
 
 lint_commitlint() {
@@ -87,7 +95,7 @@ lint_jsonlint() {
 }
 
 lint_hadolint() {
-    docker run -i --rm docker.io/hadolint/hadolint:v2.12.0 < Dockerfile
+    docker run -i --rm docker.io/hadolint/hadolint:v2.12.0 <Dockerfile
 }
 
 lint_manifest() {
@@ -117,6 +125,7 @@ all() {
     docs_cli_commands
     docs_sphinx
     format_black
+    format_shfmt
     lint_commitlint
     lint_flake8
     lint_hadolint
@@ -138,6 +147,7 @@ help() {
     echo "  --docs-cli-commands    Check CLI commands list"
     echo "  --docs-sphinx          Check Sphinx docs build"
     echo "  --format-black         Check formatting of Python code"
+    echo "  --format-shfmt         Check formatting of shell scripts"
     echo "  --help                 Display this help message"
     echo "  --lint-commitlint      Check linting of commit messages"
     echo "  --lint-flake8          Check linting of Python code"
@@ -165,6 +175,7 @@ case $arg in
 --docs-cli-commands) docs_cli_commands ;;
 --docs-sphinx) docs_sphinx ;;
 --format-black) format_black ;;
+--format-shfmt) format_shfmt ;;
 --lint-commitlint) lint_commitlint "$@" ;;
 --lint-flake8) lint_flake8 ;;
 --lint-hadolint) lint_hadolint ;;

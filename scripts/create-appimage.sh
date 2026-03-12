@@ -27,30 +27,30 @@ if ! [ -x "$(command -v convert)" ]; then
     exit 1
 fi
 
-download_python_appimage () {
+download_python_appimage() {
     wget https://github.com/niess/python-appimage/releases/download/python3.8/python3.8.18-cp38-cp38-manylinux1_x86_64.AppImage
     chmod +x python3.8.18-cp38-cp38-manylinux1_x86_64.AppImage
     wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
     chmod a+x appimagetool-x86_64.AppImage
 }
 
-extract_python_appimage () {
+extract_python_appimage() {
     ./python3.8.18-cp38-cp38-manylinux1_x86_64.AppImage --appimage-extract
 }
 
-install_reana_client_into_python_appimage () {
+install_reana_client_into_python_appimage() {
     ./squashfs-root/AppRun -m pip install --no-cache-dir "reana-client==$version"
 }
 
-modify_python_appimage_to_run_reana_client_by_default () {
+modify_python_appimage_to_run_reana_client_by_default() {
     (cd squashfs-root && ln -sf usr/bin/reana-client AppRun)
 }
 
-test_modified_python_appimage () {
+test_modified_python_appimage() {
     ./squashfs-root/AppRun --help
 }
 
-edit_desktop_file () {
+edit_desktop_file() {
     mv squashfs-root/usr/share/applications/python3.8.18.desktop squashfs-root/usr/share/applications/reana-client.desktop
     sed -i -e 's|^Name=.*|Name=reana-client|g' squashfs-root/usr/share/applications/*.desktop
     sed -i -e 's|^Exec=.*|Exec=reana-client|g' squashfs-root/usr/share/applications/*.desktop
@@ -61,22 +61,22 @@ edit_desktop_file () {
     cp squashfs-root/usr/share/applications/*.desktop squashfs-root/
 }
 
-add_icon () {
+add_icon() {
     wget https://github.com/reanahub/reana/raw/master/docs/logo-reana.png
     mkdir -p squashfs-root/usr/share/icons/hicolor/128x128/apps/
     convert -size 128x128 logo-reana.png squashfs-root/usr/share/icons/hicolor/128x128/apps/reana-client.png
     cp squashfs-root/usr/share/icons/hicolor/128x128/apps/reana-client.png squashfs-root/
 }
 
-convert_back_to_reana_client_appimage () {
+convert_back_to_reana_client_appimage() {
     VERSION=$version ARCH=x86_64 ./appimagetool-x86_64.AppImage squashfs-root/
 }
 
-test_created_reana_client_appimage () {
+test_created_reana_client_appimage() {
     "./reana-client-$version-x86_64.AppImage" --help
 }
 
-clean_after_ourselves () {
+clean_after_ourselves() {
     rm -rf logo-reana.png squashfs-root
     rm -rf appimagetool-x86_64.AppImage python3.8.18-cp38-cp38-manylinux1_x86_64.AppImage
 }

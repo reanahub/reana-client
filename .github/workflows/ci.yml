@@ -198,6 +198,24 @@ jobs:
           sudo apt-get install shellcheck
           ./run-tests.sh --lint-shellcheck
 
+  lint-yamllint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Lint YAML files
+        run: |
+          pip install yamllint
+          ./run-tests.sh --lint-yamllint
+
   python-tests:
     runs-on: ubuntu-24.04
     strategy:
@@ -258,6 +276,7 @@ jobs:
       - lint-manifest
       - lint-pydocstyle
       - lint-shellcheck
+      - lint-yamllint
       - python-tests
     steps:
       - name: Release Docker image

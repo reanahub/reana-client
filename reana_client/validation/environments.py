@@ -10,7 +10,7 @@
 
 import sys
 import logging
-
+import re
 import requests
 
 from reana_commons.config import (
@@ -19,7 +19,6 @@ from reana_commons.config import (
     WORKFLOW_RUNTIME_USER_UID,
 )
 from reana_commons.utils import run_command
-
 
 from reana_client.errors import EnvironmentValidationError
 from reana_client.config import (
@@ -53,7 +52,9 @@ def validate_environment(reana_yaml, pull=False):
         if workflow_type == "snakemake":
             workflow_steps = workflow["specification"]["steps"]
             return EnvironmentValidatorSnakemake(
-                workflow_steps=workflow_steps, pull=pull
+                workflow_steps=workflow_steps,
+                pull=pull,
+                workflow_filename=reana_yaml["workflow"]["file"],
             )
 
     workflow = reana_yaml["workflow"]
@@ -65,7 +66,7 @@ def validate_environment(reana_yaml, pull=False):
 class EnvironmentValidatorBase:
     """REANA workflow environments validation base class."""
 
-    def __init__(self, workflow_steps=None, pull=False):
+    def __init__(self, workflow_steps=None, pull=False, workflow_filename=None):
         """Validate environments in REANA workflow.
 
         :param workflow_steps: List of dictionaries which represents different steps involved in workflow.
@@ -73,6 +74,7 @@ class EnvironmentValidatorBase:
         """
         self.workflow_steps = workflow_steps
         self.pull = pull
+        self.workflow_filename = workflow_filename
         self.validated_images = set()
         self.messages = []
 
@@ -101,7 +103,7 @@ class EnvironmentValidatorBase:
     def _validate_environment_image(self, image, kubernetes_uid=None):
         """Validate image environment.
 
-        :param image: Full image name with tag if specified.
+        :param image: Full image name with tag if specified. E.g. `reanahub/reana-env-jupyter:2.0.0`.
         :param kubernetes_uid: Kubernetes UID defined in workflow spec.
         """
 
@@ -490,7 +492,7 @@ class EnvironmentValidatorSnakemake(EnvironmentValidatorBase):
     def validate_environment(self):
         """Validate environments in REANA Snakemake workflow."""
         for step in self.workflow_steps:
-            image = step["environment"]
+            image = step.get("environment")
             if not image:
                 self.messages.append(
                     {
@@ -501,3 +503,68 @@ class EnvironmentValidatorSnakemake(EnvironmentValidatorBase):
                 image = REANA_DEFAULT_SNAKEMAKE_ENV_IMAGE
             kubernetes_uid = step.get("kubernetes_uid")
             self._validate_environment_image(image, kubernetes_uid=kubernetes_uid)
+
+        # Extract and validate environments from Snakefile
+        self._validate_snakefile_environments()
+
+    def _get_snakemake_config_keys(self):
+        """
+        Extract the config keys used in the Snakefile.
+
+        We only need to know the config keys used in the Snakefile to be able to
+        create the DAG without errors. After extracting the keys, we can use any fake values.
+        """
+        with open(self.workflow_filename, "r") as f:
+            workflow_content = f.read()
+
+            # Look for all config["my_config_key"] in the workflow
+            return re.findall(r"config\[['|\"](.*?)['|\"]]", workflow_content)
+
+    def _validate_snakefile_environments(self):
+        """Extract and validate environments from Snakefile."""
+        try:
+            from pathlib import Path
+            from snakemake.api import SnakemakeApi
+            from snakemake.settings.types import (
+                ResourceSettings,
+                ConfigSettings,
+                ExecutionSettings,
+            )
+
+            # Load workflow
+            with SnakemakeApi() as snakemake_api:
+                config = {
+                    key: "fake_value" for key in self._get_snakemake_config_keys()
+                }
+                workflow_api = snakemake_api.workflow(
+                    resource_settings=ResourceSettings(),
+                    config_settings=ConfigSettings(config=config),
+                    snakefile=Path(self.workflow_filename),
+                )
+
+                # Extract all container images
+                wf = workflow_api._workflow
+                images = {rule.container_img for rule in wf.rules if rule.container_img}
+
+                # Trim prefixes
+                images = {image.replace("docker://docker.io/", "") for image in images}
+
+                # Validate all collected images
+                for image in images:
+                    self._validate_environment_image(image)
+
+        except ImportError:
+            self.messages.append(
+                {
+                    "type": "warning",
+                    "message": "Snakemake is not installed, skipping image validation.",
+                }
+            )
+
+        except Exception as e:
+            self.messages.append(
+                {
+                    "type": "error",
+                    "message": f"Error building Snakemake DAG: {str(e)}",
+                }
+            )

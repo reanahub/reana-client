@@ -1,5 +1,5 @@
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023, 2024, 2025, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -187,6 +187,7 @@ jobs:
   python-tests:
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         testenv: [lowest, release]
         python: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]

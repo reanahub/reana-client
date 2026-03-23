@@ -23,15 +23,27 @@ COPY . /code
 # hadolint ignore=DL3008,DL3013
 RUN apt-get update -y && \
     apt-get install --no-install-recommends -y \
+      autoconf \
+      automake \
       gcc \
+      libtool \
       libpython3.8 \
+      libxml2-dev \
+      libxslt-dev \
+      make \
       python3-pip \
       python3.8 \
       python3.8-dev && \
     # `pip3 install kubernetes` needed due to an old version of system pip3
     pip3 install --no-cache-dir kubernetes '.[tests]' && \
     apt-get remove -y \
+      autoconf \
+      automake \
       gcc \
+      libtool \
+      libxml2-dev \
+      libxslt-dev \
+      make \
       python3.8-dev && \
     apt-get autoremove -y && \
     apt-get clean && \

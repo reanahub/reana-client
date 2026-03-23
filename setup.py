@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -50,6 +50,14 @@ install_requires = [
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",
+    # setuptools <81 is needed because reana-commons 0.9.x uses pkg_resources
+    "setuptools>=40.8.0,<81 ; python_version<'3.8'",
+    "setuptools>=70.0.0,<81 ; python_version>='3.8'",
+    # bagit <1.9 for py36/py37 where newer bagit build deps are unavailable
+    "bagit>=1.6.4,<1.9 ; python_version<'3.8'",
+    # ruamel.yaml.clib <0.2.15 because 0.2.15 uses underscored dist-info
+    # directory naming that is incompatible with pkg_resources discovery
+    "ruamel.yaml.clib>=0.2.8,<0.2.15 ; python_version<'3.10'",
     "swagger_spec_validator>=2.4.0,<3.0.0; python_version<'3.7'",
 ]
 

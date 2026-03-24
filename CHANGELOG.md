@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.5](https://github.com/reanahub/reana-client/compare/0.9.4...0.9.5) (2026-03-24)
+
+
+### Build
+
+* **docker:** add build deps for jq and lxml ([#763](https://github.com/reanahub/reana-client/issues/763)) ([9a04527](https://github.com/reanahub/reana-client/commit/9a04527aa15ca38c66cc24e118832cb433f654c4))
+* **python:** pin setuptools below 81 ([#763](https://github.com/reanahub/reana-client/issues/763)) ([7d35fa0](https://github.com/reanahub/reana-client/commit/7d35fa0b55bde963fb9300feb40d4b94e4f5e369)), closes [#761](https://github.com/reanahub/reana-client/issues/761)
+
+
+### Continuous integration
+
+* **python:** run all matrix jobs without fast failing ([#763](https://github.com/reanahub/reana-client/issues/763)) ([8e79aaa](https://github.com/reanahub/reana-client/commit/8e79aaa686b19a1776ee88cd7b0bad36da8adf35))
+* **runners:** upgrade CI runners to Ubuntu 22.04 ([#741](https://github.com/reanahub/reana-client/issues/741)) ([639992a](https://github.com/reanahub/reana-client/commit/639992a3c13a3b601541f0a04c48afd33008ac62))
+
 ## [0.9.4](https://github.com/reanahub/reana-client/compare/0.9.3...0.9.4) (2024-11-29)
 
 

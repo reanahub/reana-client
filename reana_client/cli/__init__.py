@@ -1,20 +1,34 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2017, 2018, 2019, 2020, 2021, 2022, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA command line interface client."""
-import logging
-import os
-import sys
 
-import click
-from urllib3 import disable_warnings
+import warnings
 
-from reana_client.cli import workflow, files, ping, secrets, quotas, retention_rules
-from reana_client.utils import get_api_url
+warnings.filterwarnings(
+    "ignore", message="pkg_resources is deprecated", module="yadageschemas"
+)
+
+import logging  # noqa: E402
+import os  # noqa: E402
+import sys  # noqa: E402
+
+import click  # noqa: E402
+from urllib3 import disable_warnings  # noqa: E402
+
+from reana_client.cli import (  # noqa: E402
+    workflow,
+    files,
+    ping,
+    secrets,
+    quotas,
+    retention_rules,
+)
+from reana_client.utils import get_api_url  # noqa: E402
 
 DEBUG_LOG_FORMAT = (
     "[%(asctime)s] p%(process)s "

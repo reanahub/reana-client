@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.6](https://github.com/reanahub/reana-client/compare/0.9.5...0.9.6) (2026-03-25)
+
+
+### Bug fixes
+
+* **cli:** suppress pkg_resources deprecation warning ([#764](https://github.com/reanahub/reana-client/issues/764)) ([69105b7](https://github.com/reanahub/reana-client/commit/69105b7b5046450659b8aaeb77e4b28d7ddd1293))
+
 ## [0.9.5](https://github.com/reanahub/reana-client/compare/0.9.4...0.9.5) (2026-03-24)
 
 

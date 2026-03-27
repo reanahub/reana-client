@@ -7,12 +7,18 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA command line interface client."""
 
-import logging
-import os
-import sys
+import warnings
 
-import click
-from reana_client.cli import (
+warnings.filterwarnings(
+    "ignore", message="pkg_resources is deprecated", module="yadageschemas"
+)
+
+import logging  # noqa: E402
+import os  # noqa: E402
+import sys  # noqa: E402
+
+import click  # noqa: E402
+from reana_client.cli import (  # noqa: E402
     files,
     ping,
     quotas,
@@ -21,8 +27,8 @@ from reana_client.cli import (
     test,
     workflow,
 )
-from reana_client.utils import get_api_url
-from urllib3 import disable_warnings
+from reana_client.utils import get_api_url  # noqa: E402
+from urllib3 import disable_warnings  # noqa: E402
 
 DEBUG_LOG_FORMAT = (
     "[%(asctime)s] p%(process)s "

@@ -27,7 +27,7 @@ extras_require = {
     ],
     "tests": [
         "pytest-reana>=0.95.0a6,<0.96.0",
-        "reana-commons[kubernetes]>=0.95.0a12,<0.96.0",
+        "reana-commons[kubernetes]>=0.95.0a14,<0.96.0",
     ],
 }
 
@@ -42,7 +42,7 @@ install_requires = [
     "pathspec>=0.9.0,<1.0 ; python_version<'3.9'",
     "pathspec>=0.9.0 ; python_version>='3.9'",
     "jsonpointer>=2.0",
-    "reana-commons[yadage,snakemake,cwl]>=0.95.0a12,<0.96.0",
+    "reana-commons[yadage,snakemake,cwl]>=0.95.0a14,<0.96.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",

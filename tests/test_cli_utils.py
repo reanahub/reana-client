@@ -383,6 +383,21 @@ def test_output_user_friendly_logs_basic_output(capsys):
     assert "Step: step1" in out
 
 
+def test_output_user_friendly_logs_empty_service_logs(capsys):
+    workflow_logs = {
+        "workflow_logs": "ENGINE LOG\n",
+        "job_logs": {},
+        "service_logs": {"dask-service-123": []},
+    }
+
+    cli_utils.output_user_friendly_logs(workflow_logs, steps=None)
+
+    out = capsys.readouterr().out
+    assert "Workflow engine logs" in out
+    assert "Service logs" not in out
+    assert "Service: dask-service-123" not in out
+
+
 def test_retrieve_workflow_logs_calls_output_user_friendly_logs(monkeypatch):
     payload = {
         "workflow_logs": "W",

@@ -364,6 +364,34 @@ def output_user_friendly_logs(workflow_logs, steps):
         click.secho(f"{leading_mark} Engine internal logs", fg="yellow")
         click.secho(workflow_logs["engine_specific"])
 
+    # Service logs (e.g. Dask scheduler/worker pod logs)
+    service_logs = workflow_logs.get("service_logs", {})
+    service_names = sorted(
+        service_name for service_name, entries in service_logs.items() if entries
+    )
+    if service_names:
+        click.echo("\n")
+        click.secho(f"{leading_mark} Service logs", bold=True, fg="yellow")
+        for service_name in service_names:
+            entries = service_logs[service_name]
+            click.secho(
+                f"{leading_mark} Service: {service_name}",
+                bold=True,
+                fg="yellow",
+            )
+            for entry in entries:
+                component = entry.get("component", "")
+                content = entry.get("content", "")
+                click.secho(f"{leading_mark} Component: {component}", fg="yellow")
+                if content:
+                    click.secho(f"{leading_mark} Logs:", fg="yellow")
+                    click.secho(content)
+                else:
+                    display_message(
+                        f"Component {component} emitted no logs.",
+                        msg_type="info",
+                    )
+
     returned_step_names = set(
         workflow_logs["job_logs"][item]["job_name"]
         for item in workflow_logs["job_logs"].keys()

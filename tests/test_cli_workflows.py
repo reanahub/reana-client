@@ -18,7 +18,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 from mock import Mock, patch
-from pytest_reana.test_utils import make_mock_api_client
+from reana_commons.testing import make_mock_api_client
 from reana_client.api.client import create_workflow_from_json
 from reana_client.cli import cli
 from reana_client.config import RUN_STATUSES

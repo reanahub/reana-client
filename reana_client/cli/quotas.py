@@ -22,6 +22,7 @@ from reana_client.cli.utils import (
     human_readable_or_raw_option,
 )
 from reana_client.printer import display_message
+from reana_client.utils import format_quota_period_window
 
 
 @click.group(help="Quota commands")
@@ -97,6 +98,22 @@ def quota_show(
                 quota[resource], human_readable_or_raw
             )
             health_color = REANA_RESOURCE_HEALTH_COLORS.get(health)
+            period_window = (
+                format_quota_period_window(quota[resource])
+                if resource == "cpu"
+                else None
+            )
+            if period_window:
+                # NOTE: This splice relies on get_quota_resource_usage()
+                # rendering percentage output as a trailing parenthetical.
+                if resource_usage.endswith(")"):
+                    resource_usage = resource_usage[:-1] + (
+                        f" in the period from {period_window})"
+                    )
+                else:
+                    resource_usage = (
+                        f"{resource_usage} in the period from {period_window}"
+                    )
             return click.secho(resource_usage, fg=health_color)
 
         result = (
@@ -105,6 +122,14 @@ def quota_show(
             and quota[resource].get(report).get("raw", 0) > 0
             else "No {}.".format(report)
         )
+        if (
+            human_readable_or_raw == "human_readable"
+            and resource == "cpu"
+            and not result.startswith("No ")
+        ):
+            period_window = format_quota_period_window(quota[resource])
+            if period_window:
+                result = f"{result} in the period from {period_window}"
         return display_message(result)
 
     except Exception as e:

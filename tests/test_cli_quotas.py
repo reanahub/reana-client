@@ -34,6 +34,162 @@ def _build_quota_response(quota_period_months=3, quota_period_start_at=None):
     }
 
 
+def test_quota_show_displays_current_cpu_period():
+    """Test quota-show prints the active CPU quota window."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    quota = _build_quota_response(
+        quota_period_start_at="2026-06-04T00:00:00Z",
+    )
+
+    with patch("reana_client.api.client.get_user_quota", return_value=quota):
+        result = runner.invoke(
+            cli,
+            ["quota-show", "-t", "000000", "--resource", "cpu", "--human-readable"],
+        )
+
+    assert result.exit_code == 0
+    assert (
+        "30s out of 16m 40s used (3% in the period from 2026-06-04 to 2026-09-04)"
+        in result.output
+    )
+
+
+def test_quota_show_report_usage_human_displays_cpu_period():
+    """Test quota-show usage report prints the active CPU quota window."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    quota = _build_quota_response(
+        quota_period_start_at="2026-06-04T00:00:00Z",
+    )
+
+    with patch("reana_client.api.client.get_user_quota", return_value=quota):
+        result = runner.invoke(
+            cli,
+            [
+                "quota-show",
+                "-t",
+                "000000",
+                "--resource",
+                "cpu",
+                "--report",
+                "usage",
+                "--human-readable",
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert "30s in the period from 2026-06-04 to 2026-09-04" in result.output
+
+
+def test_quota_show_report_limit_human_displays_cpu_period():
+    """Test quota-show limit report prints the active CPU quota window."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    quota = _build_quota_response(
+        quota_period_start_at="2026-06-04T00:00:00Z",
+    )
+
+    with patch("reana_client.api.client.get_user_quota", return_value=quota):
+        result = runner.invoke(
+            cli,
+            [
+                "quota-show",
+                "-t",
+                "000000",
+                "--resource",
+                "cpu",
+                "--report",
+                "limit",
+                "--human-readable",
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert "16m 40s in the period from 2026-06-04 to 2026-09-04" in result.output
+
+
+def test_quota_show_report_usage_human_omits_suffix_without_period():
+    """Test non-periodic CPU usage report stays unchanged."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    quota = _build_quota_response(
+        quota_period_months=None,
+        quota_period_start_at=None,
+    )
+
+    with patch("reana_client.api.client.get_user_quota", return_value=quota):
+        result = runner.invoke(
+            cli,
+            [
+                "quota-show",
+                "-t",
+                "000000",
+                "--resource",
+                "cpu",
+                "--report",
+                "usage",
+                "--human-readable",
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert result.output.strip() == "30s"
+
+
+def test_quota_show_report_usage_raw_omits_period_suffix():
+    """Test raw CPU usage report remains script-friendly."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    quota = _build_quota_response(
+        quota_period_start_at="2026-06-04T00:00:00Z",
+    )
+
+    with patch("reana_client.api.client.get_user_quota", return_value=quota):
+        result = runner.invoke(
+            cli,
+            [
+                "quota-show",
+                "-t",
+                "000000",
+                "--resource",
+                "cpu",
+                "--report",
+                "usage",
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert result.output.strip() == "30"
+
+
+def test_quota_show_report_usage_human_omits_suffix_for_disk():
+    """Test disk usage report does not show a CPU period suffix."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    quota = _build_quota_response(
+        quota_period_start_at="2026-06-04T00:00:00Z",
+    )
+
+    with patch("reana_client.api.client.get_user_quota", return_value=quota):
+        result = runner.invoke(
+            cli,
+            [
+                "quota-show",
+                "-t",
+                "000000",
+                "--resource",
+                "disk",
+                "--report",
+                "usage",
+                "--human-readable",
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert result.output.strip() == "150 Bytes"
+
+
 def test_info_displays_cpu_quota_period_details():
     """Test info surfaces the active CPU quota period."""
     env = {"REANA_SERVER_URL": "localhost"}
@@ -57,6 +213,8 @@ def test_info_displays_cpu_quota_period_details():
     assert "CPU quota period in months: 3" in result.output
     assert "Current CPU quota period start: 2026-06-04" in result.output
     assert "Current CPU quota period end: 2026-09-04" in result.output
+
+
 def test_info_displays_disabled_cpu_quota_period_as_zero():
     """Test info shows disabled periodic CPU accounting as zero months."""
     env = {"REANA_SERVER_URL": "localhost"}

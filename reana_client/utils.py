@@ -8,13 +8,14 @@
 """REANA client utils."""
 
 import base64
-from datetime import datetime
+import calendar
+from datetime import datetime, timezone
 import logging
 import os
 import pathlib
 import sys
 import traceback
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, Union
 from uuid import UUID
 
 from reana_commons.utils import get_workflow_status_change_verb
@@ -23,6 +24,100 @@ from reana_commons.specification import load_reana_spec
 from reana_client.config import reana_yaml_valid_file_names
 from reana_client.printer import display_message
 from reana_client.validation.utils import validate_reana_spec
+
+
+# NOTE: Keep this month-boundary arithmetic in sync with reana_db/utils.py
+# (_add_months), reana-client-go's addMonths helper, and reana-ui's quota
+# period window calculation.
+def _add_months(dt: datetime, months: int) -> datetime:
+    """Add whole months to a datetime while preserving the time of day."""
+    year = dt.year + (dt.month - 1 + months) // 12
+    month = (dt.month - 1 + months) % 12 + 1
+    day = min(dt.day, calendar.monthrange(year, month)[1])
+    return dt.replace(year=year, month=month, day=day)
+
+
+def _format_date_label(dt: datetime) -> str:
+    """Format a datetime as an ISO calendar date."""
+    return dt.date().isoformat()
+
+
+def parse_server_datetime(value: Union[str, datetime, None]) -> Optional[datetime]:
+    """Parse a server datetime string into a naive UTC datetime."""
+    if not value:
+        return None
+
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(
+                value.replace("Z", "+00:00") if value.endswith("Z") else value
+            )
+        except ValueError:
+            logging.debug("Could not parse server datetime %r as ISO 8601", value)
+            return None
+    else:
+        logging.debug(
+            "Unexpected server datetime type %s for value %r",
+            type(value).__name__,
+            value,
+        )
+        return None
+
+    if parsed.tzinfo:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+
+def format_quota_period_window(resource: Dict) -> Optional[str]:
+    """Format the active quota accounting window for a quota resource."""
+    start_label, end_label = get_quota_period_date_range(resource)
+    if not start_label or not end_label:
+        return None
+
+    return f"{start_label} to {end_label}"
+
+
+def get_quota_period_date_range(resource: Dict) -> Tuple[Optional[str], Optional[str]]:
+    """Return ISO start/end dates for the active quota accounting window."""
+    period_months = resource.get("quota_period_months")
+    period_start_at = parse_server_datetime(resource.get("quota_period_start_at"))
+    if not period_months or not period_start_at:
+        return None, None
+
+    period_end_at = _add_months(period_start_at, period_months)
+    return _format_date_label(period_start_at), _format_date_label(period_end_at)
+
+
+def build_cpu_quota_period_info(
+    quota: Dict,
+) -> Dict[str, Dict[str, Union[str, int]]]:
+    """Build CLI info entries describing the current CPU quota period."""
+    cpu_quota = quota.get("cpu") if quota else None
+    if not cpu_quota:
+        return {}
+
+    period_months = cpu_quota.get("quota_period_months") or 0
+    period_info = {
+        "cpu_quota_period_months": {
+            "title": "CPU quota period in months",
+            "value": period_months,
+        }
+    }
+
+    start_label, end_label = get_quota_period_date_range(cpu_quota)
+    if start_label and end_label:
+        period_info["current_cpu_quota_period_start"] = {
+            "title": "Current CPU quota period start",
+            "value": start_label,
+        }
+        period_info["current_cpu_quota_period_end"] = {
+            "title": "Current CPU quota period end",
+            "value": end_label,
+        }
+
+    return period_info
 
 
 def workflow_uuid_or_name(ctx, param, value):

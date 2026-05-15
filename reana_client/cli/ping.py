@@ -16,6 +16,7 @@ import click
 from reana_client.cli.utils import add_access_token_options, check_connection
 from reana_client.config import JSON
 from reana_client.printer import display_message
+from reana_client.utils import build_cpu_quota_period_info
 from reana_client.version import __version__
 
 
@@ -110,9 +111,15 @@ def info(ctx, access_token: str, output_format: str):  # noqa: D301
     \t $ reana-client info
     """
     try:
-        from reana_client.api.client import info
+        from reana_client.api.client import get_user_quota, info
 
         response = info(access_token)
+        try:
+            response.update(build_cpu_quota_period_info(get_user_quota(access_token)))
+        except (KeyError, ValueError) as e:
+            logging.debug(
+                "Could not enrich cluster info with quota period details: %s", str(e)
+            )
         if output_format == JSON:
             display_message(json.dumps(response))
         else:

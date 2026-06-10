@@ -25,6 +25,8 @@ from reana_client.config import RUN_STATUSES
 from reana_client.utils import get_workflow_status_change_msg
 from reana_commons.api_client import BaseAPIClient
 from reana_commons.config import INTERACTIVE_SESSION_TYPES
+from reana_commons.specification import load_workflow_spec_from_reana_yaml
+from reana_commons.validation.images import extract_images
 
 
 def test_workflows_server_not_connected():
@@ -35,6 +37,28 @@ def test_workflows_server_not_connected():
     message = "REANA client is not connected to any REANA cluster."
     assert message in result.output
     assert result.exit_code == 1
+
+
+def test_load_snakemake_workflow_extracts_container_image(tmp_path):
+    """Test that client-side Snakemake expansion exposes container images."""
+    snakefile = tmp_path / "Snakefile"
+    snakefile.write_text("""
+rule all:
+    input: "output.txt"
+    default_target: True
+
+rule create_output:
+    output: "output.txt"
+    container: "docker://docker.io/library/ubuntu:24.04"
+    shell: "touch {output}"
+""")
+    reana_yaml = {"workflow": {"type": "snakemake", "file": "Snakefile"}}
+
+    reana_yaml["workflow"]["specification"] = load_workflow_spec_from_reana_yaml(
+        reana_yaml, tmp_path
+    )
+
+    assert extract_images(reana_yaml) == ["docker.io/library/ubuntu:24.04"]
 
 
 def test_workflows_no_token():

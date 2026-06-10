@@ -26,7 +26,7 @@ extras_require = {
         "sphinx-click>=1.0.4",
     ],
     "tests": [
-        "reana-commons[kubernetes,tests]>=0.95.0a20,<0.96.0",
+        "reana-commons[kubernetes,tests]>=0.95.0a21,<0.96.0",
     ],
 }
 
@@ -41,7 +41,7 @@ install_requires = [
     "pathspec>=0.9.0,<1.0 ; python_version<'3.9'",
     "pathspec>=0.9.0 ; python_version>='3.9'",
     "jsonpointer>=2.0",
-    "reana-commons[yadage,snakemake,cwl]>=0.95.0a20,<0.96.0",
+    "reana-commons[yadage,snakemake,cwl]>=0.95.0a21,<0.96.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",

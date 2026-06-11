@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2021, 2022 CERN.
+# Copyright (C) 2021, 2022, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -106,6 +106,11 @@ class EnvironmentValidatorBase:
                 indented=True,
             )
 
+    @staticmethod
+    def _is_singularity_image(image):
+        """Return True if image is a Singularity/Apptainer image reference."""
+        return image.startswith("/cvmfs/") or image.endswith(".sif")
+
     def check_image_authorized(self, image):
         """Checks if an image is authorized for use in workflows.
 
@@ -161,19 +166,27 @@ class EnvironmentValidatorBase:
         :param kubernetes_uid: Kubernetes UID defined in workflow spec.
         """
         if image not in self.validated_images:
-            image_name, image_tag = self._validate_image_tag(image)
-            self.check_image_authorized(image)
-            exists_locally, _ = self._image_exists(image_name, image_tag)
-            if exists_locally or self.pull:
-                uid, gids = self._get_image_uid_gids(image_name, image_tag)
-                self._validate_uid_gids(uid, gids, kubernetes_uid=kubernetes_uid)
-            else:
+            if self._is_singularity_image(image):
                 self.messages.append(
                     {
-                        "type": "warning",
-                        "message": "UID/GIDs validation skipped, specify `--pull` to enable it.",
+                        "type": "info",
+                        "message": f"Environment image {image} is a Singularity/Apptainer image, skipping registry validation.",
                     }
                 )
+            else:
+                image_name, image_tag = self._validate_image_tag(image)
+                self.check_image_authorized(image)
+                exists_locally, _ = self._image_exists(image_name, image_tag)
+                if exists_locally or self.pull:
+                    uid, gids = self._get_image_uid_gids(image_name, image_tag)
+                    self._validate_uid_gids(uid, gids, kubernetes_uid=kubernetes_uid)
+                else:
+                    self.messages.append(
+                        {
+                            "type": "warning",
+                            "message": "UID/GIDs validation skipped, specify `--pull` to enable it.",
+                        }
+                    )
             self.validated_images.add(image)
 
     def _image_exists(self, image, tag):

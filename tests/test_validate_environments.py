@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2021, 2022 CERN.
+# Copyright (C) 2021, 2022, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -12,7 +12,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from reana_client.errors import EnvironmentValidationError
-from reana_client.validation.environments import EnvironmentValidatorSerial
+from reana_client.validation.environments import (
+    EnvironmentValidatorCWL,
+    EnvironmentValidatorSerial,
+    EnvironmentValidatorSnakemake,
+    EnvironmentValidatorYadage,
+)
 
 
 @pytest.mark.parametrize(
@@ -185,3 +190,61 @@ def test_check_vetting_api_error():
     assert message["type"] == "warning"
     assert "Could not check if container images are authorised" in message["message"]
     assert "API connection failed" in message["message"]
+
+
+def _serial_validator(image):
+    steps = [{"environment": image, "kubernetes_uid": None}]
+    return EnvironmentValidatorSerial(workflow_steps=steps)
+
+
+def _snakemake_validator(image):
+    steps = [{"environment": image, "kubernetes_uid": None}]
+    return EnvironmentValidatorSnakemake(workflow_steps=steps)
+
+
+def _yadage_validator(image):
+    stages = [
+        {
+            "scheduler": {
+                "step": {
+                    "environment": {
+                        "environment_type": "docker-encapsulated",
+                        "image": image,
+                    }
+                }
+            }
+        }
+    ]
+    return EnvironmentValidatorYadage(workflow_steps=stages)
+
+
+def _cwl_validator(image):
+    graph = [{"requirements": {"DockerRequirement": {"dockerPull": image}}}]
+    return EnvironmentValidatorCWL(workflow_steps=graph)
+
+
+@pytest.mark.parametrize(
+    "make_validator",
+    [_serial_validator, _yadage_validator, _cwl_validator, _snakemake_validator],
+    ids=["serial", "yadage", "cwl", "snakemake"],
+)
+@pytest.mark.parametrize(
+    "image",
+    [
+        "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/reanahub/reana-env-root6:6.18.04",
+        "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/reanahub/reana-env-root6",
+        "/workspace/images/my_tool.sif",
+    ],
+)
+def test_validate_singularity_environment(make_validator, image):
+    """Test that Singularity/Apptainer images skip registry validation.
+
+    The skip logic lives in the shared ``EnvironmentValidatorBase``, so it
+    applies to every workflow type (serial, yadage, CWL and Snakemake).
+    """
+    validator = make_validator(image)
+    with patch("requests.get") as get_mock:
+        validator.validate_environment()
+        get_mock.assert_not_called()
+    assert image in validator.validated_images
+    assert any("Singularity" in msg["message"] for msg in validator.messages)

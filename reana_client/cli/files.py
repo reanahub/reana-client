@@ -29,6 +29,7 @@ from reana_client.cli.utils import (
     check_connection,
     display_formatted_output,
     human_readable_or_raw_option,
+    log_command_params,
     parse_filter_parameters,
 )
 from reana_client.config import JSON, STD_OUTPUT_CHAR, URL
@@ -112,9 +113,7 @@ def get_files(
     """  # noqa: W605
     from reana_client.api.client import current_rs_api_client, list_files
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     search_filter = None
     headers = ["name", "size", "last-modified"]
@@ -213,9 +212,7 @@ def download_files(
         else:
             click.echo(binary_file, nl=False)
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     if not filenames:
         try:
@@ -310,9 +307,7 @@ def upload_files(  # noqa: C901
     """
     from reana_client.api.client import get_workflow_specification, upload_to_server
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     if not filenames:
         try:
@@ -458,9 +453,7 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
     """  # noqa: W605
     from reana_client.api.client import delete_file
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     if workflow:
         delete_failed = False
@@ -517,9 +510,7 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
     """
     from reana_client.api.client import get_workflow_status, list_files, mv_files
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     try:
         mv_files(source, target, workflow, access_token)
@@ -565,9 +556,7 @@ def prune_files(
     """
     from reana_client.api.client import prune_workspace
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     try:
         response = prune_workspace(
@@ -614,9 +603,7 @@ def workflow_disk_usage(
     """
     from reana_client.api.client import get_workflow_disk_usage
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     search_filter = None
     headers = ["size", "name"]

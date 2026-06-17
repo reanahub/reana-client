@@ -20,6 +20,7 @@ from reana_client.cli.utils import (
     add_access_token_options,
     check_connection,
     human_readable_or_raw_option,
+    log_command_params,
 )
 from reana_client.printer import display_message
 from reana_client.utils import format_quota_period_window
@@ -72,10 +73,7 @@ def quota_show(
     """
     from reana_client.api.client import get_user_quota
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     try:
         quota = get_user_quota(access_token)

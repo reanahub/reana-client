@@ -1,0 +1,915 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of REANA.
+# Copyright (C) 2026 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+"""OIDC login (loopback PKCE and device flow) and token refresh helpers."""
+
+import base64
+import hashlib
+import json
+import os
+import secrets
+import time
+import webbrowser
+from datetime import datetime, timedelta, timezone
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Callable, Dict, Optional, Tuple
+from urllib.parse import parse_qs, parse_qsl, urlencode, urljoin, urlparse, urlunparse
+
+import requests
+
+from reana_client.auth.storage import (
+    CREDENTIAL_EPOCH_FIELD,
+    clear_token_material,
+    clear_token_material_if_matches,
+    credential_store_lock,
+    get_active_server,
+    get_server_entry,
+    normalize_server_url,
+    release_refresh_lock,
+    try_acquire_refresh_lock,
+    upsert_server_entry,
+    wait_for_refresh_lock,
+)
+from reana_client.config import tls_verify, tls_verify_for_url
+
+DEFAULT_SCOPES = "openid profile email offline_access"
+EXPIRY_LEEWAY_SECONDS = 60
+DISCOVERY_PATH = "/api/.well-known/openid-configuration"
+PKCE_CODE_CHALLENGE_METHOD = "S256"
+REFRESH_LOCK_WAIT_SECONDS = 35
+"""How long to wait for another process's in-flight refresh before failing.
+
+This is slightly longer than the 30s network timeout on the refresh request
+itself, so a legitimate in-flight refresh almost always finishes (or fails)
+before this deadline without ever permitting an unserialised rotation.
+"""
+DEVICE_FLOW_MAX_SECONDS = 3600
+"""Maximum time a device-login command may poll an issuer."""
+
+LOOPBACK_HOST = "127.0.0.1"
+LOOPBACK_PORT_ENV = "REANA_CLIENT_LOGIN_LOOPBACK_PORT"
+"""Overrides the loopback callback server's port; unset means OS-assigned.
+
+RFC 8252 native-app guidance calls for binding an OS-assigned ephemeral port
+(0) so the authorization server is expected to match the redirect URI on
+scheme/host only. Not every identity provider supports that, though --
+CERN's Application Portal, for one, has no documented way to register a
+wildcard/any-port loopback redirect URI and requires an exact match. Setting
+this env var pins one fixed port so an administrator can register
+`http://127.0.0.1:<port>/callback` once. The trade-off: login fails outright
+if something else on the machine is already bound to that port, instead of
+the ephemeral default's automatic use of a fresh free port every time --
+which is why it stays opt-in rather than the default.
+"""
+LOOPBACK_CALLBACK_PATH = "/callback"
+LOOPBACK_TIMEOUT_SECONDS = 300
+
+_CALLBACK_SUCCESS_HTML = (
+    b"<html><body><h1>REANA login complete.</h1>"
+    b"<p>You can close this tab and return to the terminal.</p></body></html>"
+)
+_CALLBACK_ERROR_HTML = (
+    b"<html><body><h1>REANA login failed.</h1>"
+    b"<p>Return to the terminal for details.</p></body></html>"
+)
+
+
+class AuthenticationError(Exception):
+    """Authentication failure visible to CLI users."""
+
+
+_OIDC_HTTPS_URL_FIELDS = (
+    "issuer",
+    "authorization_endpoint",
+    "token_endpoint",
+    "device_authorization_endpoint",
+    "revocation_endpoint",
+)
+"""OIDC metadata fields that may receive or authorize credentials."""
+
+
+def _validate_oidc_https_urls(metadata: Dict, required=()) -> None:
+    """Reject missing or non-HTTPS OIDC metadata URLs.
+
+    REANA Server validates and rewrites issuer metadata before relaying it, but
+    the CLI is a separate credential-handling boundary.  Validate again here so
+    a compromised or older server cannot redirect authorization codes, device
+    codes, access tokens, or refresh tokens to a cleartext endpoint.
+    """
+    for field in _OIDC_HTTPS_URL_FIELDS:
+        value = metadata.get(field)
+        if not value:
+            if field in required:
+                raise AuthenticationError(
+                    f"Authentication metadata is missing required field: {field}"
+                )
+            continue
+        parsed = urlparse(value)
+        if parsed.scheme.lower() != "https" or not parsed.netloc:
+            raise AuthenticationError(
+                f"Authentication metadata field '{field}' must be an HTTPS URL."
+            )
+
+
+def utcnow() -> datetime:
+    """Return timezone-aware current UTC time."""
+    return datetime.now(timezone.utc)
+
+
+def parse_timestamp(value: Optional[str]) -> Optional[datetime]:
+    """Parse ISO timestamp stored in credential file."""
+    if not value:
+        return None
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    return datetime.fromisoformat(value)
+
+
+def format_timestamp(value: datetime) -> str:
+    """Format timestamp for credential file."""
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _decode_jwt_exp(token: Optional[str]) -> Optional[datetime]:
+    """Decode JWT exp claim without validating the token."""
+    if not token or token.count(".") < 2:
+        return None
+    payload = token.split(".")[1]
+    payload += "=" * (-len(payload) % 4)
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(payload.encode("ascii")))
+        exp = claims.get("exp")
+        return datetime.fromtimestamp(exp, timezone.utc) if exp else None
+    except Exception:
+        return None
+
+
+def _token_expires_at(token_response: Dict) -> Optional[str]:
+    """Return access token expiry timestamp from token response."""
+    expires_in = token_response.get("expires_in")
+    if expires_in is not None:
+        try:
+            if isinstance(expires_in, bool):
+                raise ValueError
+            seconds = int(expires_in)
+            if seconds < 0:
+                raise ValueError
+            return format_timestamp(utcnow() + timedelta(seconds=seconds))
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise AuthenticationError(
+                "Authentication server returned an invalid 'expires_in' value."
+            ) from exc
+    jwt_exp = _decode_jwt_exp(token_response.get("access_token"))
+    return format_timestamp(jwt_exp) if jwt_exp else None
+
+
+def _refresh_token_expires_at(token_response: Dict) -> Optional[str]:
+    """Return refresh token expiry timestamp if issuer exposes it."""
+    refresh_expires_in = token_response.get("refresh_expires_in")
+    if refresh_expires_in is None:
+        return None
+    try:
+        if isinstance(refresh_expires_in, bool):
+            raise ValueError
+        seconds = int(refresh_expires_in)
+        if seconds < 0:
+            raise ValueError
+        return format_timestamp(utcnow() + timedelta(seconds=seconds))
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise AuthenticationError(
+            "Authentication server returned an invalid 'refresh_expires_in' value."
+        ) from exc
+
+
+def _device_login_parameters(device_response: Dict) -> Tuple[str, int, int]:
+    """Validate and return device code, lifetime, and polling interval."""
+    try:
+        device_code = device_response.get("device_code")
+        if not isinstance(device_code, str) or not device_code:
+            raise ValueError
+        expires_in = device_response.get("expires_in")
+        if not isinstance(expires_in, int) or isinstance(expires_in, bool):
+            raise ValueError
+        if expires_in <= 0 or expires_in > DEVICE_FLOW_MAX_SECONDS:
+            raise ValueError
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise AuthenticationError(
+            "Device login response did not contain a valid code and expiry."
+        ) from exc
+    complete_uri = device_response.get("verification_uri_complete")
+    verification_uri = device_response.get("verification_uri")
+    user_code = device_response.get("user_code")
+    prompt_uri = complete_uri or verification_uri
+    parsed_prompt_uri = urlparse(prompt_uri) if isinstance(prompt_uri, str) else None
+    if (
+        not parsed_prompt_uri
+        or parsed_prompt_uri.scheme != "https"
+        or not parsed_prompt_uri.netloc
+        or (
+            not complete_uri
+            and (
+                not isinstance(verification_uri, str)
+                or not verification_uri
+                or not isinstance(user_code, str)
+                or not user_code
+            )
+        )
+    ):
+        raise AuthenticationError(
+            "Device login response did not contain a usable verification prompt."
+        )
+    raw_interval = device_response.get("interval", 5)
+    try:
+        if not isinstance(raw_interval, int) or isinstance(raw_interval, bool):
+            raise ValueError
+        interval = raw_interval
+        if interval < 0 or interval > DEVICE_FLOW_MAX_SECONDS:
+            raise ValueError
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise AuthenticationError(
+            "Device login response contained an invalid polling interval."
+        ) from exc
+    return device_code, expires_in, interval or 5
+
+
+def _reject_redirect(response: requests.Response, description: str) -> None:
+    """Raise if the server tried to redirect this request.
+
+    Every call site here uses ``allow_redirects=False`` and must call this
+    immediately afterwards. ``requests`` follows redirects by default,
+    including 307/308, which -- unlike 301/302/303 -- preserve the original
+    method and body: a compromised or misconfigured issuer could otherwise
+    3xx-redirect an HTTPS token/device/refresh/revocation POST to an
+    attacker-controlled HTTP endpoint and have the client resend the
+    authorization code, refresh token, or client credentials to it verbatim.
+    """
+    if response.is_redirect:
+        location = response.headers.get("location", "<no Location header>")
+        raise AuthenticationError(
+            f"{description} attempted to redirect to {location!r}. "
+            "Refusing to follow a redirect on an authentication request."
+        )
+
+
+def _response_json(response: requests.Response) -> Dict:
+    """Return JSON response or raise a readable authentication error."""
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise AuthenticationError(
+            f"Authentication server returned a non-JSON response: {response.text}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise AuthenticationError(
+            "Authentication server returned a JSON response that is not an object."
+        )
+    return payload
+
+
+def _base64url_encode(value: bytes) -> str:
+    """Return unpadded base64url-encoded value."""
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
+
+
+def generate_pkce_pair() -> Dict[str, str]:
+    """Generate PKCE verifier and S256 challenge."""
+    code_verifier = secrets.token_urlsafe(64)
+    code_challenge = _base64url_encode(
+        hashlib.sha256(code_verifier.encode("ascii")).digest()
+    )
+    return {
+        "code_verifier": code_verifier,
+        "code_challenge": code_challenge,
+        "code_challenge_method": PKCE_CODE_CHALLENGE_METHOD,
+    }
+
+
+def discover(server_url: str) -> Dict:
+    """Discover OIDC endpoints relayed by REANA server."""
+    normalized_url = normalize_server_url(server_url)
+    try:
+        response = requests.get(
+            urljoin(normalized_url + "/", DISCOVERY_PATH.lstrip("/")),
+            timeout=30,
+            allow_redirects=False,
+            verify=tls_verify(),
+        )
+    except requests.RequestException as exc:
+        raise AuthenticationError(
+            f"Could not connect to the REANA server at {normalized_url}."
+        ) from exc
+    _reject_redirect(response, "Authentication metadata discovery")
+    if not response.ok:
+        raise AuthenticationError(
+            "Could not discover authentication metadata from "
+            f"{normalized_url}: HTTP {response.status_code}"
+        )
+    metadata = _response_json(response)
+    required_fields = [
+        "issuer",
+        "authorization_endpoint",
+        "token_endpoint",
+        "reana_cli_client_id",
+    ]
+    missing_fields = [field for field in required_fields if not metadata.get(field)]
+    if missing_fields:
+        raise AuthenticationError(
+            "Authentication metadata is missing required field(s): "
+            + ", ".join(missing_fields)
+        )
+    _validate_oidc_https_urls(metadata, required=required_fields)
+    return metadata
+
+
+def _store_token_response(
+    server_url: str, metadata: Dict, token_response: Dict, make_active: bool = True
+) -> Dict:
+    """Persist token response for a server.
+
+    ``make_active`` is forwarded to :func:`upsert_server_entry`. It must stay
+    ``True`` (the default) for user-initiated logins, but a background
+    refresh write-back passes ``False`` so it can never undo a concurrent
+    explicit ``login`` to a different server (see ``refresh_credentials``).
+    """
+    _validate_oidc_https_urls(metadata, required=("issuer", "token_endpoint"))
+    refresh_token = token_response.get("refresh_token")
+    if refresh_token is not None and not isinstance(refresh_token, str):
+        raise AuthenticationError(
+            "Authentication server returned an invalid refresh token."
+        )
+    recovery_entry = {
+        "issuer": metadata["issuer"],
+        "client_id": metadata["reana_cli_client_id"],
+        "token_endpoint": metadata["token_endpoint"],
+        "authorization_endpoint": metadata.get("authorization_endpoint"),
+        "device_authorization_endpoint": metadata.get("device_authorization_endpoint"),
+        "revocation_endpoint": metadata.get("revocation_endpoint"),
+        "refresh_token": refresh_token,
+    }
+    access_token = token_response.get("access_token")
+    try:
+        if not isinstance(access_token, str) or not access_token:
+            raise AuthenticationError(
+                "Authentication server did not return an access token."
+            )
+        access_token_expires_at = _token_expires_at(token_response)
+        refresh_token_expires_at = _refresh_token_expires_at(token_response)
+    except AuthenticationError:
+        if refresh_token:
+            # A rotated refresh token invalidates its predecessor even when
+            # another response field is malformed. Preserve the replacement
+            # without accepting the rejected access token, so the next command
+            # can retry instead of orphaning live issuer-side credentials.
+            upsert_server_entry(server_url, recovery_entry, make_active=make_active)
+        raise
+    entry = {
+        **recovery_entry,
+        "access_token": access_token,
+        "access_token_expires_at": access_token_expires_at,
+        "refresh_token_expires_at": refresh_token_expires_at,
+    }
+    return upsert_server_entry(server_url, entry, make_active=make_active)
+
+
+def _revoke_discarded_tokens(
+    server_url: str, metadata: Dict, token_response: Dict
+) -> None:
+    """Best-effort revoke tokens from a refresh whose write-back was discarded.
+
+    Used when a refresh's credential epoch no longer matches what it started
+    with (a concurrent logout or another refresh raced it) -- the tokens
+    this refresh just obtained are about to be thrown away rather than
+    written to disk, so revoke them at the issuer too instead of leaving a
+    live, un-revoked, never-persisted token pair.
+    """
+    revocation_endpoint = metadata.get("revocation_endpoint")
+    refresh_token = token_response.get("refresh_token")
+    if not revocation_endpoint or not refresh_token:
+        return
+    try:
+        _validate_oidc_https_urls({"revocation_endpoint": revocation_endpoint})
+        response = requests.post(
+            revocation_endpoint,
+            data={
+                "client_id": metadata["reana_cli_client_id"],
+                "token": refresh_token,
+                "token_type_hint": "refresh_token",
+            },
+            timeout=30,
+            allow_redirects=False,
+            verify=tls_verify_for_url(server_url, revocation_endpoint),
+        )
+        _reject_redirect(response, "Token revocation")
+    except (AuthenticationError, requests.RequestException):
+        pass
+
+
+def _build_authorization_url(
+    metadata: Dict, scopes: str, pkce: Dict, state: str, redirect_uri: str
+) -> str:
+    """Build the OIDC authorization endpoint URL for the loopback flow."""
+    oauth_parameters = {
+        "response_type": "code",
+        "client_id": metadata["reana_cli_client_id"],
+        "redirect_uri": redirect_uri,
+        "scope": scopes,
+        "state": state,
+        "code_challenge": pkce["code_challenge"],
+        "code_challenge_method": pkce["code_challenge_method"],
+    }
+    endpoint = urlparse(metadata["authorization_endpoint"])
+    parameters = [
+        (key, value)
+        for key, value in parse_qsl(endpoint.query, keep_blank_values=True)
+        if key not in oauth_parameters
+    ] + list(oauth_parameters.items())
+    return urlunparse(endpoint._replace(query=urlencode(parameters)))
+
+
+class _CallbackHandler(BaseHTTPRequestHandler):
+    """Capture the single authorization-code redirect on the loopback server."""
+
+    def do_GET(self):  # noqa: N802
+        """Record callback query parameters and acknowledge the browser.
+
+        Only a request carrying ``code`` or ``error`` is treated as the
+        issuer's authorization response and stops the wait loop. Any other
+        local process reaching this ephemeral port during the login window
+        (its port number is visible in the printed authorization URL) could
+        otherwise send a bare request first and pre-empt the real browser
+        redirect, forcing a misleading failure instead of a clean wait for
+        the actual callback.
+        """
+        parsed = urlparse(self.path)
+        if parsed.path != LOOPBACK_CALLBACK_PATH:
+            self.send_response(404)
+            self.end_headers()
+            return
+        query = {key: values[0] for key, values in parse_qs(parsed.query).items()}
+        if "code" not in query and "error" not in query:
+            self.send_response(400)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(_CALLBACK_ERROR_HTML)
+            return
+        self.server.callback_query = query
+        body = _CALLBACK_SUCCESS_HTML if "code" in query else _CALLBACK_ERROR_HTML
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        """Silence the default stderr request logging."""
+
+
+def _start_callback_server() -> Tuple[HTTPServer, str]:
+    """Start a loopback HTTP server and return it with its redirect URI."""
+    raw_port = (os.getenv(LOOPBACK_PORT_ENV) or "").strip() or "0"
+    try:
+        requested_port = int(raw_port)
+    except ValueError:
+        raise AuthenticationError(
+            f"{LOOPBACK_PORT_ENV} must be an integer port number, " f"got '{raw_port}'."
+        )
+    if not 0 <= requested_port <= 65535:
+        # A port outside 0-65535 reaches HTTPServer's bind() and raises
+        # OverflowError there, which is not an OSError subclass and so
+        # would otherwise skip the controlled handling below entirely.
+        raise AuthenticationError(
+            f"{LOOPBACK_PORT_ENV} must be between 0 and 65535, "
+            f"got {requested_port}."
+        )
+    try:
+        httpd = HTTPServer((LOOPBACK_HOST, requested_port), _CallbackHandler)
+    except OSError as error:
+        message = (
+            f"Could not bind the login callback server to "
+            f"{LOOPBACK_HOST}:{requested_port} ({error})."
+        )
+        if requested_port:
+            message += (
+                f" This port is fixed by {LOOPBACK_PORT_ENV} so it can be "
+                "registered as a redirect URI with the identity provider; "
+                "free it up (check what else is listening on it) and try "
+                "again."
+            )
+        raise AuthenticationError(message)
+    httpd.callback_query = None
+    port = httpd.server_address[1]
+    redirect_uri = f"http://{LOOPBACK_HOST}:{port}{LOOPBACK_CALLBACK_PATH}"
+    return httpd, redirect_uri
+
+
+def _wait_for_callback(httpd: HTTPServer, timeout: int) -> Optional[Dict]:
+    """Serve requests until the authorization callback arrives or times out."""
+    deadline = time.monotonic() + timeout
+    httpd.callback_query = None
+    while httpd.callback_query is None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        httpd.timeout = remaining
+        httpd.handle_request()
+    return httpd.callback_query
+
+
+def _exchange_authorization_code(
+    server_url: str, metadata: Dict, code: str, pkce: Dict, redirect_uri: str
+) -> Dict:
+    """Exchange an authorization code for tokens using the PKCE verifier."""
+    try:
+        response = requests.post(
+            metadata["token_endpoint"],
+            data={
+                "grant_type": "authorization_code",
+                "client_id": metadata["reana_cli_client_id"],
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "code_verifier": pkce["code_verifier"],
+            },
+            timeout=30,
+            allow_redirects=False,
+            verify=tls_verify_for_url(server_url, metadata["token_endpoint"]),
+        )
+    except requests.RequestException as exc:
+        raise AuthenticationError(
+            "Could not exchange the authorization code. Please try again."
+        ) from exc
+    _reject_redirect(response, "Authorization code exchange")
+    payload = _response_json(response)
+    if not response.ok:
+        raise AuthenticationError(
+            "Browser login failed: "
+            f"{payload.get('error_description') or payload.get('error') or response.text}"
+        )
+    return payload
+
+
+def login_with_loopback(
+    server_url: str,
+    display_url: Callable[[str], None],
+    open_browser: Callable[[str], bool] = webbrowser.open,
+    timeout: int = LOOPBACK_TIMEOUT_SECONDS,
+) -> Dict:
+    """Perform the loopback authorization-code + PKCE flow and store credentials."""
+    normalized_url = normalize_server_url(server_url)
+    metadata = discover(normalized_url)
+    pkce = generate_pkce_pair()
+    state = secrets.token_urlsafe(32)
+
+    httpd, redirect_uri = _start_callback_server()
+    try:
+        authorization_url = _build_authorization_url(
+            metadata, DEFAULT_SCOPES, pkce, state, redirect_uri
+        )
+        display_url(authorization_url)
+        try:
+            open_browser(authorization_url)
+        except Exception:
+            pass
+        query = _wait_for_callback(httpd, timeout)
+    finally:
+        httpd.server_close()
+
+    if query is None:
+        raise AuthenticationError("Browser login timed out. Please run login again.")
+    if query.get("error"):
+        raise AuthenticationError(
+            "Browser login failed: "
+            f"{query.get('error_description') or query.get('error')}"
+        )
+    returned_state = query.get("state")
+    if not returned_state or not secrets.compare_digest(returned_state, state):
+        raise AuthenticationError(
+            "Browser login failed: state parameter mismatch (possible CSRF)."
+        )
+    code = query.get("code")
+    if not code:
+        raise AuthenticationError(
+            "Browser login failed: no authorization code was returned."
+        )
+
+    token_response = _exchange_authorization_code(
+        normalized_url, metadata, code, pkce, redirect_uri
+    )
+    return _store_token_response(normalized_url, metadata, token_response)
+
+
+def _start_device_authorization(server_url: str, metadata: Dict, pkce: Dict) -> Dict:
+    """Start OIDC device authorization flow."""
+    try:
+        response = requests.post(
+            metadata["device_authorization_endpoint"],
+            data={
+                "client_id": metadata["reana_cli_client_id"],
+                "scope": DEFAULT_SCOPES,
+                "code_challenge": pkce["code_challenge"],
+                "code_challenge_method": pkce["code_challenge_method"],
+            },
+            timeout=30,
+            allow_redirects=False,
+            verify=tls_verify_for_url(
+                server_url, metadata["device_authorization_endpoint"]
+            ),
+        )
+    except requests.RequestException as exc:
+        raise AuthenticationError(
+            "Could not start device login. Please try again."
+        ) from exc
+    _reject_redirect(response, "Device authorization")
+    payload = _response_json(response)
+    if response.ok:
+        return payload
+    raise AuthenticationError(
+        "Could not start device login: "
+        f"{payload.get('error_description') or payload.get('error') or response.text}"
+    )
+
+
+def login_with_device_flow(
+    server_url: str,
+    display_callback: Callable[[Dict], None],
+    sleep: Callable[[float], None] = time.sleep,
+    monotonic: Callable[[], float] = time.monotonic,
+) -> Dict:
+    """Perform OIDC device flow (headless fallback) and store credentials."""
+    normalized_url = normalize_server_url(server_url)
+    metadata = discover(normalized_url)
+    if not metadata.get("device_authorization_endpoint"):
+        raise AuthenticationError(
+            "This REANA server does not advertise a device authorization endpoint."
+        )
+    pkce = generate_pkce_pair()
+    device_response = _start_device_authorization(normalized_url, metadata, pkce)
+    device_code, expires_in, interval = _device_login_parameters(device_response)
+    display_callback(device_response)
+    deadline = monotonic() + expires_in
+    while True:
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            raise AuthenticationError("Device login expired. Please run login again.")
+        sleep(min(interval, remaining))
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            raise AuthenticationError("Device login expired. Please run login again.")
+        try:
+            response = requests.post(
+                metadata["token_endpoint"],
+                data={
+                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                    "device_code": device_code,
+                    "client_id": metadata["reana_cli_client_id"],
+                    "code_verifier": pkce["code_verifier"],
+                },
+                timeout=max(0.1, min(30, remaining)),
+                allow_redirects=False,
+                verify=tls_verify_for_url(normalized_url, metadata["token_endpoint"]),
+            )
+        except requests.RequestException as exc:
+            raise AuthenticationError(
+                "Could not complete device login. Please try again."
+            ) from exc
+        _reject_redirect(response, "Device token polling")
+        payload = _response_json(response)
+        if response.ok:
+            return _store_token_response(normalized_url, metadata, payload)
+
+        error = payload.get("error")
+        if error == "authorization_pending":
+            continue
+        if error == "slow_down":
+            interval += 5
+            continue
+        if error == "expired_token":
+            raise AuthenticationError("Device login expired. Please run login again.")
+        if error == "access_denied":
+            raise AuthenticationError("Device login was denied.")
+        raise AuthenticationError(
+            "Device login failed: "
+            f"{payload.get('error_description') or error or response.text}"
+        )
+
+
+def _access_token_valid(server_entry: Dict) -> bool:
+    """Return whether stored access token can be used now."""
+    access_token = server_entry.get("access_token")
+    expires_at = parse_timestamp(server_entry.get("access_token_expires_at"))
+    if not access_token:
+        return False
+    if not expires_at:
+        return True
+    return expires_at - timedelta(seconds=EXPIRY_LEEWAY_SECONDS) > utcnow()
+
+
+def refresh_credentials(server_url: str, server_entry: Optional[Dict] = None) -> Dict:
+    """Refresh credentials for a server.
+
+    The credential-store lock protects only the on-disk read and the final
+    write, not the token-endpoint request in between: holding a
+    cross-process file lock for the duration of a blocking network call
+    would serialise every other ``reana-client`` invocation on the machine
+    behind a single slow or unresponsive issuer (the same bug class fixed
+    server-side for OIDC discovery). ``upsert_server_entry`` re-reads the
+    on-disk entry at write time under its own lock, so a concurrent
+    refresh from another process is merged rather than silently lost.
+
+    Three safeguards close the gaps that design otherwise leaves open:
+
+    - A separate, refresh-scoped advisory lock, keyed to this specific
+      server (distinct from the general credential-store lock, and from any
+      other server's refresh lock) serialises the network call itself
+      across processes, so concurrent refreshes of the *same* server don't
+      all pay a redundant round-trip against the same refresh token -- a
+      process that loses the race waits for the winner and reuses its
+      result instead -- while a refresh of a *different* server is never
+      blocked waiting on it.
+    - The credential epoch captured before the network call is re-checked
+      against the on-disk epoch before writing back: if a concurrent
+      ``logout()`` (or another login/refresh) ran while this request was
+      in flight, the epoch will have moved and the freshly obtained tokens
+      are revoked and discarded instead of resurrecting a session the user
+      already logged out of.
+    - The write-back passes ``make_active=False``, so a background refresh
+      completing after the user has already run ``login`` to switch to a
+      different server can never flip ``active_server`` back to this one.
+    """
+    normalized_url = normalize_server_url(server_url)
+    refresh_deadline = time.monotonic() + REFRESH_LOCK_WAIT_SECONDS
+    while True:
+        refresh_lock_file = try_acquire_refresh_lock(normalized_url)
+        if refresh_lock_file is not None:
+            break
+        remaining = refresh_deadline - time.monotonic()
+        if remaining <= 0 or not wait_for_refresh_lock(
+            normalized_url, timeout=remaining
+        ):
+            raise AuthenticationError(
+                "Timed out waiting for another credential refresh. Please retry."
+            )
+        # A successful leader leaves a usable token. After a failed leader,
+        # loop back and contend for leadership again; exactly one waiter will
+        # rotate the token while all others remain serialized.
+        with credential_store_lock():
+            waited_entry = get_server_entry(normalized_url)
+        if _access_token_valid(waited_entry):
+            return waited_entry
+
+    try:
+        with credential_store_lock():
+            # Re-read only after becoming leader. A previous leader may have
+            # rotated or cleared credentials while this process waited.
+            server_entry = get_server_entry(normalized_url) or server_entry or {}
+            refresh_token = server_entry.get("refresh_token")
+            if not refresh_token:
+                raise AuthenticationError("Please run `reana-client login`.")
+            _validate_oidc_https_urls(
+                server_entry, required=("issuer", "token_endpoint")
+            )
+            started_epoch = int(server_entry.get(CREDENTIAL_EPOCH_FIELD, 0))
+        try:
+            response = requests.post(
+                server_entry["token_endpoint"],
+                data={
+                    "grant_type": "refresh_token",
+                    "client_id": server_entry["client_id"],
+                    "refresh_token": refresh_token,
+                },
+                timeout=30,
+                allow_redirects=False,
+                verify=tls_verify_for_url(
+                    normalized_url, server_entry["token_endpoint"]
+                ),
+            )
+        except requests.RequestException as exc:
+            raise AuthenticationError(
+                "Could not refresh authentication credentials. Please try again."
+            ) from exc
+        _reject_redirect(response, "Token refresh")
+        payload = _response_json(response)
+        if not response.ok:
+            if payload.get("error") == "invalid_grant":
+                # A concurrent process may have already rotated this exact
+                # refresh token and stored a new, valid one while this request
+                # was in flight -- only clear if the stored token is still the
+                # one that was just rejected, so a losing process's failure
+                # here can never destroy a winning process's fresh credentials.
+                if clear_token_material_if_matches(normalized_url, refresh_token):
+                    raise AuthenticationError("Please run `reana-client login`.")
+                raise AuthenticationError(
+                    "Credentials were changed by another process (login, "
+                    "logout, or refresh). Please retry, or run "
+                    "`reana-client login` if you're not signed in."
+                )
+            message = payload.get("error_description") or payload.get("error")
+            raise AuthenticationError(
+                "Could not refresh authentication credentials: "
+                f"{message or f'HTTP {response.status_code}'}"
+            )
+
+        metadata = {
+            "issuer": server_entry["issuer"],
+            "reana_cli_client_id": server_entry["client_id"],
+            "token_endpoint": server_entry["token_endpoint"],
+            "authorization_endpoint": server_entry.get("authorization_endpoint"),
+            "device_authorization_endpoint": server_entry.get(
+                "device_authorization_endpoint"
+            ),
+            "revocation_endpoint": server_entry.get("revocation_endpoint"),
+        }
+        if "refresh_token" not in payload:
+            payload["refresh_token"] = refresh_token
+
+        with credential_store_lock():
+            current_entry = get_server_entry(normalized_url)
+            if int(current_entry.get(CREDENTIAL_EPOCH_FIELD, 0)) == started_epoch:
+                # A background refresh write-back must never flip the active
+                # server: an explicit `login` to a different server that
+                # completed while this refresh's network call was in flight
+                # must win, not be silently undone here.
+                return _store_token_response(
+                    normalized_url, metadata, payload, make_active=False
+                )
+        # A concurrent credential change superseded this refresh. Revoke its
+        # discarded tokens without blocking unrelated credential-store users.
+        _revoke_discarded_tokens(normalized_url, metadata, payload)
+        raise AuthenticationError("Please run `reana-client login`.")
+    finally:
+        if refresh_lock_file is not None:
+            release_refresh_lock(refresh_lock_file)
+
+
+def get_access_token() -> str:
+    """Return valid access token for the active server, refreshing as needed."""
+    with credential_store_lock():
+        server_url = get_active_server()
+        if not server_url:
+            raise AuthenticationError(
+                "REANA client is not connected to any REANA cluster."
+            )
+        # Re-read after acquiring the lock: a waiting process can reuse the
+        # access token produced by the refresh that just completed.
+        server_entry = get_server_entry(server_url)
+        if _access_token_valid(server_entry):
+            return server_entry["access_token"]
+    # Refresh outside the lock: refresh_credentials() does its own locking
+    # around the on-disk read/write and must not hold it across the blocking
+    # token-endpoint request, so it cannot be called from inside this lock
+    # either -- doing so would keep the file lock held for the whole refresh
+    # regardless, defeating the point.
+    return refresh_credentials(server_url, server_entry)["access_token"]
+
+
+def logout(server_url: Optional[str] = None) -> Optional[str]:
+    """Logout from active server and return remote revocation warning if any.
+
+    Holds the credential-store lock across the whole operation, including
+    the revocation request: unlike a refresh (a hot path invoked on every
+    near-expiry request, where holding the lock across the network call
+    would serialise every concurrent CLI invocation on the machine), logout
+    is a rare, one-shot, user-initiated action, so there's no throughput
+    cost to keeping this atomic. Without it, a concurrent
+    ``refresh_credentials()`` could rotate the refresh token between the
+    read here and the final clear: this would revoke the now-superseded
+    token (a no-op at the issuer) while wiping the newly-rotated one from
+    local disk, leaving that new token live and un-revoked at the issuer
+    even though the CLI reports a successful logout.
+    """
+    with credential_store_lock():
+        server_url = server_url or get_active_server()
+        if not server_url:
+            raise AuthenticationError(
+                "REANA client is not connected to any REANA cluster."
+            )
+        server_entry = get_server_entry(server_url)
+        refresh_token = server_entry.get("refresh_token")
+        revocation_endpoint = server_entry.get("revocation_endpoint")
+        warning = None
+        if refresh_token and revocation_endpoint:
+            try:
+                _validate_oidc_https_urls({"revocation_endpoint": revocation_endpoint})
+                response = requests.post(
+                    revocation_endpoint,
+                    data={
+                        "client_id": server_entry["client_id"],
+                        "token": refresh_token,
+                        "token_type_hint": "refresh_token",
+                    },
+                    timeout=30,
+                    allow_redirects=False,
+                    verify=tls_verify_for_url(server_url, revocation_endpoint),
+                )
+                _reject_redirect(response, "Token revocation")
+                if not response.ok:
+                    warning = (
+                        "Remote token revocation failed with "
+                        f"HTTP {response.status_code}."
+                    )
+            except (AuthenticationError, requests.RequestException) as exc:
+                warning = f"Remote token revocation failed: {exc}"
+        clear_token_material(server_url)
+        return warning

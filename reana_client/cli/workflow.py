@@ -21,12 +21,14 @@ from reana_client.cli.utils import (
     add_access_token_options_not_required,
     add_pagination_options,
     add_workflow_option,
+    access_token_check,
     check_connection,
     display_formatted_output,
     format_session_uri,
     get_formatted_progress,
     human_readable_or_raw_option,
     key_value_to_dict,
+    log_command_params,
     parse_filter_parameters,
     requires_environments,
     retrieve_workflow_logs,
@@ -37,7 +39,6 @@ from reana_client.cli.utils import (
     format_run_label_list,
 )
 from reana_client.config import (
-    ERROR_MESSAGES,
     RUN_STATUSES,
     TIMECHECK,
     CLI_LOGS_FOLLOW_DEFAULT_INTERVAL,
@@ -266,9 +267,7 @@ def workflows_list(  # noqa: C901
         )
         sys.exit(1)
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
     type = "interactive" if sessions else "batch"
 
     status_filter = RUN_STATUSES.copy()
@@ -295,6 +294,7 @@ def workflows_list(  # noqa: C901
             search=search_filter,
             include_progress=include_progress,
             include_workspace_size=include_workspace_size,
+            include_session_secrets=type == "interactive",
             workflow=workflow,
             shared=shared,
             shared_by=shared_by,
@@ -349,7 +349,7 @@ def workflows_list(  # noqa: C901
                 workflow["session_uri"] = format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
                     path=workflow["session_uri"],
-                    access_token=access_token,
+                    session_secret=workflow.get("session_secret"),
                 )
             row = []
             for header in headers[type]:
@@ -458,9 +458,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
     from reana_client.api.client import create_workflow_from_bundle
     from reana_client.utils import get_api_url
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     # Check that name is not an UUIDv4.
     # Otherwise it would mess up `--workflow` flag usage because no distinction
@@ -570,9 +568,7 @@ def workflow_start(
         else:
             display_message(status_msg, msg_type="success")
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     parsed_parameters = {"input_parameters": parameters, "operational_options": options}
     if workflow:
@@ -708,9 +704,7 @@ def workflow_restart(
     )
     from reana_client.utils import get_api_url
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     parsed_parameters = {
         "input_parameters": parameters,
@@ -893,9 +887,7 @@ def workflow_status(  # noqa: C901
                 data[-1] += [response.get(k)]
         return data
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
     try:
         workflow_response = get_workflow_status(workflow, access_token)
         headers = ["name", "run_number", "created", "status"]
@@ -972,9 +964,7 @@ def workflow_logs(
     \t $ reana-client logs -w myanalysis.42 --filter status=running\n
     \t $ reana-client logs -w myanalysis.42 --filter step=myfit --follow\n
     """
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     if json_format and follow:
         display_message(
@@ -1106,12 +1096,10 @@ def workflow_validate(
     """
     from reana_client.api.client import validate_workflow_spec_bundle
 
-    if not access_token:
-        display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
-        ctx.exit(1)
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    access_token = access_token_check(ctx, None, access_token, True)
+    if server_capabilities:
+        check_connection(lambda: None)()
+    log_command_params(ctx)
 
     if server_capabilities:
         display_message(
@@ -1371,9 +1359,7 @@ def workflow_delete(  # noqa: C901
 
     should_delete_workspace = True
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     if workflow:
         try:
@@ -1603,9 +1589,7 @@ def workflow_diff(
     """
     from reana_client.api.client import diff_workflows
 
-    logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
-    for p in ctx.params:
-        logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
+    log_command_params(ctx)
 
     def print_color_diff(lines):
         for line in lines:
@@ -1699,7 +1683,11 @@ def workflow_open_interactive_session(
     Examples:\n
     \t $ reana-client open -w myanalysis.42 jupyter
     """
-    from reana_client.api.client import info, open_interactive_session
+    from reana_client.api.client import (
+        get_interactive_session_secret,
+        info,
+        open_interactive_session,
+    )
 
     if workflow:
         try:
@@ -1713,28 +1701,55 @@ def workflow_open_interactive_session(
                 interactive_session_type,
                 interactive_session_configuration,
             )
+            try:
+                session_secret = get_interactive_session_secret(workflow, access_token)[
+                    "session_secret"
+                ]
+            except Exception as secret_error:
+                # The session was already created above; a transient failure
+                # fetching its secret must not be reported as a failed open.
+                logging.debug(traceback.format_exc())
+                logging.debug(str(secret_error))
+                session_secret = None
             display_message(
                 "Interactive session opened successfully", msg_type="success"
             )
+            if session_secret is None:
+                display_message(
+                    "Could not retrieve the session's access token; "
+                    "run `reana-client open` again to get the full URL.",
+                    msg_type="warning",
+                )
             click.secho(
                 format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
                     path=path,
-                    access_token=access_token,
+                    session_secret=session_secret,
                 ),
                 fg="green",
             )
             display_message(
                 "It could take several minutes to start the interactive session."
             )
-            reana_info = info(access_token)
-            max_inactivity_days_entry = (
-                reana_info.get("maximum_interactive_session_inactivity_period") or {}
-            )
-            max_inactivity_days = max_inactivity_days_entry.get("value")
-            if max_inactivity_days:
+            try:
+                reana_info = info(access_token)
+                max_inactivity_days_entry = (
+                    reana_info.get("maximum_interactive_session_inactivity_period")
+                    or {}
+                )
+                max_inactivity_days = max_inactivity_days_entry.get("value")
+                if max_inactivity_days:
+                    display_message(
+                        f"Please note that it will be automatically closed after {max_inactivity_days} days of inactivity."
+                    )
+            except Exception as info_error:
+                # The session is already open. Optional informational metadata
+                # must not turn that successful mutation into an exit failure.
+                logging.debug(traceback.format_exc())
+                logging.debug(str(info_error))
                 display_message(
-                    f"Please note that it will be automatically closed after {max_inactivity_days} days of inactivity."
+                    "Could not retrieve the interactive-session inactivity policy.",
+                    msg_type="warning",
                 )
         except Exception as e:
             logging.debug(traceback.format_exc())

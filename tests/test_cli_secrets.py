@@ -15,26 +15,36 @@ from mock import Mock, patch
 from reana_commons.testing import make_mock_api_client
 
 from reana_client.cli import cli
+from reana_client.config import ERROR_MESSAGES
 
 
-def test_secrets_list_server_not_reachable():
+def test_secrets_list_server_not_reachable(tmp_path, monkeypatch):
     """Test list secrets when not connected to any cluster."""
+    monkeypatch.setenv(
+        "REANA_CLIENT_CONFIG", str(tmp_path / "missing-client-config.json")
+    )
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     message = "REANA client is not connected to any REANA cluster."
     reana_token = "000000"
-    runner = CliRunner(env={"REANA_SERVER_URL": None})
+    runner = CliRunner()
     result = runner.invoke(cli, ["secrets-list", "-t", reana_token])
     assert result.exit_code == 1
     assert message in result.output
 
 
-def test_secrets_list_server_no_token():
+def test_secrets_list_server_no_token(monkeypatch):
     """Test list secrets when access token is not set."""
-    message = "Please provide your access token"
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
+    monkeypatch.setattr(
+        "reana_client.cli.utils.get_access_token",
+        lambda: (_ for _ in ()).throw(
+            Exception(ERROR_MESSAGES["missing_access_token"])
+        ),
+    )
     result = runner.invoke(cli, ["secrets-list"])
     assert result.exit_code == 1
-    assert message in result.output
+    assert ERROR_MESSAGES["missing_access_token"] in result.output
 
 
 def test_secrets_list_ok():

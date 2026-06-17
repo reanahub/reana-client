@@ -11,9 +11,7 @@ reana_yaml_valid_file_names = ["reana.yaml", "reana.yml"]
 """REANA specification valid file names."""
 
 ERROR_MESSAGES = {
-    "missing_access_token": "Please provide your access token by using"
-    " the -t/--access-token flag, or by setting the"
-    " REANA_ACCESS_TOKEN environment variable."
+    "missing_access_token": "Please run `reana-client login` to authenticate."
 }
 
 JSON = "json"

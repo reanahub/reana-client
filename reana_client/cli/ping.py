@@ -13,6 +13,12 @@ import sys
 import traceback
 
 import click
+from reana_client.auth.oidc import (
+    AuthenticationError,
+    login_with_device_flow,
+    logout as oidc_logout,
+)
+from reana_client.auth.storage import get_active_server, normalize_server_url
 from reana_client.cli.utils import add_access_token_options, check_connection
 from reana_client.config import JSON
 from reana_client.printer import display_message
@@ -24,6 +30,54 @@ from reana_client.version import __version__
 def configuration_group():
     """Configuration commands."""
     pass
+
+
+@configuration_group.command("login")
+@click.option(
+    "--server-url",
+    envvar="REANA_SERVER_URL",
+    help="REANA server URL to authenticate against.",
+)
+@click.pass_context
+def login(ctx, server_url):  # noqa: D301
+    """Authenticate against REANA server using OIDC device login."""
+    try:
+        server_url = normalize_server_url(server_url or get_active_server())
+
+        def display_device_prompt(device_response):
+            verification_uri_complete = device_response.get("verification_uri_complete")
+            if verification_uri_complete:
+                display_message(
+                    "Open the following URL to authenticate:\n"
+                    f"{verification_uri_complete}"
+                )
+            else:
+                display_message(
+                    "Open the following URL to authenticate:\n"
+                    f"{device_response.get('verification_uri')}\n"
+                    f"Code: {device_response.get('user_code')}"
+                )
+
+        login_with_device_flow(server_url, display_device_prompt)
+        display_message(f"Logged in to {server_url}")
+    except (AuthenticationError, ValueError) as e:
+        display_message(str(e), msg_type="error")
+        ctx.exit(1)
+
+
+@configuration_group.command("logout")
+@click.pass_context
+def logout(ctx):  # noqa: D301
+    """Logout from the active REANA server."""
+    try:
+        server_url = get_active_server()
+        warning = oidc_logout(server_url)
+        if warning:
+            display_message(warning, msg_type="warning")
+        display_message(f"Logged out from {server_url}")
+    except (AuthenticationError, ValueError) as e:
+        display_message(str(e), msg_type="error")
+        ctx.exit(1)
 
 
 @configuration_group.command("ping")

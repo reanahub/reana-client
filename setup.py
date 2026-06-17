@@ -37,11 +37,12 @@ for key, reqs in extras_require.items():
     extras_require["all"].extend(reqs)
 
 install_requires = [
-    "click>=7",
+    "click>=8",
     "pathspec>=0.9.0,<1.0 ; python_version<'3.9'",
     "pathspec>=0.9.0 ; python_version>='3.9'",
     "jsonpointer>=2.0",
     "reana-commons[yadage,snakemake,cwl]>=0.95.0a22,<0.96.0",
+    "requests>=2.20.0",
     "tablib>=0.12.1,<0.13",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",
@@ -65,9 +66,7 @@ setup(
     author="REANA",
     author_email="info@reana.io",
     url="https://github.com/reanahub/reana-client",
-    packages=[
-        "reana_client",
-    ],
+    packages=packages,
     zip_safe=False,
     include_package_data=True,
     entry_points={

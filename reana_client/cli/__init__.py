@@ -44,7 +44,16 @@ class Config(object):
 
     def __init__(self):
         """Initialize config variables."""
-        self.reana_server_url = get_api_url()
+        # A rejected server URL must not abort the whole CLI: `reana-client
+        # login --server-url ...` is how the user recovers from one, so it has
+        # to stay reachable. Commands that need a server report the problem
+        # themselves when they resolve it.
+        self.server_url_error = None
+        try:
+            self.reana_server_url = get_api_url()
+        except ValueError as error:
+            self.reana_server_url = None
+            self.server_url_error = error
 
 
 class ReanaCLI(click.Group):

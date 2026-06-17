@@ -50,6 +50,7 @@ def test_start_workflow_uses_bounded_request_options(monkeypatch):
     assert captured["_request_options"] == {
         "connect_timeout": 10,
         "timeout": 300,
+        "headers": {"Authorization": "Bearer token"},
     }
 
 
@@ -206,6 +207,7 @@ def test_post_streams_one_uncompressed_zip(
     _post_spec_members(
         "validate_workflow_specification",
         _gather_spec_members(str(specification)),
+        "token",
         {},
     )
 
@@ -216,6 +218,7 @@ def test_post_streams_one_uncompressed_zip(
     assert captured["_request_options"] == {
         "connect_timeout": 10,
         "timeout": 300,
+        "headers": {"Authorization": "Bearer token"},
     }
 
 
@@ -247,6 +250,7 @@ def test_post_preserves_noncanonical_selected_specification(
     _post_spec_members(
         "validate_workflow_specification",
         _gather_spec_members(str(specification)),
+        "token",
         {},
     )
 
@@ -275,7 +279,7 @@ def test_post_rejects_swapped_source_ancestor(
     monkeypatch.setattr(client_module, "current_rs_api_client", api_client)
 
     with pytest.raises(REANAValidationError, match="securely open"):
-        _post_spec_members("validate_workflow_specification", members, {})
+        _post_spec_members("validate_workflow_specification", members, "token", {})
     api_client.api.validate_workflow_specification.assert_not_called()
 
 
@@ -297,6 +301,7 @@ def test_post_enforces_file_count_before_archive_creation(
         _post_spec_members(
             "validate_workflow_specification",
             {"reana.yaml": str(specification), "extra.yaml": str(extra)},
+            "token",
             {},
         )
 
@@ -317,6 +322,7 @@ def test_post_enforces_extracted_bytes_while_archiving(
         _post_spec_members(
             "validate_workflow_specification",
             {"reana.yaml": str(specification)},
+            "token",
             {},
         )
 
@@ -340,13 +346,13 @@ def test_upload_file_streams_snapshotted_raw_body(monkeypatch):
         assert data.read(3) + data.read() == b"contents"
         assert data.read() == b""
         assert kwargs["headers"] == {
+            "Authorization": "Bearer token",
             "Content-Type": "application/octet-stream",
             "Content-Length": "8",
         }
-        assert kwargs["timeout"] == (10, 300)
+        assert kwargs["timeout"] == client_module.FILE_TRANSFER_TIMEOUT
         assert kwargs["params"] == {
             "file_name": "data.txt",
-            "access_token": "token",
         }
         assert url == "https://reana/api/workflows/workflow.1/workspace"
         return http_response
@@ -390,6 +396,9 @@ def test_download_file_uses_generated_operation(monkeypatch):
     operation.assert_called_once_with(
         workflow_id_or_name="workflow.1",
         file_name="requested.txt",
-        access_token="token",
-        _request_options={"connect_timeout": 10, "timeout": 300},
+        _request_options={
+            "connect_timeout": 10,
+            "timeout": 300,
+            "headers": {"Authorization": "Bearer token"},
+        },
     )

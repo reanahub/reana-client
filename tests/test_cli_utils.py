@@ -111,7 +111,13 @@ def test_format_run_label_list_uses_default_max():
 
 
 def test_access_token_required_option_exits_when_missing(monkeypatch):
-    monkeypatch.delenv("REANA_ACCESS_TOKEN", raising=False)
+    monkeypatch.setattr(
+        cli_utils,
+        "get_access_token",
+        lambda: (_ for _ in ()).throw(
+            Exception(ERROR_MESSAGES["missing_access_token"])
+        ),
+    )
 
     @click.command()
     @cli_utils.add_access_token_options
@@ -124,9 +130,113 @@ def test_access_token_required_option_exits_when_missing(monkeypatch):
     assert ERROR_MESSAGES["missing_access_token"] in result.output
 
 
-def test_access_token_not_required_option_allows_missing(monkeypatch):
-    monkeypatch.delenv("REANA_ACCESS_TOKEN", raising=False)
+def test_access_token_required_option_accepts_cli_override(monkeypatch):
+    monkeypatch.setattr(
+        cli_utils,
+        "get_access_token",
+        lambda: (_ for _ in ()).throw(AssertionError("OIDC token must not be used")),
+    )
 
+    @click.command()
+    @cli_utils.add_access_token_options
+    def cmd(access_token):
+        click.echo(access_token)
+
+    runner = CliRunner()
+    result = runner.invoke(cmd, ["--access-token", "jwt-token"])
+    assert result.exit_code == 0
+    assert result.output.strip() == "jwt-token"
+
+
+def test_access_token_required_option_uses_env_when_oidc_is_unavailable(monkeypatch):
+    monkeypatch.setattr(
+        cli_utils,
+        "get_access_token",
+        lambda: (_ for _ in ()).throw(cli_utils.AuthenticationError("not logged in")),
+    )
+
+    @click.command()
+    @cli_utils.add_access_token_options
+    def cmd(access_token):
+        click.echo(access_token)
+
+    runner = CliRunner(env={"REANA_ACCESS_TOKEN": "header.payload.signature"})
+    result = runner.invoke(cmd, [])
+    assert result.exit_code == 0
+    assert result.output.strip() == "header.payload.signature"
+
+
+def test_access_token_required_option_rejects_opaque_env_token(monkeypatch):
+    """A legacy opaque value cannot silently shadow a valid stored login."""
+    monkeypatch.setattr(
+        cli_utils,
+        "get_access_token",
+        lambda: (_ for _ in ()).throw(AssertionError("OIDC token must not be used")),
+    )
+
+    @click.command()
+    @cli_utils.add_access_token_options
+    def cmd(access_token):
+        click.echo(access_token)
+
+    runner = CliRunner(env={"REANA_ACCESS_TOKEN": "opaque-token"})
+    result = runner.invoke(cmd, [])
+
+    assert result.exit_code == 1
+    assert "REANA_ACCESS_TOKEN must contain a JWT" in result.output
+
+
+def test_access_token_required_option_prefers_env_over_stored_login(monkeypatch):
+    """The environment override wins, as the option help documents."""
+    monkeypatch.setattr(cli_utils, "get_access_token", lambda: "oidc-token")
+
+    @click.command()
+    @cli_utils.add_access_token_options
+    def cmd(access_token):
+        click.echo(access_token)
+
+    runner = CliRunner(env={"REANA_ACCESS_TOKEN": "header.payload.signature"})
+    result = runner.invoke(cmd, [])
+    assert result.exit_code == 0
+    assert result.output.strip() == "header.payload.signature"
+
+
+def test_access_token_reports_rejected_server_url(monkeypatch):
+    """An unusable server URL is reported, not raised as a traceback."""
+    monkeypatch.setattr(
+        cli_utils,
+        "get_access_token",
+        lambda: (_ for _ in ()).throw(ValueError("REANA server URL must use HTTPS")),
+    )
+
+    @click.command()
+    @cli_utils.add_access_token_options
+    def cmd(access_token):
+        click.echo(access_token)
+
+    runner = CliRunner()
+    result = runner.invoke(cmd, [])
+
+    assert result.exit_code == 1
+    assert "REANA server URL must use HTTPS" in result.output
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+
+
+def test_access_token_required_option_uses_oidc_by_default(monkeypatch):
+    monkeypatch.setattr(cli_utils, "get_access_token", lambda: "oidc-token")
+
+    @click.command()
+    @cli_utils.add_access_token_options
+    def cmd(access_token):
+        click.echo(access_token)
+
+    runner = CliRunner()
+    result = runner.invoke(cmd, [])
+    assert result.exit_code == 0
+    assert result.output.strip() == "oidc-token"
+
+
+def test_access_token_not_required_option_allows_missing(monkeypatch):
     @click.command()
     @cli_utils.add_access_token_options_not_required
     def cmd(access_token):
@@ -289,8 +399,8 @@ def test_display_formatted_output_table_with_format(monkeypatch):
 
 def test_format_session_uri_and_progress():
     assert (
-        cli_utils.format_session_uri("https://reana", "/path", "tok")
-        == "https://reana/path?token=tok"
+        cli_utils.format_session_uri("https://reana", "/path", "secret with spaces")
+        == "https://reana/path?token=secret+with+spaces"
     )
     assert (
         cli_utils.get_formatted_progress(

@@ -18,26 +18,36 @@ from click.testing import CliRunner
 from mock import Mock, patch
 from reana_commons.testing import make_mock_api_client
 from reana_client.cli import cli
+from reana_client.config import ERROR_MESSAGES
 
 
-def test_list_files_server_not_reachable():
+def test_list_files_server_not_reachable(tmp_path, monkeypatch):
     """Test list workflow workspace files when not connected to any cluster."""
+    monkeypatch.setenv(
+        "REANA_CLIENT_CONFIG", str(tmp_path / "missing-client-config.json")
+    )
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     reana_token = "000000"
     message = "REANA client is not connected to any REANA cluster."
-    runner = CliRunner(env={"REANA_SERVER_URL": None})
+    runner = CliRunner()
     result = runner.invoke(cli, ["ls", "-t", reana_token, "-w", "workflow.1"])
     assert result.exit_code == 1
     assert message in result.output
 
 
-def test_list_files_server_no_token():
+def test_list_files_server_no_token(monkeypatch):
     """Test list workflow workspace files when access token is not set."""
-    message = "Please provide your access token"
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
+    monkeypatch.setattr(
+        "reana_client.cli.utils.get_access_token",
+        lambda: (_ for _ in ()).throw(
+            Exception(ERROR_MESSAGES["missing_access_token"])
+        ),
+    )
     result = runner.invoke(cli, ["ls", "-w", "workflow.1"])
     assert result.exit_code == 1
-    assert message in result.output
+    assert ERROR_MESSAGES["missing_access_token"] in result.output
 
 
 def test_list_files_ok():
@@ -200,7 +210,7 @@ def test_upload_file(create_yaml_workflow_schema):
     """Test upload file."""
     reana_token = "000000"
     file = "file.txt"
-    env = {"REANA_SERVER_URL": "http://localhost"}
+    env = {"REANA_SERVER_URL": "https://localhost"}
     message = "was successfully uploaded."
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -227,7 +237,7 @@ def test_upload_file_with_test_files_from_spec(
     """Test upload file with test files from the specification, not from the command line."""
     reana_token = "000000"
     file = "upload-this-test.feature"
-    env = {"REANA_SERVER_URL": "http://localhost"}
+    env = {"REANA_SERVER_URL": "https://localhost"}
     runner = CliRunner(env=env)
 
     with patch(
@@ -258,7 +268,7 @@ def test_upload_file_respect_gitignore(
 ):
     """If .gitignore exists and is not empty, respect it's rules."""
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "http://localhost"}
+    env = {"REANA_SERVER_URL": "https://localhost"}
     runner = CliRunner(env=env)
     mock_specification = Mock(return_value=get_workflow_specification_with_directory)
     with runner.isolation():
@@ -293,7 +303,7 @@ def test_upload_file_skip_empty_git_and_reana_ignore_files(
     This is edge case. We do not expect this to happen.
     """
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "http://localhost"}
+    env = {"REANA_SERVER_URL": "https://localhost"}
     runner = CliRunner(env=env)
     mock_specification = Mock(return_value=get_workflow_specification_with_directory)
     with runner.isolation():
@@ -336,7 +346,7 @@ def test_upload_file_respect_reanaignore_and_gitignore(
 ):
     """Check if file upload respect both reana and git ignore files with input.directories."""
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "http://localhost"}
+    env = {"REANA_SERVER_URL": "https://localhost"}
     runner = CliRunner(env=env)
     mock_specification = Mock(return_value=get_workflow_specification_with_directory)
     with runner.isolation():
@@ -468,10 +478,12 @@ def test_move_files():
             )
 
             mock_client.api.move_files.assert_called_once_with(
+                _request_options={
+                    "headers": {"Authorization": f"Bearer {reana_token}"}
+                },
                 source=source,
                 target=target,
                 workflow_id_or_name=workflow,
-                access_token=reana_token,
             )
             assert result.exit_code == 0
             assert "successfully" in result.output

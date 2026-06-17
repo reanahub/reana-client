@@ -16,19 +16,29 @@ from reana_client.cli import cli
 from reana_client.config import ERROR_MESSAGES
 
 
-def test_ping_token_not_set():
+def test_ping_token_not_set(monkeypatch):
     """Test ping when token is not set."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
+    monkeypatch.setattr(
+        "reana_client.cli.utils.get_access_token",
+        lambda: (_ for _ in ()).throw(
+            Exception(ERROR_MESSAGES["missing_access_token"])
+        ),
+    )
     result = runner.invoke(cli, ["ping"])
     message = ERROR_MESSAGES["missing_access_token"]
     assert message in result.output
 
 
-def test_ping_server_not_set():
+def test_ping_server_not_set(tmp_path, monkeypatch):
     """Test ping when server is not set."""
+    monkeypatch.setenv(
+        "REANA_CLIENT_CONFIG", str(tmp_path / "missing-client-config.json")
+    )
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     reana_token = "000000"
-    runner = CliRunner(env={"REANA_SERVER_URL": None})
+    runner = CliRunner()
     result = runner.invoke(cli, ["ping", "-t", reana_token])
     message = "REANA client is not connected to any REANA cluster."
     assert message in result.output

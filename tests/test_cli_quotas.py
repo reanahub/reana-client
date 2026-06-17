@@ -45,7 +45,7 @@ def test_quota_show_displays_current_cpu_period():
     with patch("reana_client.api.client.get_user_quota", return_value=quota):
         result = runner.invoke(
             cli,
-            ["quota-show", "-t", "000000", "--resource", "cpu", "--human-readable"],
+            ["quota-show", "--resource", "cpu", "--human-readable"],
         )
 
     assert result.exit_code == 0
@@ -68,8 +68,6 @@ def test_quota_show_report_usage_human_displays_cpu_period():
             cli,
             [
                 "quota-show",
-                "-t",
-                "000000",
                 "--resource",
                 "cpu",
                 "--report",
@@ -95,8 +93,6 @@ def test_quota_show_report_limit_human_displays_cpu_period():
             cli,
             [
                 "quota-show",
-                "-t",
-                "000000",
                 "--resource",
                 "cpu",
                 "--report",
@@ -123,8 +119,6 @@ def test_quota_show_report_usage_human_omits_suffix_without_period():
             cli,
             [
                 "quota-show",
-                "-t",
-                "000000",
                 "--resource",
                 "cpu",
                 "--report",
@@ -150,8 +144,6 @@ def test_quota_show_report_usage_raw_omits_period_suffix():
             cli,
             [
                 "quota-show",
-                "-t",
-                "000000",
                 "--resource",
                 "cpu",
                 "--report",
@@ -176,8 +168,6 @@ def test_quota_show_report_usage_human_omits_suffix_for_disk():
             cli,
             [
                 "quota-show",
-                "-t",
-                "000000",
                 "--resource",
                 "disk",
                 "--report",
@@ -207,7 +197,7 @@ def test_info_displays_cpu_quota_period_details():
     with patch("reana_client.api.client.info", return_value=info_response), patch(
         "reana_client.api.client.get_user_quota", return_value=quota
     ):
-        result = runner.invoke(cli, ["info", "-t", "000000"])
+        result = runner.invoke(cli, ["info"])
 
     assert result.exit_code == 0
     assert "CPU quota period in months: 3" in result.output
@@ -233,7 +223,7 @@ def test_info_displays_disabled_cpu_quota_period_as_zero():
     with patch("reana_client.api.client.info", return_value=info_response), patch(
         "reana_client.api.client.get_user_quota", return_value=quota
     ):
-        result = runner.invoke(cli, ["info", "-t", "000000"])
+        result = runner.invoke(cli, ["info"])
 
     assert result.exit_code == 0
     assert "CPU quota period in months: 0" in result.output
@@ -258,7 +248,7 @@ def test_info_json_includes_cpu_quota_period_details():
     with patch("reana_client.api.client.info", return_value=info_response), patch(
         "reana_client.api.client.get_user_quota", return_value=quota
     ):
-        result = runner.invoke(cli, ["info", "-t", "000000", "--json"])
+        result = runner.invoke(cli, ["info", "--json"])
 
     assert result.exit_code == 0
     response = json.loads(result.output)

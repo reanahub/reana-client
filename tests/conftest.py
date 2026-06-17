@@ -16,6 +16,12 @@ import pytest
 from typing import Dict
 
 
+@pytest.fixture(autouse=True)
+def default_cli_access_token(monkeypatch):
+    """Return a test token from the central CLI auth resolver by default."""
+    monkeypatch.setattr("reana_client.cli.utils.get_access_token", lambda: "000000")
+
+
 @pytest.fixture()
 def create_yaml_workflow_schema() -> str:
     """Return dummy YAML workflow schema."""

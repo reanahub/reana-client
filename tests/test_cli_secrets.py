@@ -15,26 +15,29 @@ from mock import Mock, patch
 from reana_commons.testing import make_mock_api_client
 
 from reana_client.cli import cli
+from reana_client.config import ERROR_MESSAGES
 
 
 def test_secrets_list_server_not_reachable():
     """Test list secrets when not connected to any cluster."""
     message = "REANA client is not connected to any REANA cluster."
-    reana_token = "000000"
     runner = CliRunner()
-    result = runner.invoke(cli, ["secrets-list", "-t", reana_token])
-    assert result.exit_code == 1
-    assert message in result.output
-
-
-def test_secrets_list_server_no_token():
-    """Test list secrets when access token is not set."""
-    message = "Please provide your access token"
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
     result = runner.invoke(cli, ["secrets-list"])
     assert result.exit_code == 1
     assert message in result.output
+
+
+def test_secrets_list_server_no_token(monkeypatch):
+    """Test list secrets when access token is not set."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    monkeypatch.setattr(
+        "reana_client.cli.utils.get_access_token",
+        lambda: (_ for _ in ()).throw(Exception(ERROR_MESSAGES["missing_access_token"])),
+    )
+    result = runner.invoke(cli, ["secrets-list"])
+    assert result.exit_code == 1
+    assert ERROR_MESSAGES["missing_access_token"] in result.output
 
 
 def test_secrets_list_ok():
@@ -52,7 +55,7 @@ def test_secrets_list_ok():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["secrets-list", "-t", reana_token])
+            result = runner.invoke(cli, ["secrets-list"])
             assert result.exit_code == 0
             assert "password" in result.output
             assert "env" in result.output
@@ -84,8 +87,6 @@ def test_secrets_add(secret):
                     cli,
                     [
                         "secrets-add",
-                        "-t",
-                        reana_token,
                         "--file",
                         secret_file,
                         "--env",
@@ -104,7 +105,7 @@ def test_secrets_add_wrong_format(secret):
     runner = CliRunner(env=env)
     message = 'For literal strings use "SECRET_NAME=VALUE" format'
 
-    result = runner.invoke(cli, ["secrets-add", "-t", reana_token, "--env", secret])
+    result = runner.invoke(cli, ["secrets-add", "--env", secret])
     assert result.exit_code == 1
     assert message in result.output
 
@@ -126,7 +127,7 @@ def test_secrets_add_already_exist():
     with runner.isolation():
         with patch("reana_client.api.client.current_rs_api_client", rs_api_client_mock):
             result = runner.invoke(
-                cli, ["secrets-add", "-t", reana_token, "--env", "USER=reanauser"]
+                cli, ["secrets-add", "--env", "USER=reanauser"]
             )
             assert message in result.output
             assert result.exit_code == 1
@@ -150,7 +151,7 @@ def test_secrets_delete():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(
-                cli, ["secrets-delete", "-t", reana_token, secret_file]
+                cli, ["secrets-delete", secret_file]
             )
             assert result.exit_code == 0
             assert message in result.output

@@ -18,11 +18,15 @@ from reana_client.config import ERROR_MESSAGES
 
 
 @pytest.mark.parametrize(
-    "with_workspace, cli_args, expected_output, exit_code, available_workspaces",
+    (
+        "with_workspace, cli_args, authenticated, expected_output, exit_code, "
+        "available_workspaces"
+    ),
     [
         (
             False,
             ["validate"],
+            True,
             "appear valid",
             0,
             ["/var/reana", "/myexternaldisk/reana"],
@@ -30,27 +34,31 @@ from reana_client.config import ERROR_MESSAGES
         (
             False,
             ["validate", "--server-capabilities"],
+            False,
             ERROR_MESSAGES["missing_access_token"],
             1,
             ["/var/reana", "/myexternaldisk/reana"],
         ),
         (
             False,
-            ["validate", "-t", "00000", "--server-capabilities"],
+            ["validate", "--server-capabilities"],
+            True,
             "Valid REANA specification file.",
             0,
             ["/var/reana", "/myexternaldisk/reana"],
         ),
         (
             True,
-            ["validate", "-t", "00000", "--server-capabilities"],
+            ["validate", "--server-capabilities"],
+            True,
             "Workflow workspace appears valid.",
             0,
             ["/var/reana", "/myexternaldisk/reana"],
         ),
         (
             True,
-            ["validate", "-t", "00000", "--server-capabilities"],
+            ["validate", "--server-capabilities"],
+            True,
             'Desired workspace "/var/reana" is not valid.',
             1,
             ["/foo/reana", "/bar/reana"],
@@ -62,16 +70,26 @@ def test_validate_workspaces(
     create_yaml_workflow_schema_with_workspace,
     with_workspace,
     cli_args,
+    authenticated,
     expected_output,
     exit_code,
     available_workspaces,
+    monkeypatch,
 ):
     """Test multiple combinations of validating workflows workspaces."""
+    if not authenticated:
+        monkeypatch.setattr(
+            "reana_client.cli.utils.get_access_token",
+            lambda: (_ for _ in ()).throw(
+                Exception(ERROR_MESSAGES["missing_access_token"])
+            ),
+        )
     env = {"REANA_SERVER_URL": "http://localhost"}
     runner = CliRunner(env=env)
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = 200
     mock_response = {
+        "compute_backends": {"value": ["kubernetes"]},
         "default_workspace": {"value": available_workspaces[0]},
         "workspaces_available": {"value": available_workspaces},
     }

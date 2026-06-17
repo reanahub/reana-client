@@ -111,7 +111,11 @@ def test_format_run_label_list_uses_default_max():
 
 
 def test_access_token_required_option_exits_when_missing(monkeypatch):
-    monkeypatch.delenv("REANA_ACCESS_TOKEN", raising=False)
+    monkeypatch.setattr(
+        cli_utils,
+        "get_access_token",
+        lambda: (_ for _ in ()).throw(Exception(ERROR_MESSAGES["missing_access_token"])),
+    )
 
     @click.command()
     @cli_utils.add_access_token_options
@@ -125,8 +129,6 @@ def test_access_token_required_option_exits_when_missing(monkeypatch):
 
 
 def test_access_token_not_required_option_allows_missing(monkeypatch):
-    monkeypatch.delenv("REANA_ACCESS_TOKEN", raising=False)
-
     @click.command()
     @cli_utils.add_access_token_options_not_required
     def cmd(access_token):
@@ -290,7 +292,7 @@ def test_display_formatted_output_table_with_format(monkeypatch):
 def test_format_session_uri_and_progress():
     assert (
         cli_utils.format_session_uri("https://reana", "/path", "tok")
-        == "https://reana/path?token=tok"
+        == "https://reana/path"
     )
     assert (
         cli_utils.get_formatted_progress(

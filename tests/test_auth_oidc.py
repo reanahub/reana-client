@@ -50,6 +50,7 @@ def test_credentials_are_stored_with_restrictive_permissions(tmp_path, monkeypat
     assert normalize_server_url("HTTPS://reana.example.org/") == (
         "https://reana.example.org"
     )
+    assert normalize_server_url("localhost:5000/") == "http://localhost:5000"
     assert load_config()["active_server"] == "https://reana.example.org"
     assert get_server_entry("https://reana.example.org")["access_token"] == "access"
     assert oct(config_path.stat().st_mode & 0o777) == "0o600"

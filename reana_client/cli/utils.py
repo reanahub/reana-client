@@ -40,7 +40,9 @@ def _access_token_option_decorator(func: Callable, required: bool) -> Callable:
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        if "access_token" not in kwargs:
+        if "access_token" not in kwargs or (
+            required and kwargs.get("access_token") is None
+        ):
             kwargs["access_token"] = access_token_check(None, None, None, required)
         return func(*args, **kwargs)
 

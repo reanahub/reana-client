@@ -28,6 +28,8 @@ def normalize_server_url(server_url: str) -> str:
     if not server_url:
         raise ValueError("REANA server URL is not set")
     server_url = server_url.strip()
+    if "://" not in server_url:
+        server_url = f"http://{server_url}"
     parsed = urlparse(server_url)
     if not parsed.scheme or not parsed.netloc:
         raise ValueError("REANA server URL must include scheme and host")

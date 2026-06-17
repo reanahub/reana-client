@@ -48,8 +48,6 @@ def test_test_workflow_not_found():
                 "myanalysis",
                 "-n",
                 "test_analysis.feature",
-                "-t",
-                "000000",
             ],
         )
     assert "Could not find workflow ``myanalysis``." in result.output
@@ -73,8 +71,6 @@ def test_test_workflow_not_finished(mock_get_workflow_status):
                 "myanalysis",
                 "-n",
                 "test_analysis.feature",
-                "-t",
-                "000000",
             ],
         )
         assert (
@@ -95,7 +91,7 @@ def test_test_workflow_deleted(mock_get_workflow_status):
     with runner.isolation():
         result = runner.invoke(
             cli,
-            ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
+            ["test", "-w", "myanalysis", "-n", "test_analysis.feature"],
         )
         assert (
             "``myanalysis`` is deleted. It must be finished to run tests."
@@ -117,7 +113,7 @@ def test_test_no_test_files(mock_get_workflow_status, mock_get_workflow_specific
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
     with runner.isolation():
-        result = runner.invoke(cli, ["test", "-w", "myanalysis", "-t", "000000"])
+        result = runner.invoke(cli, ["test", "-w", "myanalysis"])
         assert (
             "No test files specified in reana.yaml and no -n option provided."
             in result.output
@@ -146,8 +142,6 @@ def test_test_no_test_files_with_test_file_option(
                 "test",
                 "-w",
                 "myanalysis",
-                "-t",
-                "000000",
                 "-n",
                 "test_analysis.feature",
             ],
@@ -182,8 +176,6 @@ def test_test_multiple_test_files_with_test_file_option(
                 "test",
                 "-w",
                 "myanalysis",
-                "-t",
-                "000000",
                 "-n",
                 "use_this.feature",
             ],
@@ -219,7 +211,7 @@ def test_test_files_from_spec(
     with runner.isolation():
         result = runner.invoke(
             cli,
-            ["test", "-w", "myanalysis", "-t", "000000"],
+            ["test", "-w", "myanalysis"],
         )
         assert 'Testing file "use-me.feature"' in result.output
         assert 'Testing file "me-too.feature"' in result.output
@@ -244,8 +236,6 @@ def test_test_parser_error(mock_get_workflow_status, mock_parse_and_run_tests):
                 "test",
                 "-w",
                 "myanalysis",
-                "-t",
-                "000000",
                 "-n",
                 "test_analysis.feature",
             ],
@@ -275,8 +265,6 @@ def test_test_feature_file_not_found(
                 "test",
                 "-w",
                 "myanalysis",
-                "-t",
-                "000000",
                 "-n",
                 "test_analysis.feature",
             ],
@@ -307,8 +295,6 @@ def test_test_multiple_test_files(mock_workflow_status, mock_parse_and_run_tests
                 "test",
                 "-w",
                 "myanalysis",
-                "-t",
-                "000000",
                 "-n",
                 "test_analysis.feature",
                 "-n",
@@ -337,7 +323,7 @@ def test_test_all_scenarios_pass(mock_workflow_status, mock_parse_and_run_tests)
     with runner.isolated_filesystem():
         result = runner.invoke(
             cli,
-            ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
+            ["test", "-w", "myanalysis", "-n", "test_analysis.feature"],
         )
         assert "SUCCESS" in result.output and "ERROR" not in result.output
         assert result.exit_code == 0
@@ -361,7 +347,7 @@ def test_test_all_scenarios_fail(mock_workflow_status, mock_parse_and_run_tests)
     with runner.isolation():
         result = runner.invoke(
             cli,
-            ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
+            ["test", "-w", "myanalysis", "-n", "test_analysis.feature"],
         )
         assert "ERROR" in result.output and "SUCCESS" not in result.output
         assert result.exit_code == 1
@@ -385,7 +371,7 @@ def test_test_some_scenarios_pass(mock_workflow_status, mock_parse_and_run_tests
     with runner.isolated_filesystem():
         result = runner.invoke(
             cli,
-            ["test", "-w", "myanalysis", "-n", "test_analysis.feature", "-t", "000000"],
+            ["test", "-w", "myanalysis", "-n", "test_analysis.feature"],
         )
         assert "SUCCESS" in result.output and "ERROR" in result.output
         assert result.exit_code == 1

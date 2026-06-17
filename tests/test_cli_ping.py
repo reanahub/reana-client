@@ -16,10 +16,14 @@ from reana_client.cli import cli
 from reana_client.config import ERROR_MESSAGES
 
 
-def test_ping_token_not_set():
+def test_ping_token_not_set(monkeypatch):
     """Test ping when token is not set."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
+    monkeypatch.setattr(
+        "reana_client.cli.utils.get_access_token",
+        lambda: (_ for _ in ()).throw(Exception(ERROR_MESSAGES["missing_access_token"])),
+    )
     result = runner.invoke(cli, ["ping"])
     message = ERROR_MESSAGES["missing_access_token"]
     assert message in result.output
@@ -29,7 +33,7 @@ def test_ping_server_not_set():
     """Test ping when server is not set."""
     reana_token = "000000"
     runner = CliRunner()
-    result = runner.invoke(cli, ["ping", "-t", reana_token])
+    result = runner.invoke(cli, ["ping"])
     message = "REANA client is not connected to any REANA cluster."
     assert message in result.output
 
@@ -39,7 +43,7 @@ def test_ping_server_not_reachable():
     reana_token = "000000"
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    result = runner.invoke(cli, ["ping", "-t", reana_token])
+    result = runner.invoke(cli, ["ping"])
     message = "ERROR: INVALID SERVER"
     assert message in result.output
 
@@ -64,7 +68,7 @@ def test_ping_ok():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["ping", "-t", reana_token])
+            result = runner.invoke(cli, ["ping"])
             message = "Authenticated as: John Doe <johndoe@example.org>"
             assert message in result.output
             message = "Connected"

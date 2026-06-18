@@ -3,6 +3,33 @@
 
 # Changelog
 
+## [0.9.7](https://github.com/reanahub/reana-client/compare/0.9.6...0.9.7) (2026-06-18)
+
+
+### Features
+
+* **info:** display server-side quota period settings ([#772](https://github.com/reanahub/reana-client/issues/772)) ([3141bc0](https://github.com/reanahub/reana-client/commit/3141bc0349fe1ec928d5e8f0e901c1904e1f2641)), closes [#771](https://github.com/reanahub/reana-client/issues/771)
+* **quotas:** show quota period in quota-show ([#772](https://github.com/reanahub/reana-client/issues/772)) ([0cf2b53](https://github.com/reanahub/reana-client/commit/0cf2b53b076c496c3b4377b1bd0bf14f09b7ee22)), closes [#771](https://github.com/reanahub/reana-client/issues/771)
+* **utils:** show Dask service logs ([#769](https://github.com/reanahub/reana-client/issues/769)) ([36f23b2](https://github.com/reanahub/reana-client/commit/36f23b2c06141ffed87ec164ebff1b458c8a970a)), closes [#768](https://github.com/reanahub/reana-client/issues/768)
+* **validation:** add workflow image vetting to validate command ([#749](https://github.com/reanahub/reana-client/issues/749)) ([56ec5b0](https://github.com/reanahub/reana-client/commit/56ec5b0206a6ebe0d0be951749394e76e02be1a3))
+* **workflow:** add JSON output for sharing commands ([#750](https://github.com/reanahub/reana-client/issues/750)) ([eac1fb9](https://github.com/reanahub/reana-client/commit/eac1fb92284ce1a5fdf3eebba01daae629cbc89d)), closes [#712](https://github.com/reanahub/reana-client/issues/712)
+* **workflow:** guard deletion of restarted runs ([#759](https://github.com/reanahub/reana-client/issues/759)) ([9b298bf](https://github.com/reanahub/reana-client/commit/9b298bf14d1f2a7833b87f092a85d3b4d1c09401))
+
+
+### Bug fixes
+
+* **config:** use glob for egg-info in flake8 exclude ([#745](https://github.com/reanahub/reana-client/issues/745)) ([59059f6](https://github.com/reanahub/reana-client/commit/59059f6841cfea35194ec3ea3062974e700b535b))
+
+
+### Code refactoring
+
+* **pytest:** drop pytest-reana for reana-commons[tests] ([#770](https://github.com/reanahub/reana-client/issues/770)) ([50b45a1](https://github.com/reanahub/reana-client/commit/50b45a1881166b29523ba83dceafb3bb8e299fed))
+
+
+### Test suite
+
+* **snakemake:** cover container image validation ([#775](https://github.com/reanahub/reana-client/issues/775)) ([a381927](https://github.com/reanahub/reana-client/commit/a381927bf7439b96e160e3930af03394457d8e9a))
+
 ## [0.9.6](https://github.com/reanahub/reana-client/compare/0.9.5...0.9.6) (2026-03-25)
 
 ### Bug fixes

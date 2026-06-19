@@ -8,9 +8,9 @@
 
 """REANA client environment validation."""
 
+import os
 import sys
 import logging
-
 import requests
 
 from reana_commons.config import (
@@ -59,7 +59,13 @@ def validate_environment(reana_yaml, pull=False, access_token=None):
         if workflow_type == "snakemake":
             workflow_steps = workflow["specification"]["steps"]
             return EnvironmentValidatorSnakemake(
-                workflow_steps=workflow_steps, pull=pull, access_token=access_token
+                workflow_steps=workflow_steps,
+                pull=pull,
+                access_token=access_token,
+                workflow_filename=reana_yaml["workflow"]["file"],
+                workflow_input_parameters=reana_yaml.get("inputs", {}).get(
+                    "parameters", {}
+                ),
             )
 
     workflow = reana_yaml["workflow"]
@@ -71,15 +77,29 @@ def validate_environment(reana_yaml, pull=False, access_token=None):
 class EnvironmentValidatorBase:
     """REANA workflow environments validation base class."""
 
-    def __init__(self, workflow_steps=None, pull=False, access_token=None):
+    def __init__(
+        self,
+        workflow_steps=None,
+        pull=False,
+        access_token=None,
+        workflow_filename=None,
+        workflow_input_parameters=None,
+    ):
         """Validate environments in REANA workflow.
 
         :param workflow_steps: List of dictionaries which represents different steps involved in workflow.
         :param pull: If true, attempt to pull remote environment image to perform GID/UID validation.
+        :param workflow_filename: Path to the main workflow file (e.g. Snakefile).
+        :param workflow_input_parameters: The ``inputs.parameters`` dict from the REANA
+            specification.  For Snakemake workflows the ``input`` key (if present) is
+            the path to a Snakemake configfile; all other keys are direct
+            ``config["key"]`` overrides passed at runtime via ``--config key=value``.
         """
         self.workflow_steps = workflow_steps
         self.pull = pull
         self.access_token = access_token
+        self.workflow_filename = workflow_filename
+        self.workflow_input_parameters = workflow_input_parameters or {}
         self.validated_images = set()
         self.messages = []
         self._vetting_config = None  # cached (vetting_enabled, allowlist); False = skip
@@ -157,7 +177,7 @@ class EnvironmentValidatorBase:
     def _validate_environment_image(self, image, kubernetes_uid=None):
         """Validate image environment.
 
-        :param image: Full image name with tag if specified.
+        :param image: Full image name with tag if specified. E.g. `reanahub/reana-env-jupyter:2.0.0`.
         :param kubernetes_uid: Kubernetes UID defined in workflow spec.
         """
         if image not in self.validated_images:
@@ -526,7 +546,7 @@ class EnvironmentValidatorSnakemake(EnvironmentValidatorBase):
     def validate_environment(self):
         """Validate environments in REANA Snakemake workflow."""
         for step in self.workflow_steps:
-            image = step["environment"]
+            image = step.get("environment")
             if not image:
                 self.messages.append(
                     {
@@ -537,3 +557,78 @@ class EnvironmentValidatorSnakemake(EnvironmentValidatorBase):
                 continue
             kubernetes_uid = step.get("kubernetes_uid")
             self._validate_environment_image(image, kubernetes_uid=kubernetes_uid)
+
+        # Extract and validate environments from Snakefile
+        self._validate_snakefile_environments()
+
+    def _validate_snakefile_environments(self):
+        """Build the Snakemake DAG and validate every container image it uses.
+
+        The DAG is built with the real workflow ``config`` so that images derived
+        from config values (e.g. ``container: config["image"]``) resolve correctly:
+
+        - ``inputs.parameters.input`` (if given) is the path to a Snakemake
+          configfile and is passed to Snakemake;
+        - any other ``inputs.parameters`` entries are direct ``--config`` overrides;
+        - ``configfile:`` directives inside the Snakefile are loaded by Snakemake
+          itself while building the DAG.
+
+        Building the DAG transparently expands ``include:`` directives, so images
+        declared in included sub-Snakefiles are validated too.
+        """
+        from pathlib import Path
+
+        # Import the Snakemake API on its own so that a genuine "not installed"
+        # case is not confused with an import error raised while evaluating the
+        # workflow (which must surface as a validation failure instead).
+        try:
+            from snakemake.api import SnakemakeApi
+            from snakemake.settings.types import ResourceSettings, ConfigSettings
+        except ImportError:
+            self.messages.append(
+                {
+                    "type": "warning",
+                    "message": "Snakemake is not installed, skipping image validation.",
+                }
+            )
+            return
+
+        # Resolve paths to absolute before changing directory below.
+        snakefile_path = Path(self.workflow_filename).resolve()
+        configfile = self.workflow_input_parameters.get("input")
+        config_settings = ConfigSettings(
+            configfiles=[Path(configfile).resolve()] if configfile else [],
+            config={
+                k: v for k, v in self.workflow_input_parameters.items() if k != "input"
+            },
+        )
+
+        # Change into the Snakefile's directory so that relative paths declared
+        # inside it (e.g. ``configfile: "config.yaml"``) resolve against the
+        # Snakefile location rather than the directory validation runs from.
+        original_dir = os.getcwd()
+        try:
+            os.chdir(snakefile_path.parent)
+            with SnakemakeApi() as snakemake_api:
+                workflow = snakemake_api.workflow(
+                    resource_settings=ResourceSettings(),
+                    config_settings=config_settings,
+                    snakefile=snakefile_path,
+                )._workflow
+                images = {
+                    rule.container_img for rule in workflow.rules if rule.container_img
+                }
+        except Exception as e:
+            # A failure while building the DAG (e.g. a syntax error or a config
+            # value that no configfile or input parameter provides) means the
+            # workflow could not be validated; raise so that ``validate()``
+            # reports it and exits non-zero.
+            raise EnvironmentValidationError(f"Error building Snakemake DAG: {e}")
+        finally:
+            os.chdir(original_dir)
+
+        prefix = "docker://"
+        for image in images:
+            if image.startswith(prefix):
+                image = image[len(prefix) :]
+            self._validate_environment_image(image)

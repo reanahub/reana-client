@@ -21,6 +21,7 @@ import tablib
 
 from reana_commons.utils import click_table_printer
 
+from reana_client.auth.oidc import AuthenticationError, get_access_token
 from reana_client.config import (
     ERROR_MESSAGES,
     RUN_STATUSES,
@@ -35,19 +36,14 @@ from reana_client.utils import workflow_uuid_or_name
 
 
 def _access_token_option_decorator(func: Callable, required: bool) -> Callable:
-    """Add access token related options to click commands."""
+    """Resolve authenticated access token for click commands."""
 
-    @click.option(
-        "-t",
-        "--access-token",
-        default=os.getenv("REANA_ACCESS_TOKEN"),
-        callback=lambda ctx, _, access_token: access_token_check(
-            ctx, _, access_token, required
-        ),
-        help="Access token of the current user.",
-    )
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        if "access_token" not in kwargs or (
+            required and kwargs.get("access_token") is None
+        ):
+            kwargs["access_token"] = access_token_check(None, None, None, required)
         return func(*args, **kwargs)
 
     return wrapper
@@ -87,11 +83,22 @@ def access_token_check(
     required: bool,
 ) -> Union[str, NoReturn]:
     """Check if access token is present."""
-    if not access_token and required:
-        display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
-        ctx.exit(1)
-    else:
+    if access_token:
         return access_token
+    if not required:
+        return None
+    try:
+        return get_access_token()
+    except AuthenticationError as exc:
+        display_message(str(exc) or ERROR_MESSAGES["missing_access_token"], msg_type="error")
+        if ctx:
+            ctx.exit(1)
+        sys.exit(1)
+    except Exception:
+        display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
+        if ctx:
+            ctx.exit(1)
+        sys.exit(1)
 
 
 def check_connection(func):
@@ -268,11 +275,9 @@ def display_formatted_output(
             click_table_printer(headers, _format, data)
 
 
-def format_session_uri(reana_server_url, path, access_token):
+def format_session_uri(reana_server_url, path, access_token=None):
     """Format interactive session URI."""
-    return "{reana_server_url}{path}?token={access_token}".format(
-        reana_server_url=reana_server_url, path=path, access_token=access_token
-    )
+    return "{reana_server_url}{path}".format(reana_server_url=reana_server_url, path=path)
 
 
 def get_formatted_progress(progress):

@@ -23,6 +23,7 @@ from reana_client.cli.utils import (
     add_access_token_options_not_required,
     add_pagination_options,
     add_workflow_option,
+    access_token_check,
     check_connection,
     display_formatted_output,
     format_session_uri,
@@ -1070,11 +1071,8 @@ def workflow_validate(
     \t $ reana-client validate -f reana.yaml
     """
     if server_capabilities:
-        if access_token:
-            check_connection(lambda: None)()
-        else:
-            display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
-            ctx.exit(1)
+        access_token = access_token or access_token_check(ctx, None, None, True)
+        check_connection(lambda: None)()
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))

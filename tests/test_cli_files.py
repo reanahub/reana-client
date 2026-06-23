@@ -18,26 +18,29 @@ from click.testing import CliRunner
 from mock import Mock, patch
 from reana_commons.testing import make_mock_api_client
 from reana_client.cli import cli
+from reana_client.config import ERROR_MESSAGES
 
 
 def test_list_files_server_not_reachable():
     """Test list workflow workspace files when not connected to any cluster."""
-    reana_token = "000000"
     message = "REANA client is not connected to any REANA cluster."
     runner = CliRunner()
-    result = runner.invoke(cli, ["ls", "-t", reana_token, "-w", "workflow.1"])
-    assert result.exit_code == 1
-    assert message in result.output
-
-
-def test_list_files_server_no_token():
-    """Test list workflow workspace files when access token is not set."""
-    message = "Please provide your access token"
-    env = {"REANA_SERVER_URL": "localhost"}
-    runner = CliRunner(env=env)
     result = runner.invoke(cli, ["ls", "-w", "workflow.1"])
     assert result.exit_code == 1
     assert message in result.output
+
+
+def test_list_files_server_no_token(monkeypatch):
+    """Test list workflow workspace files when access token is not set."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    runner = CliRunner(env=env)
+    monkeypatch.setattr(
+        "reana_client.cli.utils.get_access_token",
+        lambda: (_ for _ in ()).throw(Exception(ERROR_MESSAGES["missing_access_token"])),
+    )
+    result = runner.invoke(cli, ["ls", "-w", "workflow.1"])
+    assert result.exit_code == 1
+    assert ERROR_MESSAGES["missing_access_token"] in result.output
 
 
 def test_list_files_ok():
@@ -64,7 +67,7 @@ def test_list_files_ok():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(
-                cli, ["ls", "-t", reana_token, "--workflow", "mytest.1", "--json"]
+                cli, ["ls", "--workflow", "mytest.1", "--json"]
             )
             json_response = json.loads(result.output)
             assert result.exit_code == 0
@@ -98,7 +101,7 @@ def test_list_files_url():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(
-                cli, ["ls", "-t", reana_token, "--workflow", workflow_name, "--url"]
+                cli, ["ls", "--workflow", workflow_name, "--url"]
             )
             assert result.exit_code == 0
             assert workflow_name in result.output
@@ -128,7 +131,7 @@ def test_download_file():
     with runner.isolation():
         with patch("reana_client.api.client.requests", mock_requests):
             result = runner.invoke(
-                cli, ["download", "-t", reana_token, "--workflow", "mytest.1", file]
+                cli, ["download", "--workflow", "mytest.1", file]
             )
             assert result.exit_code == 0
             assert os.path.isfile(file) is True
@@ -161,8 +164,6 @@ def test_download_file_stdout():
                 cli,
                 [
                     "download",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "mytest.1",
                     filename,
@@ -205,8 +206,6 @@ def test_download_multiple_files_stdout():
                 cli,
                 [
                     "download",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "mytest.1",
                     "-o",
@@ -233,7 +232,7 @@ def test_upload_file(create_yaml_workflow_schema):
                 with open("reana.yaml", "w") as reana_schema:
                     reana_schema.write(create_yaml_workflow_schema)
                 result = runner.invoke(
-                    cli, ["upload", "-t", reana_token, "--workflow", "mytest.1", file]
+                    cli, ["upload", "--workflow", "mytest.1", file]
                 )
                 post_request.assert_called_once()
                 assert result.exit_code == 0
@@ -261,7 +260,7 @@ def test_upload_file_with_test_files_from_spec(
             }
             mock_specification.return_value = get_workflow_specification_with_directory
             result = runner.invoke(
-                cli, ["upload", "-t", reana_token, "--workflow", "test-workflow.1"]
+                cli, ["upload", "--workflow", "test-workflow.1"]
             )
             assert result.exit_code == 0
             assert (
@@ -290,7 +289,7 @@ def test_upload_file_respect_gitignore(
                     f.write("This file should not be uploaded.")
 
                 result = runner.invoke(
-                    cli, ["upload", "-t", reana_token, "--workflow", "mytest.1"]
+                    cli, ["upload", "--workflow", "mytest.1"]
                 )
 
                 assert (
@@ -328,7 +327,7 @@ def test_upload_file_skip_empty_git_and_reana_ignore_files(
                     f.write("This file should be uploaded.")
 
                 result = runner.invoke(
-                    cli, ["upload", "-t", reana_token, "--workflow", "mytest.1"]
+                    cli, ["upload", "--workflow", "mytest.1"]
                 )
 
                 assert (
@@ -378,7 +377,7 @@ def test_upload_file_respect_reanaignore_and_gitignore(
                     f.write("This file will be uploaded.")
 
                 result = runner.invoke(
-                    cli, ["upload", "-t", reana_token, "--workflow", "mytest.1"]
+                    cli, ["upload", "--workflow", "mytest.1"]
                 )
 
                 assert (
@@ -422,7 +421,7 @@ def test_delete_file():
         ):
             with runner.isolated_filesystem():
                 result = runner.invoke(
-                    cli, ["rm", "-t", reana_token, "--workflow", "mytest.1", filename1]
+                    cli, ["rm", "--workflow", "mytest.1", filename1]
                 )
                 assert result.exit_code == 1
                 assert message1 in result.output
@@ -449,7 +448,7 @@ def test_delete_non_existing_file():
         ):
             with runner.isolated_filesystem():
                 result = runner.invoke(
-                    cli, ["rm", "-t", reana_token, "--workflow", "mytest.1", filename]
+                    cli, ["rm", "--workflow", "mytest.1", filename]
                 )
                 assert result.exit_code == 1
                 assert message in result.output
@@ -474,14 +473,16 @@ def test_move_files():
         with patch("reana_client.api.client.current_rs_api_client", mock_client):
             result = runner.invoke(
                 cli,
-                ["mv", "-t", reana_token, "--workflow", workflow, source, target],
+                ["mv", "--workflow", workflow, source, target],
             )
 
             mock_client.api.move_files.assert_called_once_with(
+                _request_options={
+                    "headers": {"Authorization": f"Bearer {reana_token}"}
+                },
                 source=source,
                 target=target,
                 workflow_id_or_name=workflow,
-                access_token=reana_token,
             )
             assert result.exit_code == 0
             assert "successfully" in result.output
@@ -514,8 +515,6 @@ def test_list_files_filter():
                 cli,
                 [
                     "ls",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "mytest.1",
                     "--filter",
@@ -561,8 +560,6 @@ def test_list_disk_usage_with_valid_filter():
                 cli,
                 [
                     "du",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "workflow.1",
                     "--filter",
@@ -598,8 +595,6 @@ def test_list_disk_usage_with_invalid_filter():
                 cli,
                 [
                     "du",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "workflow.1",
                     "--filter",
@@ -647,8 +642,6 @@ def test_list_files_filter_with_filename():
                 cli,
                 [
                     "ls",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "mytest.1",
                     "**/*.cwl",
@@ -688,8 +681,6 @@ def test_prune_workspace():
                 cli,
                 [
                     "prune",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "test-worflow.1",
                     "--include-outputs",

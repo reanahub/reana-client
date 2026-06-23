@@ -35,6 +35,19 @@ current_rs_api_client = LocalProxy(
 )
 
 
+def _auth_request_options(access_token):
+    """Return bravado request options carrying bearer authentication."""
+    return {"headers": {"Authorization": "Bearer {}".format(access_token)}}
+
+
+def _auth_headers(access_token, extra_headers=None):
+    """Return requests headers carrying bearer authentication."""
+    headers = {"Authorization": "Bearer {}".format(access_token)}
+    if extra_headers:
+        headers.update(extra_headers)
+    return headers
+
+
 def ping(access_token):
     """Check if the REANA server is reachable and the user is correctly authenticated.
 
@@ -46,7 +59,7 @@ def ping(access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_you(
-            access_token=access_token
+            _request_options=_auth_request_options(access_token),
         ).result()
         if http_response.status_code == 200:
             response["status"] = "Connected"
@@ -82,7 +95,7 @@ def get_user_quota(access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_you(
-            access_token=access_token
+            _request_options=_auth_request_options(access_token),
         ).result()
         if http_response.status_code == 200:
             return response["quota"]
@@ -144,7 +157,7 @@ def get_workflows(
     """
     try:
         response, http_response = current_rs_api_client.api.get_workflows(
-            access_token=access_token,
+            _request_options=_auth_request_options(access_token),
             verbose=verbose,
             type=type,
             page=page,
@@ -190,7 +203,8 @@ def get_workflow_status(workflow, access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_status(
-            workflow_id_or_name=workflow, access_token=access_token
+            _request_options=_auth_request_options(access_token),
+            workflow_id_or_name=workflow
         ).result()
         if http_response.status_code == 200:
             return response
@@ -224,12 +238,12 @@ def create_workflow(reana_specification, name, access_token):
              the ``workflow_id`` and ``workflow_name``, along with a ``message`` of success.
     """
     try:
-        response, http_response = current_rs_api_client.api.create_workflow(
+        (response, http_response) = current_rs_api_client.api.create_workflow(
+            _request_options=_auth_request_options(access_token),
             reana_specification=json.loads(
                 json.dumps(reana_specification, sort_keys=True)
             ),
             workflow_name=name,
-            access_token=access_token,
         ).result()
         if http_response.status_code == 201:
             return response
@@ -325,10 +339,10 @@ def create_workflow_from_json(
         if input_params is not None:
             reana_yaml["inputs"]["parameters"] = input_params
         validate_reana_yaml(reana_yaml)
-        response, http_response = current_rs_api_client.api.create_workflow(
+        (response, http_response) = current_rs_api_client.api.create_workflow(
+            _request_options=_auth_request_options(access_token),
             reana_specification=json.loads(json.dumps(reana_yaml, sort_keys=True)),
             workflow_name=name,
-            access_token=access_token,
         ).result()
         if http_response.status_code == 201:
             return response
@@ -364,9 +378,9 @@ def start_workflow(workflow, access_token, parameters):
              along with a ``message`` of success.
     """
     try:
-        response, http_response = current_rs_api_client.api.start_workflow(
+        (response, http_response) = current_rs_api_client.api.start_workflow(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
-            access_token=access_token,
             parameters=parameters,
         ).result()
         if http_response.status_code == 200:
@@ -405,13 +419,15 @@ def upload_file(workflow, file_, file_name, access_token):
 
     try:
         endpoint = current_rs_api_client.api.upload_file.operation.path_name.format(
-            workflow_id_or_name=workflow
+            workflow_id_or_name=workflow,
         )
         http_response = requests.post(
             urljoin(get_api_url(), endpoint),
             data=file_,
-            params={"file_name": file_name, "access_token": access_token},
-            headers={"Content-Type": "application/octet-stream"},
+            params={"file_name": file_name},
+            headers=_auth_headers(
+                access_token, {"Content-Type": "application/octet-stream"}
+            ),
             verify=False,
         )
         if http_response.ok:
@@ -448,10 +464,10 @@ def get_workflow_logs(workflow, access_token, steps=None, page=None, size=None):
              contains the requested logs.
     """
     try:
-        response, http_response = current_rs_api_client.api.get_workflow_logs(
+        (response, http_response) = current_rs_api_client.api.get_workflow_logs(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
             steps=steps,
-            access_token=access_token,
             page=page,
             size=size,
         ).result()
@@ -492,11 +508,13 @@ def download_file(workflow, file_name, access_token):
 
         logging.getLogger("urllib3").setLevel(logging.CRITICAL)
         endpoint = current_rs_api_client.api.download_file.operation.path_name.format(
-            workflow_id_or_name=workflow, file_name=file_name
+            workflow_id_or_name=workflow,
+            file_name=file_name,
         )
         http_response = requests.get(
             urljoin(get_api_url(), endpoint),
-            params={"file_name": file_name, "access_token": access_token},
+            params={"file_name": file_name},
+            headers=_auth_headers(access_token),
             verify=False,
         )
         if "Content-Disposition" in http_response.headers:
@@ -545,10 +563,10 @@ def delete_file(workflow, file_name, access_token):
              name of the file as key and info about the size as value.
     """
     try:
-        response, http_response = current_rs_api_client.api.delete_file(
+        (response, http_response) = current_rs_api_client.api.delete_file(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
             file_name=file_name,
-            access_token=access_token,
         ).result()
         if http_response.status_code == 200 and (
             response["deleted"] or response["failed"]
@@ -592,9 +610,9 @@ def list_files(
                 ``last-modified`` keys.
     """
     try:
-        response, http_response = current_rs_api_client.api.get_files(
+        (response, http_response) = current_rs_api_client.api.get_files(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
-            access_token=access_token,
             file_name=file_name,
             page=page,
             size=size,
@@ -711,7 +729,8 @@ def get_workflow_parameters(workflow, access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_parameters(
-            workflow_id_or_name=workflow, access_token=access_token
+            _request_options=_auth_request_options(access_token),
+            workflow_id_or_name=workflow,
         ).result()
         if http_response.status_code == 200:
             return response
@@ -745,7 +764,8 @@ def get_workflow_specification(workflow, access_token):
     """
     try:
         response, http_response = current_rs_api_client.api.get_workflow_specification(
-            workflow_id_or_name=workflow, access_token=access_token
+            _request_options=_auth_request_options(access_token),
+            workflow_id_or_name=workflow,
         ).result()
         if http_response.status_code == 200:
             return response
@@ -792,10 +812,10 @@ def delete_workflow(workflow, all_runs: bool, workspace: bool, access_token: str
             "all_runs": all_runs,
             "workspace": workspace,
         }
-        response, http_response = current_rs_api_client.api.set_workflow_status(
+        (response, http_response) = current_rs_api_client.api.set_workflow_status(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
             status="deleted",
-            access_token=access_token,
             parameters=parameters,
         ).result()
         if http_response.status_code == 200:
@@ -832,10 +852,10 @@ def stop_workflow(workflow, force_stop, access_token):
     """
     try:
         parameters = {"force_stop": force_stop}
-        response, http_response = current_rs_api_client.api.set_workflow_status(
+        (response, http_response) = current_rs_api_client.api.set_workflow_status(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
             status="stop",
-            access_token=access_token,
             parameters=parameters,
         ).result()
         if http_response.status_code == 200:
@@ -875,12 +895,12 @@ def diff_workflows(workflow_id_a, workflow_id_b, brief, access_token, context_li
         are the actual lines that differ.
     """
     try:
-        response, http_response = current_rs_api_client.api.get_workflow_diff(
+        (response, http_response) = current_rs_api_client.api.get_workflow_diff(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name_a=workflow_id_a,
             workflow_id_or_name_b=workflow_id_b,
             brief=brief,
             context_lines=context_lines,
-            access_token=access_token,
         ).result()
 
         if http_response.status_code == 200:
@@ -919,9 +939,9 @@ def open_interactive_session(
     :return: the relative path to the interactive session.
     """
     try:
-        response, http_response = current_rs_api_client.api.open_interactive_session(
+        (response, http_response) = current_rs_api_client.api.open_interactive_session(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
-            access_token=access_token,
             interactive_session_type=interactive_session_type,
             interactive_session_configuration=interactive_session_configuration,
         ).result()
@@ -954,9 +974,9 @@ def close_interactive_session(workflow, access_token):
     :return: the relative path to the interactive session.
     """
     try:
-        response, http_response = current_rs_api_client.api.close_interactive_session(
+        (response, http_response) = current_rs_api_client.api.close_interactive_session(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
-            access_token=access_token,
         ).result()
         if http_response.status_code == 200:
             return response
@@ -990,11 +1010,11 @@ def mv_files(source, target, workflow, access_token):
              and a ``message`` about the success of the operation.
     """
     try:
-        response, http_response = current_rs_api_client.api.move_files(
+        (response, http_response) = current_rs_api_client.api.move_files(
+            _request_options=_auth_request_options(access_token),
             source=source,
             target=target,
             workflow_id_or_name=workflow,
-            access_token=access_token,
         ).result()
 
         if http_response.status_code == 200:
@@ -1036,10 +1056,10 @@ def get_workflow_disk_usage(workflow, parameters, access_token):
              to a file, with the ``name`` and ``size`` keys.
     """
     try:
-        response, http_response = current_rs_api_client.api.get_workflow_disk_usage(
+        (response, http_response) = current_rs_api_client.api.get_workflow_disk_usage(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
             parameters=parameters,
-            access_token=access_token,
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1079,8 +1099,10 @@ def add_secrets(secrets, overwrite, access_token):
     :return: a dictionary containing the ``message`` key with a success message.
     """
     try:
-        response, http_response = current_rs_api_client.api.add_secrets(
-            secrets=secrets, access_token=access_token, overwrite=overwrite
+        (response, http_response) = current_rs_api_client.api.add_secrets(
+            _request_options=_auth_request_options(access_token),
+            secrets=secrets,
+            overwrite=overwrite,
         ).result()
         if http_response.status_code == 201:
             return response
@@ -1115,8 +1137,9 @@ def delete_secrets(secrets, access_token):
     :return: a list with the names of the deleted secrets.
     """
     try:
-        response, http_response = current_rs_api_client.api.delete_secrets(
-            secrets=secrets, access_token=access_token
+        (response, http_response) = current_rs_api_client.api.delete_secrets(
+            _request_options=_auth_request_options(access_token),
+            secrets=secrets,
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1153,8 +1176,8 @@ def list_secrets(access_token):
              ``name`` and ``type`` keys.
     """
     try:
-        response, http_response = current_rs_api_client.api.get_secrets(
-            access_token=access_token
+        (response, http_response) = current_rs_api_client.api.get_secrets(
+            _request_options=_auth_request_options(access_token),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1189,8 +1212,8 @@ def info(access_token):
              and ``maximum_interactive_session_inactivity_period``.
     """
     try:
-        response, http_response = current_rs_api_client.api.info(
-            access_token=access_token
+        (response, http_response) = current_rs_api_client.api.info(
+            _request_options=_auth_request_options(access_token),
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1230,8 +1253,8 @@ def get_workflow_retention_rules(workflow, access_token):
             response,
             http_response,
         ) = current_rs_api_client.api.get_workflow_retention_rules(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
-            access_token=access_token,
         ).result()
         if http_response.status_code == 200:
             return response
@@ -1264,11 +1287,11 @@ def prune_workspace(workflow, include_inputs, include_outputs, access_token):
              a ``message`` key with the result of the operation.
     """
     try:
-        response, http_response = current_rs_api_client.api.prune_workspace(
+        (response, http_response) = current_rs_api_client.api.prune_workspace(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
             include_inputs=include_inputs,
             include_outputs=include_outputs,
-            access_token=access_token,
         ).result()
 
         if http_response.status_code == 200:
@@ -1315,10 +1338,10 @@ def share_workflow(
         if valid_until:
             share_params["valid_until"] = valid_until
 
-        response, http_response = current_rs_api_client.api.share_workflow(
+        (response, http_response) = current_rs_api_client.api.share_workflow(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
             share_details=share_params,
-            access_token=access_token,
         ).result()
 
         if http_response.status_code == 200:
@@ -1352,11 +1375,11 @@ def unshare_workflow(workflow, user_email_to_unshare_with, access_token):
         unshare_params = {
             "workflow_id_or_name": workflow,
             "user_email_to_unshare_with": user_email_to_unshare_with,
-            "access_token": access_token,
         }
 
-        response, http_response = current_rs_api_client.api.unshare_workflow(
-            **unshare_params
+        (response, http_response) = current_rs_api_client.api.unshare_workflow(
+            _request_options=_auth_request_options(access_token),
+            **unshare_params,
         ).result()
 
         if http_response.status_code == 200:
@@ -1390,8 +1413,8 @@ def get_workflow_sharing_status(workflow, access_token):
             response,
             http_response,
         ) = current_rs_api_client.api.get_workflow_share_status(
+            _request_options=_auth_request_options(access_token),
             workflow_id_or_name=workflow,
-            access_token=access_token,
         ).result()
 
         if http_response.status_code == 200:
@@ -1409,3 +1432,30 @@ def get_workflow_sharing_status(workflow, access_token):
             f"Message: {e.response.json()['message']}"
         )
         raise Exception(e.response.json()["message"])
+
+def get_openid_configuration():
+    """Get OpenID configuration.
+
+    :return: a dictionary containing the OpenID configuration.
+    """
+    try:
+        (response, http_response) = current_rs_api_client.api.get_openid_configuration().result()
+        if http_response.status_code == 200:
+            return response
+        else:
+            raise Exception(
+                "Expected status code 200 but replied with "
+                "{status_code}".format(status_code=http_response.status_code)
+            )
+
+    except HTTPError as e:
+        logging.debug(
+            "OpenID configuration could not be retrieved: "
+            "\nStatus: {}\nReason: {}\n"
+            "Message: {}".format(
+                e.response.status_code, e.response.reason, e.response.json()["message"]
+            )
+        )
+        raise Exception(e.response.json()["message"])
+    except Exception as e:
+        raise e

@@ -36,7 +36,7 @@ def test_retention_rules_list(mock_get_workflow_retention_rules: MagicMock):
 
     runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
     result = runner.invoke(
-        cli, ["retention-rules-list", "-w", workflow_name, "-t", access_token]
+        cli, ["retention-rules-list", "-w", workflow_name]
     )
 
     assert result.exit_code == 0

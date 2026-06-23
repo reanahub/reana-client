@@ -13,6 +13,13 @@ import sys
 import traceback
 
 import click
+from reana_client.auth.oidc import (
+    AuthenticationError,
+    login_with_device_flow,
+    login_with_loopback,
+    logout as oidc_logout,
+)
+from reana_client.auth.storage import get_active_server, normalize_server_url
 from reana_client.cli.utils import add_access_token_options, check_connection
 from reana_client.config import JSON
 from reana_client.printer import display_message
@@ -24,6 +31,85 @@ from reana_client.version import __version__
 def configuration_group():
     """Configuration commands."""
     pass
+
+
+@configuration_group.command("login")
+@click.option(
+    "--server-url",
+    envvar="REANA_SERVER_URL",
+    help="REANA server URL to authenticate against.",
+)
+@click.option(
+    "--headless",
+    is_flag=True,
+    default=False,
+    help="Use device login instead of opening a local browser. "
+    "Use this on machines without a browser (e.g. over SSH).",
+)
+@click.pass_context
+def login(ctx, server_url, headless):  # noqa: D301
+    """Authenticate against REANA server using OIDC.
+
+    By default the browser-based loopback flow (authorization code with PKCE)
+    is used. On headless machines pass ``--headless`` to use the device flow.
+    """
+    try:
+        server_url = normalize_server_url(server_url or get_active_server())
+        if headless:
+            _device_login(server_url)
+        else:
+            _browser_login(server_url)
+        display_message(f"Logged in to {server_url}")
+    except (AuthenticationError, ValueError) as e:
+        display_message(str(e), msg_type="error")
+        ctx.exit(1)
+
+
+def _browser_login(server_url):
+    """Run the loopback authorization-code + PKCE login flow."""
+
+    def display_url(authorization_url):
+        display_message(
+            "Opening your browser to authenticate. If it does not open "
+            f"automatically, visit:\n{authorization_url}"
+        )
+
+    login_with_loopback(server_url, display_url)
+
+
+def _device_login(server_url):
+    """Run the OIDC device login flow."""
+
+    def display_device_prompt(device_response):
+        verification_uri_complete = device_response.get("verification_uri_complete")
+        if verification_uri_complete:
+            display_message(
+                "Open the following URL to authenticate:\n"
+                f"{verification_uri_complete}"
+            )
+        else:
+            display_message(
+                "Open the following URL to authenticate:\n"
+                f"{device_response.get('verification_uri')}\n"
+                f"Code: {device_response.get('user_code')}"
+            )
+
+    login_with_device_flow(server_url, display_device_prompt)
+
+
+@configuration_group.command("logout")
+@click.pass_context
+def logout(ctx):  # noqa: D301
+    """Logout from the active REANA server."""
+    try:
+        server_url = get_active_server()
+        warning = oidc_logout(server_url)
+        if warning:
+            display_message(warning, msg_type="warning")
+        display_message(f"Logged out from {server_url}")
+    except (AuthenticationError, ValueError) as e:
+        display_message(str(e), msg_type="error")
+        ctx.exit(1)
 
 
 @configuration_group.command("ping")

@@ -21,7 +21,7 @@ from mock import Mock, patch
 from reana_commons.testing import make_mock_api_client
 from reana_client.api.client import create_workflow_from_json
 from reana_client.cli import cli
-from reana_client.config import RUN_STATUSES
+from reana_client.config import ERROR_MESSAGES, RUN_STATUSES
 from reana_client.utils import get_workflow_status_change_msg
 from reana_commons.api_client import BaseAPIClient
 from reana_commons.config import INTERACTIVE_SESSION_TYPES
@@ -32,8 +32,7 @@ from reana_commons.validation.images import extract_images
 def test_workflows_server_not_connected():
     """Test workflows command when server is not connected."""
     runner = CliRunner()
-    reana_token = "000000"
-    result = runner.invoke(cli, ["list", "-t", reana_token])
+    result = runner.invoke(cli, ["list"])
     message = "REANA client is not connected to any REANA cluster."
     assert message in result.output
     assert result.exit_code == 1
@@ -61,14 +60,17 @@ rule create_output:
     assert extract_images(reana_yaml) == ["docker.io/library/ubuntu:24.04"]
 
 
-def test_workflows_no_token():
+def test_workflows_no_token(monkeypatch):
     """Test workflows command when token is not set."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
+    monkeypatch.setattr(
+        "reana_client.cli.utils.get_access_token",
+        lambda: (_ for _ in ()).throw(Exception(ERROR_MESSAGES["missing_access_token"])),
+    )
     result = runner.invoke(cli, ["list"])
-    message = "Please provide your access token by using the -t"
     assert result.exit_code == 1
-    assert message in result.output
+    assert ERROR_MESSAGES["missing_access_token"] in result.output
 
 
 def test_workflows_server_ok():
@@ -102,7 +104,7 @@ def test_workflows_server_ok():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(
-                cli, ["list", "-t", reana_token, "--include-progress"]
+                cli, ["list", "--include-progress"]
             )
             message = "RUN_NUMBER"
             assert result.exit_code == 0
@@ -136,7 +138,7 @@ def test_deleted_workflows(cli_options: List[str], expected_status_filter: List[
     with runner.isolation():
         with patch("reana_client.api.client.get_workflows") as mock_get_workflows:
             mock_get_workflows.return_value = response
-            runner.invoke(cli, ["list", "-t", reana_token] + cli_options)
+            runner.invoke(cli, ["list"] + cli_options)
             kwargs = mock_get_workflows.call_args.kwargs
             assert kwargs["status"] == expected_status_filter
 
@@ -145,7 +147,7 @@ def test_deleted_workflows(cli_options: List[str], expected_status_filter: List[
     "cli_options, expected_output",
     [
         (
-            ["list", "-t", "000000", "--sort", "Run_NUMber"],
+            ["list", "--sort", "Run_NUMber"],
             (
                 "mytest   15           2018-06-13T10:55:37   -                     -                     running\n"
                 "mytest   2            2018-06-13T09:55:35   -                     -                     running\n"
@@ -155,8 +157,6 @@ def test_deleted_workflows(cli_options: List[str], expected_status_filter: List[
         (
             [
                 "list",
-                "-t",
-                "000000",
                 "--include-workspace-size",
                 "-h",
                 "--sort",
@@ -249,7 +249,7 @@ def test_workflows_sessions():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["list", "-t", reana_token, "--sessions"])
+            result = runner.invoke(cli, ["list", "--sessions"])
             message = "RUN_NUMBER"
             assert result.exit_code == 0
             assert message in result.output
@@ -282,7 +282,7 @@ def test_workflows_valid_json():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["list", "-v", "-t", reana_token, "--json"])
+            result = runner.invoke(cli, ["list", "-v", "--json"])
             assert result.exit_code == 0
 
 
@@ -319,7 +319,7 @@ def test_workflows_include_progress():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(
-                cli, ["list", "--include-progress", "-t", reana_token]
+                cli, ["list", "--include-progress"]
             )
             assert result.exit_code == 0
             assert "PROGRESS" in result.output
@@ -356,7 +356,7 @@ def test_workflows_without_include_progress():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["list", "-t", reana_token])
+            result = runner.invoke(cli, ["list"])
             assert result.exit_code == 0
             assert "PROGRESS" not in result.output
             assert "STARTED" in result.output
@@ -390,7 +390,7 @@ def test_workflows_include_workspace_size():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(
-                cli, ["list", "--include-workspace-size", "-t", reana_token]
+                cli, ["list", "--include-workspace-size"]
             )
             assert result.exit_code == 0
             assert "SIZE" in result.output
@@ -423,7 +423,7 @@ def test_workflows_without_include_workspace_size():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["list", "-t", reana_token])
+            result = runner.invoke(cli, ["list"])
             assert result.exit_code == 0
             assert "SIZE" not in result.output
 
@@ -465,7 +465,7 @@ def test_workflows_format():
         ):
             result = runner.invoke(
                 cli,
-                ["list", "-t", reana_token, "--json", '--format="{}"'.format(_format)],
+                ["list", "--json", '--format="{}"'.format(_format)],
             )
             json_response = json.loads(result.output)
             assert result.exit_code == 0
@@ -504,7 +504,7 @@ def test_workflows_filter():
         ):
             result = runner.invoke(
                 cli,
-                ["list", "-t", reana_token, "--json", "--filter", filter],
+                ["list", "--json", "--filter", filter],
             )
             json_response = json.loads(result.output)
             assert result.exit_code == 0
@@ -541,7 +541,7 @@ def test_workflows_shared():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["list", "--shared", "-t", reana_token])
+            result = runner.invoke(cli, ["list", "--shared"])
             assert result.exit_code == 0
             assert "SHARED_WITH" in result.output
             assert "SHARED_BY" in result.output
@@ -575,7 +575,7 @@ def test_workflows_shared_with():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(
-                cli, ["list", "--shared-with", "anybody", "-t", reana_token]
+                cli, ["list", "--shared-with", "anybody"]
             )
             assert result.exit_code == 0
             assert "SHARED_WITH" in result.output
@@ -610,7 +610,7 @@ def test_workflows_shared_by():
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(
-                cli, ["list", "--shared-by", "anybody", "-t", reana_token]
+                cli, ["list", "--shared-by", "anybody"]
             )
             assert result.exit_code == 0
             assert "SHARED_WITH" not in result.output
@@ -652,8 +652,6 @@ def test_workflows_shared_with_and_shared_by():
                     "anybody",
                     "--shared-by",
                     "anybody",
-                    "-t",
-                    reana_token,
                 ],
             )
             assert result.exit_code == 1
@@ -696,7 +694,7 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
                 with open("reana.yaml", "w") as f:
                     f.write(create_yaml_workflow_schema)
                 result = runner.invoke(
-                    cli, ["create", "-t", reana_token, "--skip-validation"]
+                    cli, ["create", "--skip-validation"]
                 )
                 assert result.exit_code == 0
                 assert response["workflow_name"] in result.output
@@ -848,7 +846,7 @@ def test_workflow_start_successful(status, exit_code):
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
             result = runner.invoke(
-                cli, ["start", "-t", reana_token, "-w", response["workflow_name"]]
+                cli, ["start", "-w", response["workflow_name"]]
             )
             assert result.exit_code == exit_code
             assert expected_message in result.output
@@ -920,7 +918,7 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
     with runner.isolation():
         with patch("reana_client.api.client.current_rs_api_client", mock_api_client):
             result = runner.invoke(
-                cli, ["start", "-t", reana_token, "-w", workflow_name, "--follow"]
+                cli, ["start", "-w", workflow_name, "--follow"]
             )
             assert result.exit_code == exit_code
             assert initial_expected_message in result.output
@@ -940,7 +938,7 @@ def test_workflows_validate(create_yaml_workflow_schema):
             f.write(create_yaml_workflow_schema)
         result = runner.invoke(
             cli,
-            ["validate", "-t", reana_token, "--file", "reana.yaml"],
+            ["validate", "--file", "reana.yaml"],
         )
         assert result.exit_code == 0
         assert message in result.output
@@ -1015,7 +1013,7 @@ def test_get_workflow_status_ok():
         ):
             result = runner.invoke(
                 cli,
-                ["status", "-t", reana_token, "--json", "-v", "-w", response["name"]],
+                ["status", "--json", "-v", "-w", response["name"]],
             )
             json_response = json.loads(result.output)
             assert result.exit_code == 0
@@ -1046,7 +1044,7 @@ def test_get_workflow_logs():
         ):
             result = runner.invoke(
                 cli,
-                ["logs", "-t", reana_token, "--json", "-w", response["workflow_name"]],
+                ["logs", "--json", "-w", response["workflow_name"]],
             )
             json_response = json.loads(result.output)
             assert result.exit_code == 0
@@ -1109,8 +1107,6 @@ def test_follow_job_logs():
                 cli,
                 [
                     "logs",
-                    "-t",
-                    reana_token,
                     "--follow",
                     "-i",
                     1,
@@ -1175,8 +1171,6 @@ def test_follow_live_logs_disabled():
                 cli,
                 [
                     "logs",
-                    "-t",
-                    reana_token,
                     "--follow",
                     "-i",
                     1,
@@ -1213,7 +1207,7 @@ def test_run(
             f.write(create_yaml_workflow_schema)
         runner.invoke(
             cli,
-            ["run", "-t", reana_token, "-f", reana_workflow_schema],
+            ["run", "-f", reana_workflow_schema],
         )
     assert workflow_create_mock.called is True
     assert upload_file_mock.called is True
@@ -1251,8 +1245,6 @@ def test_workflow_input_parameters():
                 cli,
                 [
                     "start",
-                    "-t",
-                    reana_token,
                     "-w workflow.19",
                     "-p {0}=True".format(parameter),
                 ],
@@ -1315,8 +1307,6 @@ def test_open_interactive_session(
                 cli,
                 [
                     "open",
-                    "-t",
-                    reana_token,
                     "-w",
                     workflow_id,
                     interactive_session_type,
@@ -1349,7 +1339,7 @@ def test_close_interactive_session():
             "reana_client.api.client.current_rs_api_client",
             make_mock_api_client("reana-server")(mock_response, mock_http_response),
         ):
-            result = runner.invoke(cli, ["close", "-t", reana_token, "-w", workflow])
+            result = runner.invoke(cli, ["close", "-w", workflow])
             assert expected_message in result.output
 
 
@@ -1375,7 +1365,7 @@ def test_yml_ext_specification(create_yaml_workflow_schema):
     with runner.isolated_filesystem():
         with open("reana.yml", "w") as reana_schema:
             reana_schema.write(create_yaml_workflow_schema)
-        result = runner.invoke(cli, ["validate", "-t", reana_token])
+        result = runner.invoke(cli, ["validate"])
         assert result.exit_code == 0
         assert message in result.output
 
@@ -1383,7 +1373,7 @@ def test_yml_ext_specification(create_yaml_workflow_schema):
     with runner.isolated_filesystem():
         with open("reana.json", "w") as reana_schema:
             reana_schema.write(create_yaml_workflow_schema)
-        result = runner.invoke(cli, ["validate", "-t", reana_token])
+        result = runner.invoke(cli, ["validate"])
         assert result.exit_code != 0
         assert message in result.output
 
@@ -1406,7 +1396,7 @@ def test_run_with_no_inputs(spec_without_inputs):
         with open("reana.yaml", "w") as f:
             yaml.dump(spec_without_inputs, f)
 
-        result = runner.invoke(cli, ["run", "-t", reana_token])
+        result = runner.invoke(cli, ["run"])
 
         assert result.exit_code == 0
         cli_workflow_create.assert_called()
@@ -1438,8 +1428,6 @@ def test_share_add_workflow():
                 cli,
                 [
                     "share-add",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "test-workflow.1",
                     "--user",
@@ -1477,8 +1465,6 @@ def test_share_remove_workflow():
                 cli,
                 [
                     "share-remove",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "test-workflow.1",
                     "--user",
@@ -1512,8 +1498,6 @@ def test_share_status_workflow():
                 cli,
                 [
                     "share-status",
-                    "-t",
-                    reana_token,
                     "--workflow",
                     "test-workflow.1",
                 ],

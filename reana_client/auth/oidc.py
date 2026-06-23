@@ -5,16 +5,18 @@
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
-"""OIDC device-flow and token refresh helpers."""
+"""OIDC login (loopback PKCE and device flow) and token refresh helpers."""
 
 import base64
 import hashlib
 import json
 import secrets
 import time
+import webbrowser
 from datetime import datetime, timedelta, timezone
-from typing import Callable, Dict, Optional
-from urllib.parse import urljoin
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Callable, Dict, Optional, Tuple
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
 import requests
 
@@ -26,12 +28,23 @@ from reana_client.auth.storage import (
     upsert_server_entry,
 )
 
-
 DEFAULT_SCOPES = "openid profile email offline_access"
-FALLBACK_SCOPES = "openid profile email"
 EXPIRY_LEEWAY_SECONDS = 60
 DISCOVERY_PATH = "/api/.well-known/openid-configuration"
 PKCE_CODE_CHALLENGE_METHOD = "S256"
+
+LOOPBACK_HOST = "127.0.0.1"
+LOOPBACK_CALLBACK_PATH = "/callback"
+LOOPBACK_TIMEOUT_SECONDS = 300
+
+_CALLBACK_SUCCESS_HTML = (
+    b"<html><body><h1>REANA login complete.</h1>"
+    b"<p>You can close this tab and return to the terminal.</p></body></html>"
+)
+_CALLBACK_ERROR_HTML = (
+    b"<html><body><h1>REANA login failed.</h1>"
+    b"<p>Return to the terminal for details.</p></body></html>"
+)
 
 
 class AuthenticationError(Exception):
@@ -132,8 +145,8 @@ def discover(server_url: str) -> Dict:
     metadata = _response_json(response)
     required_fields = [
         "issuer",
+        "authorization_endpoint",
         "token_endpoint",
-        "device_authorization_endpoint",
         "reana_cli_client_id",
     ]
     missing_fields = [field for field in required_fields if not metadata.get(field)]
@@ -145,40 +158,9 @@ def discover(server_url: str) -> Dict:
     return metadata
 
 
-def _start_device_authorization(metadata: Dict, scopes: str, pkce: Dict) -> Dict:
-    """Start OIDC device authorization flow."""
-    response = requests.post(
-        metadata["device_authorization_endpoint"],
-        data={
-            "client_id": metadata["reana_cli_client_id"],
-            "scope": scopes,
-            "code_challenge": pkce["code_challenge"],
-            "code_challenge_method": pkce["code_challenge_method"],
-        },
-        timeout=30,
-        verify=False,
-    )
-    payload = _response_json(response)
-    if response.ok:
-        return payload
-    if payload.get("error") == "invalid_scope" and scopes == DEFAULT_SCOPES:
-        return _start_device_authorization(metadata, FALLBACK_SCOPES, pkce)
-    raise AuthenticationError(
-        "Could not start device login: "
-        f"{payload.get('error_description') or payload.get('error') or response.text}"
-    )
-
-
-def _offline_access_not_allowed(payload: Dict) -> bool:
-    """Return whether token response refused offline access."""
-    error = (payload.get("error") or "").lower()
-    description = (payload.get("error_description") or "").lower()
-    return "offline" in description and (
-        "not allowed" in description or error in {"invalid_grant", "invalid_scope"}
-    )
-
-
-def _store_token_response(server_url: str, metadata: Dict, token_response: Dict) -> Dict:
+def _store_token_response(
+    server_url: str, metadata: Dict, token_response: Dict
+) -> Dict:
     """Persist token response for a server."""
     refresh_token = token_response.get("refresh_token")
     if not refresh_token:
@@ -190,7 +172,8 @@ def _store_token_response(server_url: str, metadata: Dict, token_response: Dict)
         "issuer": metadata["issuer"],
         "client_id": metadata["reana_cli_client_id"],
         "token_endpoint": metadata["token_endpoint"],
-        "device_authorization_endpoint": metadata["device_authorization_endpoint"],
+        "authorization_endpoint": metadata.get("authorization_endpoint"),
+        "device_authorization_endpoint": metadata.get("device_authorization_endpoint"),
         "revocation_endpoint": metadata.get("revocation_endpoint"),
         "access_token": token_response.get("access_token"),
         "access_token_expires_at": _token_expires_at(token_response),
@@ -200,58 +183,210 @@ def _store_token_response(server_url: str, metadata: Dict, token_response: Dict)
     return upsert_server_entry(server_url, entry)
 
 
+def _build_authorization_url(
+    metadata: Dict, scopes: str, pkce: Dict, state: str, redirect_uri: str
+) -> str:
+    """Build the OIDC authorization endpoint URL for the loopback flow."""
+    params = {
+        "response_type": "code",
+        "client_id": metadata["reana_cli_client_id"],
+        "redirect_uri": redirect_uri,
+        "scope": scopes,
+        "state": state,
+        "code_challenge": pkce["code_challenge"],
+        "code_challenge_method": pkce["code_challenge_method"],
+    }
+    return metadata["authorization_endpoint"] + "?" + urlencode(params)
+
+
+class _CallbackHandler(BaseHTTPRequestHandler):
+    """Capture the single authorization-code redirect on the loopback server."""
+
+    def do_GET(self):  # noqa: N802
+        """Record callback query parameters and acknowledge the browser."""
+        parsed = urlparse(self.path)
+        if parsed.path != LOOPBACK_CALLBACK_PATH:
+            self.send_response(404)
+            self.end_headers()
+            return
+        query = {key: values[0] for key, values in parse_qs(parsed.query).items()}
+        self.server.callback_query = query
+        body = _CALLBACK_SUCCESS_HTML if "code" in query else _CALLBACK_ERROR_HTML
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        """Silence the default stderr request logging."""
+
+
+def _start_callback_server() -> Tuple[HTTPServer, str]:
+    """Start a loopback HTTP server and return it with its redirect URI."""
+    httpd = HTTPServer((LOOPBACK_HOST, 0), _CallbackHandler)
+    httpd.callback_query = None
+    port = httpd.server_address[1]
+    redirect_uri = f"http://{LOOPBACK_HOST}:{port}{LOOPBACK_CALLBACK_PATH}"
+    return httpd, redirect_uri
+
+
+def _wait_for_callback(httpd: HTTPServer, timeout: int) -> Optional[Dict]:
+    """Serve requests until the authorization callback arrives or times out."""
+    deadline = time.monotonic() + timeout
+    httpd.callback_query = None
+    while httpd.callback_query is None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        httpd.timeout = remaining
+        httpd.handle_request()
+    return httpd.callback_query
+
+
+def _exchange_authorization_code(
+    metadata: Dict, code: str, pkce: Dict, redirect_uri: str
+) -> Dict:
+    """Exchange an authorization code for tokens using the PKCE verifier."""
+    response = requests.post(
+        metadata["token_endpoint"],
+        data={
+            "grant_type": "authorization_code",
+            "client_id": metadata["reana_cli_client_id"],
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "code_verifier": pkce["code_verifier"],
+        },
+        timeout=30,
+        verify=False,
+    )
+    payload = _response_json(response)
+    if not response.ok:
+        raise AuthenticationError(
+            "Browser login failed: "
+            f"{payload.get('error_description') or payload.get('error') or response.text}"
+        )
+    return payload
+
+
+def login_with_loopback(
+    server_url: str,
+    display_url: Callable[[str], None],
+    open_browser: Callable[[str], bool] = webbrowser.open,
+    timeout: int = LOOPBACK_TIMEOUT_SECONDS,
+) -> Dict:
+    """Perform the loopback authorization-code + PKCE flow and store credentials."""
+    normalized_url = normalize_server_url(server_url)
+    metadata = discover(normalized_url)
+    pkce = generate_pkce_pair()
+    state = secrets.token_urlsafe(32)
+
+    httpd, redirect_uri = _start_callback_server()
+    try:
+        authorization_url = _build_authorization_url(
+            metadata, DEFAULT_SCOPES, pkce, state, redirect_uri
+        )
+        display_url(authorization_url)
+        try:
+            open_browser(authorization_url)
+        except Exception:
+            pass
+        query = _wait_for_callback(httpd, timeout)
+    finally:
+        httpd.server_close()
+
+    if query is None:
+        raise AuthenticationError("Browser login timed out. Please run login again.")
+    if query.get("error"):
+        raise AuthenticationError(
+            "Browser login failed: "
+            f"{query.get('error_description') or query.get('error')}"
+        )
+    returned_state = query.get("state")
+    if not returned_state or not secrets.compare_digest(returned_state, state):
+        raise AuthenticationError(
+            "Browser login failed: state parameter mismatch (possible CSRF)."
+        )
+    code = query.get("code")
+    if not code:
+        raise AuthenticationError(
+            "Browser login failed: no authorization code was returned."
+        )
+
+    token_response = _exchange_authorization_code(metadata, code, pkce, redirect_uri)
+    return _store_token_response(normalized_url, metadata, token_response)
+
+
+def _start_device_authorization(metadata: Dict, pkce: Dict) -> Dict:
+    """Start OIDC device authorization flow."""
+    response = requests.post(
+        metadata["device_authorization_endpoint"],
+        data={
+            "client_id": metadata["reana_cli_client_id"],
+            "scope": DEFAULT_SCOPES,
+            "code_challenge": pkce["code_challenge"],
+            "code_challenge_method": pkce["code_challenge_method"],
+        },
+        timeout=30,
+        verify=False,
+    )
+    payload = _response_json(response)
+    if response.ok:
+        return payload
+    raise AuthenticationError(
+        "Could not start device login: "
+        f"{payload.get('error_description') or payload.get('error') or response.text}"
+    )
+
+
 def login_with_device_flow(
     server_url: str,
     display_callback: Callable[[Dict], None],
     sleep: Callable[[int], None] = time.sleep,
 ) -> Dict:
-    """Perform OIDC device flow and store resulting credentials."""
+    """Perform OIDC device flow (headless fallback) and store credentials."""
     normalized_url = normalize_server_url(server_url)
     metadata = discover(normalized_url)
-    scopes_to_try = [DEFAULT_SCOPES, FALLBACK_SCOPES]
-    for scopes in scopes_to_try:
-        pkce = generate_pkce_pair()
-        device_response = _start_device_authorization(metadata, scopes, pkce)
-        display_callback(device_response)
+    if not metadata.get("device_authorization_endpoint"):
+        raise AuthenticationError(
+            "This REANA server does not advertise a device authorization endpoint."
+        )
+    pkce = generate_pkce_pair()
+    device_response = _start_device_authorization(metadata, pkce)
+    display_callback(device_response)
 
-        interval = int(device_response.get("interval", 5))
-        device_code = device_response["device_code"]
-        while True:
-            sleep(interval)
-            response = requests.post(
-                metadata["token_endpoint"],
-                data={
-                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                    "device_code": device_code,
-                    "client_id": metadata["reana_cli_client_id"],
-                    "code_verifier": pkce["code_verifier"],
-                },
-                timeout=30,
-                verify=False,
-            )
-            payload = _response_json(response)
-            if response.ok:
-                return _store_token_response(normalized_url, metadata, payload)
+    interval = int(device_response.get("interval", 5))
+    device_code = device_response["device_code"]
+    while True:
+        sleep(interval)
+        response = requests.post(
+            metadata["token_endpoint"],
+            data={
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                "device_code": device_code,
+                "client_id": metadata["reana_cli_client_id"],
+                "code_verifier": pkce["code_verifier"],
+            },
+            timeout=30,
+            verify=False,
+        )
+        payload = _response_json(response)
+        if response.ok:
+            return _store_token_response(normalized_url, metadata, payload)
 
-            error = payload.get("error")
-            if error == "authorization_pending":
-                continue
-            if error == "slow_down":
-                interval += 5
-                continue
-            if error == "expired_token":
-                raise AuthenticationError(
-                    "Device login expired. Please run login again."
-                )
-            if error == "access_denied":
-                raise AuthenticationError("Device login was denied.")
-            if scopes == DEFAULT_SCOPES and _offline_access_not_allowed(payload):
-                break
-            raise AuthenticationError(
-                "Device login failed: "
-                f"{payload.get('error_description') or error or response.text}"
-            )
-    raise AuthenticationError("Device login failed: offline access is not allowed.")
+        error = payload.get("error")
+        if error == "authorization_pending":
+            continue
+        if error == "slow_down":
+            interval += 5
+            continue
+        if error == "expired_token":
+            raise AuthenticationError("Device login expired. Please run login again.")
+        if error == "access_denied":
+            raise AuthenticationError("Device login was denied.")
+        raise AuthenticationError(
+            "Device login failed: "
+            f"{payload.get('error_description') or error or response.text}"
+        )
 
 
 def _access_token_valid(server_entry: Dict) -> bool:
@@ -290,9 +425,10 @@ def refresh_credentials(server_url: str, server_entry: Optional[Dict] = None) ->
         "issuer": server_entry["issuer"],
         "reana_cli_client_id": server_entry["client_id"],
         "token_endpoint": server_entry["token_endpoint"],
-        "device_authorization_endpoint": server_entry[
+        "authorization_endpoint": server_entry.get("authorization_endpoint"),
+        "device_authorization_endpoint": server_entry.get(
             "device_authorization_endpoint"
-        ],
+        ),
         "revocation_endpoint": server_entry.get("revocation_endpoint"),
     }
     if "refresh_token" not in payload:

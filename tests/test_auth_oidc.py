@@ -8,6 +8,9 @@
 """REANA client OIDC authentication tests."""
 
 from datetime import timedelta
+from urllib.parse import parse_qs, urlparse
+
+import pytest
 
 from reana_client.auth import oidc
 from reana_client.auth.storage import (
@@ -97,28 +100,111 @@ def test_get_access_token_refreshes_expiring_token(tmp_path, monkeypatch):
     assert server_entry["refresh_token"] == "new-refresh"
 
 
-def test_device_flow_retries_without_offline_access(tmp_path, monkeypatch):
-    """Test invalid offline_access scope fallback."""
+METADATA = {
+    "issuer": "https://issuer.example.org",
+    "authorization_endpoint": "https://issuer.example.org/auth",
+    "token_endpoint": "https://issuer.example.org/token",
+    "device_authorization_endpoint": "https://issuer.example.org/device",
+    "reana_cli_client_id": "reana-cli",
+}
+
+
+class FakeLoopbackServer:
+    """Loopback HTTP server double exposing a no-op ``server_close``."""
+
+    def server_close(self):
+        """Match the HTTPServer interface used in the ``finally`` block."""
+
+
+def test_login_with_loopback_exchanges_code_with_pkce(tmp_path, monkeypatch):
+    """Test the browser loopback flow exchanges the code using the verifier."""
     config_path = tmp_path / "reana-client.json"
     monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
-    metadata = {
-        "issuer": "https://issuer.example.org",
-        "token_endpoint": "https://issuer.example.org/token",
-        "device_authorization_endpoint": "https://issuer.example.org/device",
-        "reana_cli_client_id": "reana-cli",
-    }
+    redirect_uri = "http://127.0.0.1:5555/callback"
+    captured = {}
+
+    monkeypatch.setattr(oidc, "discover", lambda server_url: dict(METADATA))
+    monkeypatch.setattr(
+        oidc, "_start_callback_server", lambda: (FakeLoopbackServer(), redirect_uri)
+    )
+
+    def fake_wait(httpd, timeout):
+        query = parse_qs(urlparse(captured["url"]).query)
+        return {"code": "auth-code", "state": query["state"][0]}
+
+    monkeypatch.setattr(oidc, "_wait_for_callback", fake_wait)
+
+    def fake_post(url, data, timeout, verify):
+        assert url == METADATA["token_endpoint"]
+        assert data["grant_type"] == "authorization_code"
+        assert data["code"] == "auth-code"
+        assert data["redirect_uri"] == redirect_uri
+        assert data["code_verifier"]
+        return MockResponse(
+            {"access_token": "access", "refresh_token": "refresh", "expires_in": 3600}
+        )
+
+    monkeypatch.setattr(oidc.requests, "post", fake_post)
+
+    oidc.login_with_loopback(
+        "https://reana.example.org",
+        lambda url: captured.__setitem__("url", url),
+        open_browser=lambda url: True,
+    )
+
+    params = parse_qs(urlparse(captured["url"]).query)
+    assert params["response_type"] == ["code"]
+    assert params["redirect_uri"] == [redirect_uri]
+    assert params["code_challenge_method"] == ["S256"]
+    assert params["code_challenge"]
+    assert params["scope"] == [oidc.DEFAULT_SCOPES]
+    entry = get_server_entry("https://reana.example.org")
+    assert entry["access_token"] == "access"
+    assert entry["refresh_token"] == "refresh"
+
+
+def test_login_with_loopback_rejects_state_mismatch(tmp_path, monkeypatch):
+    """Test the loopback flow fails closed on a mismatched state (CSRF guard)."""
+    config_path = tmp_path / "reana-client.json"
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
+
+    monkeypatch.setattr(oidc, "discover", lambda server_url: dict(METADATA))
+    monkeypatch.setattr(
+        oidc,
+        "_start_callback_server",
+        lambda: (FakeLoopbackServer(), "http://127.0.0.1:5555/callback"),
+    )
+    monkeypatch.setattr(
+        oidc,
+        "_wait_for_callback",
+        lambda httpd, timeout: {"code": "auth-code", "state": "forged-state"},
+    )
+
+    def fail_post(url, data, timeout, verify):
+        raise AssertionError("token endpoint must not be called on state mismatch")
+
+    monkeypatch.setattr(oidc.requests, "post", fail_post)
+
+    with pytest.raises(oidc.AuthenticationError, match="state parameter mismatch"):
+        oidc.login_with_loopback(
+            "https://reana.example.org",
+            lambda url: None,
+            open_browser=lambda url: True,
+        )
+
+
+def test_device_flow_stores_credentials_with_pkce(tmp_path, monkeypatch):
+    """Test the headless device flow uses offline scope and PKCE."""
+    config_path = tmp_path / "reana-client.json"
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
     posts = []
 
-    def fake_discover(server_url):
-        return metadata
+    monkeypatch.setattr(oidc, "discover", lambda server_url: dict(METADATA))
 
     def fake_post(url, data, timeout, verify):
         posts.append(data.copy())
-        if data.get("scope") == oidc.DEFAULT_SCOPES:
-            assert data["code_challenge"]
-            assert data["code_challenge_method"] == "S256"
-            return MockResponse({"error": "invalid_scope"}, ok=False, status_code=400)
-        if data.get("scope") == oidc.FALLBACK_SCOPES:
+        if url == METADATA["device_authorization_endpoint"]:
+            assert data["scope"] == oidc.DEFAULT_SCOPES
             assert data["code_challenge"]
             assert data["code_challenge_method"] == "S256"
             return MockResponse(
@@ -129,16 +215,12 @@ def test_device_flow_retries_without_offline_access(tmp_path, monkeypatch):
                     "interval": 0,
                 }
             )
+        assert data["grant_type"] == "urn:ietf:params:oauth:grant-type:device_code"
         assert data["code_verifier"]
         return MockResponse(
-            {
-                "access_token": "access",
-                "refresh_token": "refresh",
-                "expires_in": 3600,
-            }
+            {"access_token": "access", "refresh_token": "refresh", "expires_in": 3600}
         )
 
-    monkeypatch.setattr(oidc, "discover", fake_discover)
     monkeypatch.setattr(oidc.requests, "post", fake_post)
 
     prompts = []
@@ -148,87 +230,7 @@ def test_device_flow_retries_without_offline_access(tmp_path, monkeypatch):
         sleep=lambda interval: None,
     )
 
-    assert posts[0]["scope"] == oidc.DEFAULT_SCOPES
-    assert posts[1]["scope"] == oidc.FALLBACK_SCOPES
     assert prompts[0]["device_code"] == "device-code"
-    assert get_server_entry("https://reana.example.org")["refresh_token"] == "refresh"
-
-
-def test_device_flow_restarts_without_offline_access_when_token_endpoint_refuses_it(
-    tmp_path, monkeypatch
-):
-    """Test fallback when token endpoint refuses offline tokens."""
-    config_path = tmp_path / "reana-client.json"
-    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
-    metadata = {
-        "issuer": "https://issuer.example.org",
-        "token_endpoint": "https://issuer.example.org/token",
-        "device_authorization_endpoint": "https://issuer.example.org/device",
-        "reana_cli_client_id": "reana-cli",
-    }
-    posts = []
-    token_attempts = []
-
-    def fake_discover(server_url):
-        return metadata
-
-    def fake_post(url, data, timeout, verify):
-        posts.append(data.copy())
-        if data.get("scope") == oidc.DEFAULT_SCOPES:
-            return MockResponse(
-                {
-                    "device_code": "offline-device-code",
-                    "verification_uri": "https://issuer.example.org/device",
-                    "user_code": "1111",
-                    "interval": 0,
-                }
-            )
-        if data.get("scope") == oidc.FALLBACK_SCOPES:
-            return MockResponse(
-                {
-                    "device_code": "refresh-device-code",
-                    "verification_uri": "https://issuer.example.org/device",
-                    "user_code": "2222",
-                    "interval": 0,
-                }
-            )
-
-        token_attempts.append(data.copy())
-        if data["device_code"] == "offline-device-code":
-            return MockResponse(
-                {
-                    "error": "invalid_grant",
-                    "error_description": (
-                        "Offline tokens not allowed for the user or client"
-                    ),
-                },
-                ok=False,
-                status_code=400,
-            )
-        return MockResponse(
-            {
-                "access_token": "access",
-                "refresh_token": "refresh",
-                "expires_in": 3600,
-            }
-        )
-
-    monkeypatch.setattr(oidc, "discover", fake_discover)
-    monkeypatch.setattr(oidc.requests, "post", fake_post)
-
-    prompts = []
-    oidc.login_with_device_flow(
-        "https://reana.example.org",
-        prompts.append,
-        sleep=lambda interval: None,
-    )
-
-    assert posts[0]["scope"] == oidc.DEFAULT_SCOPES
-    assert posts[2]["scope"] == oidc.FALLBACK_SCOPES
-    assert prompts[0]["device_code"] == "offline-device-code"
-    assert prompts[1]["device_code"] == "refresh-device-code"
-    assert token_attempts[0]["device_code"] == "offline-device-code"
-    assert token_attempts[1]["device_code"] == "refresh-device-code"
     assert get_server_entry("https://reana.example.org")["refresh_token"] == "refresh"
 
 

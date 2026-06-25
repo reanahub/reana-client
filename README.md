@@ -35,6 +35,48 @@ $ pip install reana-client
 The detailed information on how to install and use REANA can be found in
 [docs.reana.io](https://docs.reana.io).
 
+### Bundling additional workflow source files
+
+The `create` and `validate` commands upload a scoped specification bundle for
+server-side workflow loading. Declare every imported source explicitly under
+`workflow.files` or `workflow.directories` so it is available to the loader.
+
+For example, given this Snakemake project:
+
+```text
+analysis/
+├── reana.yaml
+├── Snakefile
+└── rules/
+    └── common.smk
+```
+
+where `Snakefile` contains `include: "rules/common.smk"`, declare the included
+source in `reana.yaml`:
+
+```yaml
+version: 0.9.0
+workflow:
+  type: snakemake
+  file: Snakefile
+  directories:
+    - rules
+```
+
+Paths are relative to the directory containing the selected specification.
+Absolute paths, paths that escape through `..`, and symbolic links are rejected.
+Use `workflow.files` only for workflow definitions and configuration needed
+while loading the workflow; input datasets belong under `inputs.files` or
+`inputs.directories`.
+
+Validation snapshots accept at most 1,000 files, 2,000 directories, 100 MiB of
+file content, and 64 relative path components. Symbolic links are not followed.
+
+`reana-client validate --environments` performs offline image-reference checks
+and reports effective runtime identities. Add `--pull` to verify availability
+and inspect those images with your local container runtime and registry
+credentials; the REANA server does not contact image registries.
+
 ## Useful links
 
 - [REANA project home page](http://www.reana.io/)

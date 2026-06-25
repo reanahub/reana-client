@@ -21,7 +21,7 @@ def test_secrets_list_server_not_reachable():
     """Test list secrets when not connected to any cluster."""
     message = "REANA client is not connected to any REANA cluster."
     reana_token = "000000"
-    runner = CliRunner()
+    runner = CliRunner(env={"REANA_SERVER_URL": None})
     result = runner.invoke(cli, ["secrets-list", "-t", reana_token])
     assert result.exit_code == 1
     assert message in result.output

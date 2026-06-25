@@ -10,29 +10,150 @@
 import json
 import logging
 import os
+import shutil
+import tempfile
 import traceback
+import warnings
+import zipfile
 from functools import partial
 from urllib.parse import urljoin
 
 import requests
-from bravado.exception import HTTPError
+import yaml
+from bravado.exception import BravadoConnectionError, BravadoTimeoutError, HTTPError
 from reana_client.api.utils import get_content_disposition_filename
 from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
 from reana_client.utils import is_regular_path, is_uuid_v4
 from reana_commons.api_client import get_current_api_client
-from reana_commons.config import REANA_WORKFLOW_ENGINES
-from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
-from reana_commons.specification import (
-    load_input_parameters,
-    load_workflow_spec_from_reana_yaml,
+from reana_commons.config import (
+    REANA_WORKFLOW_ENGINES,
+    WORKFLOW_SPECIFICATION_BUNDLES_CAPABILITY,
 )
-from reana_commons.validation.utils import validate_reana_yaml, validate_workflow_name
+from reana_commons.validation.utils import validate_workflow_name
+from reana_commons.errors import (
+    REANASecretAlreadyExists,
+    REANASpecificationScopeError,
+    REANASecretDoesNotExist,
+)
+from reana_commons.specification_paths import (
+    SPECIFICATION_BUNDLE_MAX_BYTES,
+    SPECIFICATION_BUNDLE_MAX_FILES,
+    gather_validation_members,
+    open_regular_file_beneath,
+)
 from werkzeug.local import LocalProxy
 
 current_rs_api_client = LocalProxy(
     partial(get_current_api_client, component="reana-server")
 )
+
+_TRANSFER_REQUEST_OPTIONS = {"connect_timeout": 10, "timeout": 300}
+_CONTROL_REQUEST_OPTIONS = {"connect_timeout": 10, "timeout": 300}
+
+_MIGRATION_HINT = (
+    "Write a raw reana.yaml specification, declare any loader dependencies "
+    "through workflow.files/workflow.directories, and call "
+    "create_workflow_from_bundle()."
+)
+
+
+def _untranslatable_json_creation(workflow_engine, workflow_file):
+    """Explain why a historical creation call cannot be translated safely."""
+    return (
+        "create_workflow_from_json() can only translate an inline serial "
+        "workflow (workflow_engine='serial' with workflow_json and no "
+        "workflow_file); got workflow_engine='{}'{}. The workflow is loaded "
+        "server-side from its specification files, which this call does not "
+        "identify unambiguously. {}".format(
+            workflow_engine,
+            (
+                " and workflow_file='{}'".format(workflow_file)
+                if workflow_file is not None
+                else ""
+            ),
+            _MIGRATION_HINT,
+        )
+    )
+
+
+class _BoundedSpecificationReader:
+    """Stream one specification without exposing bytes beyond its size limit."""
+
+    def __init__(self, specification, limit):
+        self.specification = specification
+        self.limit = limit
+        self.remaining = limit
+        self.too_large = False
+
+    def read(self, size=-1):
+        """Read bounded bytes and fail if the open file has grown too large."""
+        if self.too_large:
+            raise FileUploadError(
+                "Restart specification is too large (maximum is {} bytes).".format(
+                    self.limit
+                )
+            )
+        requested = self.remaining + 1
+        if size is not None and size >= 0:
+            requested = min(size, requested)
+        contents = self.specification.read(requested)
+        if len(contents) > self.remaining:
+            self.too_large = True
+            raise FileUploadError(
+                "Restart specification is too large (maximum is {} bytes).".format(
+                    self.limit
+                )
+            )
+        self.remaining -= len(contents)
+        return contents
+
+    def __getattr__(self, name):
+        """Delegate file metadata used by multipart transports."""
+        return getattr(self.specification, name)
+
+
+class _SnapshotUploadReader:
+    """Expose exactly the bytes present when a workspace upload starts."""
+
+    def __init__(self, source, length):
+        self.source = source
+        self.length = length
+        self.remaining = length
+
+    def __len__(self):
+        """Return the request body's exact declared length."""
+        return self.length
+
+    def read(self, size=-1):
+        """Read at most the snapshotted number of bytes."""
+        if self.remaining == 0:
+            return b""
+        if size == 0:
+            return b""
+        if size is None or size < 0:
+            size = self.remaining
+        contents = self.source.read(min(size, self.remaining))
+        if not contents:
+            raise FileUploadError("The upload file changed while it was being read.")
+        self.remaining -= len(contents)
+        return contents
+
+
+def _remaining_file_length(source):
+    """Return remaining bytes without consuming a seekable upload source."""
+    try:
+        position = source.tell()
+        source.seek(0, os.SEEK_END)
+        length = source.tell() - position
+        source.seek(position)
+    except (AttributeError, OSError) as error:
+        raise FileUploadError(
+            "Workspace uploads require a seekable file source."
+        ) from error
+    if length < 0:
+        raise FileUploadError("Could not determine the upload size.")
+    return length
 
 
 def ping(access_token):
@@ -213,43 +334,160 @@ def get_workflow_status(workflow, access_token):
         raise e
 
 
-def create_workflow(reana_specification, name, access_token):
-    """Create a workflow.
-
-    :param reana_specification: a dictionary representing the REANA specification of the workflow.
-    :param name: name of the workflow.
-    :param access_token: access token of the current user.
-
-    :return: if the workflow was created successfully, a dictionary with the information about
-             the ``workflow_id`` and ``workflow_name``, along with a ``message`` of success.
-    """
+def _gather_spec_members(reana_file):
+    """Return the explicitly declared, containment-safe validation members."""
     try:
-        response, http_response = current_rs_api_client.api.create_workflow(
-            reana_specification=json.loads(
-                json.dumps(reana_specification, sort_keys=True)
-            ),
-            workflow_name=name,
-            access_token=access_token,
-        ).result()
-        if http_response.status_code == 201:
-            return response
-        else:
-            raise Exception(
-                "Expected status code 201 but replied with "
-                "{status_code}".format(status_code=http_response.status_code)
-            )
+        members, _specification, _legacy_parameters = gather_validation_members(
+            reana_file
+        )
+        return members
+    except REANASpecificationScopeError:
+        # Preserve the authoritative server-side error taxonomy. A malformed or
+        # wrongly shaped specification has no trustworthy declared scope, so
+        # only its canonical file may be forwarded. Containment, symlink and
+        # missing-path errors deliberately do not use this fallback.
+        return {"reana.yaml": os.path.abspath(reana_file)}
 
-    except HTTPError as e:
-        logging.debug(
-            "Workflow creation failed: "
-            "\nStatus: {}\nReason: {}\n"
-            "Message: {}".format(
-                e.response.status_code, e.response.reason, e.response.json()["message"]
+
+def _require_workflow_specification_bundles():
+    """Refuse a server that cannot accept a workflow specification bundle.
+
+    ``create``, ``validate`` and a replacement ``restart`` upload the raw
+    specification bundle that the server loads and validates authoritatively.
+    A released server only understands the retired client-serialized JSON
+    protocol, so the pairing must be refused here -- before any bundle is built
+    or uploaded -- rather than failing mid-transfer with a wire-level error.
+
+    The capability is read from the unauthenticated ``ping`` operation so it
+    works before authentication. Support is decided by the advertised
+    capability, never by comparing version strings.
+
+    :raises RuntimeError: if the connected server does not advertise
+        ``workflow-specification-bundles-v1``.
+    """
+    response, _http_response = current_rs_api_client.api.ping(
+        _request_options=_CONTROL_REQUEST_OPTIONS
+    ).result()
+    capabilities = (response or {}).get("api_capabilities") or []
+    if WORKFLOW_SPECIFICATION_BUNDLES_CAPABILITY in capabilities:
+        return
+
+    server_version = (response or {}).get("reana_server_version")
+    raise RuntimeError(
+        "The connected REANA server{} does not support the server-side workflow "
+        "specification validation protocol used by this client (missing '{}'). "
+        "Please upgrade the REANA cluster, or use a REANA client release that "
+        "matches it.".format(
+            " (version {})".format(server_version) if server_version else "",
+            WORKFLOW_SPECIFICATION_BUNDLES_CAPABILITY,
+        )
+    )
+
+
+def _post_spec_members(operation_id, members, params):
+    """Call a Bravado operation with one deterministic ZIP ``bundle`` field.
+
+    :param operation_id: OpenAPI operation name.
+    :param members: mapping of bundle-relative path to local file path.
+    :param params: query parameters (e.g. ``access_token``, ``workflow_name``).
+    :return: the Bravado result and response adapter.
+    """
+    _require_workflow_specification_bundles()
+    if len(members) > SPECIFICATION_BUNDLE_MAX_FILES:
+        raise FileUploadError(
+            "Specification bundle has too many files (maximum is {}).".format(
+                SPECIFICATION_BUNDLE_MAX_FILES
             )
         )
-        raise Exception(e.response.json()["message"])
-    except Exception as e:
-        raise e
+    specification_path = members.get("reana.yaml")
+    if specification_path is None:
+        raise FileUploadError("Specification bundle is missing canonical reana.yaml.")
+    base_directory = os.path.dirname(os.path.abspath(specification_path))
+
+    with tempfile.TemporaryFile() as archive:
+        total_bytes = 0
+        with zipfile.ZipFile(
+            archive, mode="w", compression=zipfile.ZIP_STORED, allowZip64=False
+        ) as bundle:
+            for member in sorted(members):
+                info = zipfile.ZipInfo(member, date_time=(1980, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_STORED
+                info.create_system = 3
+                info.external_attr = 0o100600 << 16
+                source_relative_path = os.path.relpath(
+                    os.path.abspath(members[member]), base_directory
+                ).replace(os.sep, "/")
+                descriptor = open_regular_file_beneath(
+                    base_directory,
+                    source_relative_path,
+                    "specification bundle",
+                )
+                with os.fdopen(descriptor, "rb") as source, bundle.open(
+                    info, "w"
+                ) as target:
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        total_bytes += len(chunk)
+                        if total_bytes > SPECIFICATION_BUNDLE_MAX_BYTES:
+                            raise FileUploadError(
+                                "Specification bundle is too large "
+                                "(maximum is {} bytes).".format(
+                                    SPECIFICATION_BUNDLE_MAX_BYTES
+                                )
+                            )
+                        target.write(chunk)
+
+        archive.seek(0)
+        operation = getattr(current_rs_api_client.api, operation_id)
+        return operation(
+            bundle=("validation-bundle.zip", archive),
+            _request_options=_TRANSFER_REQUEST_OPTIONS,
+            **params,
+        ).result()
+
+
+def create_workflow_from_bundle(reana_file, name, access_token):
+    """Create a workflow by uploading the raw specification bundle.
+
+    The server loads and validates the specification authoritatively (in a
+    sandbox for Snakemake/CWL/Yadage), so the client does not run the workflow
+    engines locally.
+
+    :param reana_file: path to the local ``reana.yaml`` specification file.
+    :param name: name of the workflow.
+    :param access_token: access token of the current user.
+    :return: server response dict with ``workflow_id``, ``workflow_name`` and
+             (optionally) ``validation_warnings``.
+    """
+    response, _http_response = _post_spec_members(
+        "create_workflow",
+        _gather_spec_members(reana_file),
+        {"workflow_name": name, "access_token": access_token},
+    )
+    return response
+
+
+def create_workflow_from_bundle_dir(bundle_dir, name, access_token):
+    """Create a workflow from declarations in ``bundle_dir/reana.yaml``.
+
+    Used when the caller has assembled a local source directory (e.g. the
+    ``reana-cwl-runner`` entrypoint). Only files explicitly selected by the
+    specification's validation-scope declarations are uploaded.
+
+    :param bundle_dir: directory containing the canonical specification and its
+        declared workflow-definition files.
+    :param name: name of the workflow.
+    :param access_token: access token of the current user.
+    :return: server response dict.
+    """
+    response, _http_response = _post_spec_members(
+        "create_workflow",
+        _gather_spec_members(os.path.join(bundle_dir, "reana.yaml")),
+        {"workflow_name": name, "access_token": access_token},
+    )
+    return response
 
 
 def create_workflow_from_json(
@@ -262,20 +500,36 @@ def create_workflow_from_json(
     outputs=None,
     workspace_path=None,
 ):
-    """Create a workflow from JSON specification.
+    """Create a workflow from an inline JSON specification (deprecated).
 
-    :param name: name or UUID of the workflow to be started.
+    .. deprecated::
+        Write a raw ``reana.yaml`` and call :func:`create_workflow_from_bundle`
+        instead. The server now loads and validates the specification
+        authoritatively, so a client-serialized specification is no longer
+        accepted.
+
+    Only the documented inline **serial** use case is translated: it is the one
+    shape the server-side loader can reconstruct, because a serial workflow is
+    the only engine whose loader accepts an inline ``workflow.specification``
+    with no ``workflow.file``. Every other historical call shape referenced
+    local loader dependencies that a single dictionary does not identify, so
+    those fail with migration guidance rather than silently submitting a
+    specification the server cannot re-derive.
+
+    :param name: name or UUID of the workflow to be created.
     :param access_token: access token of the current user.
     :param workflow_json: workflow specification in JSON format.
-    :param workflow_file: workflow specification file path.
-                          Ignores ``workflow_json`` if provided.
+    :param workflow_file: workflow specification file path. No longer
+        translatable; kept so historical calls fail with guidance.
     :param parameters: workflow input parameters dictionary.
-    :param workflow_engine: one of the workflow engines (yadage, serial, cwl)
+    :param workflow_engine: one of the workflow engines. Only ``serial`` is
+        translatable.
     :param outputs: dictionary with expected workflow outputs.
-    :param workspace_path: path to the workspace where the workflow is located.
+    :param workspace_path: accepted for call compatibility; unused.
 
-    :return: if the workflow was created successfully, a dictionary with the information about
-             the ``workflow_id`` and ``workflow_name``, along with a ``message`` of success.
+    :return: server response dict with ``workflow_id`` and ``workflow_name``.
+
+    :raises ValueError: for call shapes that cannot be translated safely.
 
     :Example:
 
@@ -289,6 +543,12 @@ def create_workflow_from_json(
                 'parameters': {'key': 'value'}},
             workflow_engine='serial')
     """
+    warnings.warn(
+        "create_workflow_from_json() is deprecated. Write a raw reana.yaml "
+        "specification and call create_workflow_from_bundle() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     validate_workflow_name(name)
     if is_uuid_v4(name):
         raise ValueError("Workflow name cannot be a valid UUIDv4")
@@ -296,59 +556,65 @@ def create_workflow_from_json(
         raise Exception(ERROR_MESSAGES["missing_access_token"])
     if os.environ.get("REANA_SERVER_URL") is None:
         raise Exception("Environment variable REANA_SERVER_URL is not set")
+
     workflow_engine = workflow_engine.lower()
     if workflow_engine not in REANA_WORKFLOW_ENGINES:
         raise Exception(
             "Workflow engine - {} not found. You must use one of "
             "these engines - {}".format(workflow_engine, REANA_WORKFLOW_ENGINES)
         )
-    try:
-        reana_yaml = dict(workflow={})
-        reana_yaml["workflow"]["type"] = workflow_engine
-        if parameters:
-            reana_yaml["inputs"] = parameters
-        if outputs:
-            reana_yaml["outputs"] = outputs
-        if workflow_file:
-            reana_yaml["workflow"]["file"] = workflow_file
-            reana_yaml["workflow"]["specification"] = (
-                load_workflow_spec_from_reana_yaml(reana_yaml, workspace_path)
-            )
-        else:
-            reana_yaml["workflow"]["specification"] = workflow_json
-        # The function below loads the input parameters into the reana_yaml dictionary
-        # taking them from the parameters yaml files (used by CWL and Snakemake workflows),
-        # and replacing the `input.parameters.input` field with the actual parameters values.
-        # For this reason, we have to load the workflow specification first, as otherwise
-        # the specification validation would fail.
-        input_params = load_input_parameters(reana_yaml, workspace_path)
-        if input_params is not None:
-            reana_yaml["inputs"]["parameters"] = input_params
-        validate_reana_yaml(reana_yaml)
-        response, http_response = current_rs_api_client.api.create_workflow(
-            reana_specification=json.loads(json.dumps(reana_yaml, sort_keys=True)),
-            workflow_name=name,
-            access_token=access_token,
-        ).result()
-        if http_response.status_code == 201:
-            return response
-        else:
-            raise Exception(
-                "Expected status code 201 but replied with "
-                "{status_code}".format(status_code=http_response.status_code)
-            )
-
-    except HTTPError as e:
-        logging.debug(
-            "Workflow creation failed: "
-            "\nStatus: {}\nReason: {}\n"
-            "Message: {}".format(
-                e.response.status_code, e.response.reason, e.response.json()["message"]
-            )
+    # Historically ``workflow_file`` took precedence over ``workflow_json``, so
+    # report it first to keep the diagnosis stable for existing callers.
+    if workflow_file is not None or workflow_engine != "serial":
+        raise ValueError(_untranslatable_json_creation(workflow_engine, workflow_file))
+    if not workflow_json:
+        raise ValueError(
+            "An inline serial workflow specification is required in "
+            "'workflow_json'. " + _MIGRATION_HINT
         )
-        raise Exception(e.response.json()["message"])
-    except Exception as e:
-        raise e
+
+    reana_yaml = {"workflow": {"type": workflow_engine, "specification": workflow_json}}
+    if parameters:
+        reana_yaml["inputs"] = parameters
+    if outputs:
+        reana_yaml["outputs"] = outputs
+    # Normalise to JSON-native types: ``workflow_json`` comes from arbitrary
+    # caller code and yaml.safe_dump cannot represent tuples, sets or numpy
+    # scalars. The removed implementation round-tripped the same way before
+    # sending, so translated calls keep behaving identically.
+    reana_yaml = json.loads(json.dumps(reana_yaml, sort_keys=True))
+
+    # Legacy ``inputs.files`` stay data inputs here: with no ``workflow.file``
+    # the specification does not use the legacy validation scope, so they are
+    # not loader dependencies and must not be gathered into the bundle.
+    bundle_dir = tempfile.mkdtemp(prefix="reana-workflow-json-")
+    try:
+        specification_path = os.path.join(bundle_dir, "reana.yaml")
+        with open(specification_path, "w") as specification:
+            yaml.safe_dump(reana_yaml, specification, default_flow_style=False)
+        return create_workflow_from_bundle(specification_path, name, access_token)
+    finally:
+        shutil.rmtree(bundle_dir, ignore_errors=True)
+
+
+def validate_workflow_spec_bundle(reana_file, access_token, environments=False):
+    """Validate a raw specification bundle server-side.
+
+    :param reana_file: path to the local ``reana.yaml`` specification file.
+    :param access_token: access token of the current user.
+    :param environments: if True, ask the server to check runtime environment
+        image tags and return effective runtime identities.
+    :return: validation report dict ``{valid, errors, warnings}``.
+    """
+    params = {"access_token": access_token}
+    if environments:
+        params["environments"] = True
+    response, _http_response = _post_spec_members(
+        "validate_workflow_specification",
+        _gather_spec_members(reana_file),
+        params,
+    )
+    return response
 
 
 def start_workflow(workflow, access_token, parameters):
@@ -368,6 +634,7 @@ def start_workflow(workflow, access_token, parameters):
             workflow_id_or_name=workflow,
             access_token=access_token,
             parameters=parameters,
+            _request_options=_CONTROL_REQUEST_OPTIONS,
         ).result()
         if http_response.status_code == 200:
             return response
@@ -390,6 +657,54 @@ def start_workflow(workflow, access_token, parameters):
         raise e
 
 
+def restart_workflow(workflow, replacement, access_token, parameters):
+    """Atomically restart a workflow with one replacement specification.
+
+    The multipart request is described by the server's OpenAPI 2.0 contract and
+    dispatched through Bravado like every other generated API operation.
+    """
+    _require_workflow_specification_bundles()
+    replacement = os.path.abspath(replacement)
+    base_directory = os.path.dirname(replacement)
+    descriptor = open_regular_file_beneath(
+        base_directory,
+        os.path.basename(replacement),
+        "restart specification",
+    )
+    try:
+        if os.fstat(descriptor).st_size > SPECIFICATION_BUNDLE_MAX_BYTES:
+            raise FileUploadError(
+                "Restart specification is too large (maximum is {} bytes).".format(
+                    SPECIFICATION_BUNDLE_MAX_BYTES
+                )
+            )
+        with os.fdopen(descriptor, "rb") as specification:
+            descriptor = None
+            bounded_specification = _BoundedSpecificationReader(
+                specification, SPECIFICATION_BUNDLE_MAX_BYTES
+            )
+            response, http_response = current_rs_api_client.api.restart_workflow(
+                workflow_id_or_name=workflow,
+                access_token=access_token,
+                replacement=(os.path.basename(replacement), bounded_specification),
+                parameters=json.dumps(parameters),
+                _request_options=_TRANSFER_REQUEST_OPTIONS,
+            ).result()
+    except HTTPError as error:
+        raise Exception(error.response.json()["message"])
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+    if http_response.status_code != 200:
+        raise Exception(
+            "Expected status code 200 but replied with {}".format(
+                http_response.status_code
+            )
+        )
+    return response
+
+
 def upload_file(workflow, file_, file_name, access_token):
     """Upload file to workflow workspace.
 
@@ -404,33 +719,39 @@ def upload_file(workflow, file_, file_name, access_token):
     from reana_client.utils import get_api_url
 
     try:
+        length = _remaining_file_length(file_)
         endpoint = current_rs_api_client.api.upload_file.operation.path_name.format(
             workflow_id_or_name=workflow
         )
         http_response = requests.post(
             urljoin(get_api_url(), endpoint),
-            data=file_,
+            data=_SnapshotUploadReader(file_, length),
             params={"file_name": file_name, "access_token": access_token},
-            headers={"Content-Type": "application/octet-stream"},
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Content-Length": str(length),
+            },
+            timeout=(
+                _TRANSFER_REQUEST_OPTIONS["connect_timeout"],
+                _TRANSFER_REQUEST_OPTIONS["timeout"],
+            ),
             verify=False,
         )
+        response = http_response.json()
         if http_response.ok:
-            return http_response.json()
-        raise Exception(http_response.json().get("message"))
+            return response
+        raise Exception(response.get("message"))
     except requests.exceptions.ConnectionError:
+        from reana_client.utils import get_api_url
+
         logging.debug("File could not be uploaded.", exc_info=True)
         raise Exception("Could not connect to the server {}".format(get_api_url()))
-    except requests.exceptions.HTTPError as e:
-        logging.debug("The server responded with an HTTP error code.", exc_info=True)
-        raise Exception("Unexpected response from the server: \n{}".format(e.response))
     except requests.exceptions.Timeout:
         logging.debug("Timeout while trying to establish connection.", exc_info=True)
         raise Exception("The request to the server has timed out.")
     except requests.exceptions.RequestException:
-        logging.debug(
-            "Something went wrong while connecting to the server.", exc_info=True
-        )
-        raise Exception("The request to the server has failed for an unknown reason.")
+        logging.debug("The request to the server failed.", exc_info=True)
+        raise Exception("The request to the server has failed.")
     except Exception as e:
         raise e
 
@@ -488,17 +809,13 @@ def download_file(workflow, file_name, access_token):
         the returned file is a zip archive containing multiple files.
     """
     try:
-        from reana_client.utils import get_api_url
-
         logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-        endpoint = current_rs_api_client.api.download_file.operation.path_name.format(
-            workflow_id_or_name=workflow, file_name=file_name
-        )
-        http_response = requests.get(
-            urljoin(get_api_url(), endpoint),
-            params={"file_name": file_name, "access_token": access_token},
-            verify=False,
-        )
+        _response, http_response = current_rs_api_client.api.download_file(
+            workflow_id_or_name=workflow,
+            file_name=file_name,
+            access_token=access_token,
+            _request_options=_TRANSFER_REQUEST_OPTIONS,
+        ).result()
         if "Content-Disposition" in http_response.headers:
             file_name = get_content_disposition_filename(
                 http_response.headers.get("Content-Disposition")
@@ -510,7 +827,7 @@ def download_file(workflow, file_name, access_token):
         )
 
         if http_response.status_code == 200:
-            return http_response.content, file_name, multiple_files_zipped
+            return http_response.raw_bytes, file_name, multiple_files_zipped
         else:
             raise Exception(
                 "Error {status_code} {reason} {message}".format(

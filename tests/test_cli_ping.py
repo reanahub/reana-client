@@ -28,7 +28,7 @@ def test_ping_token_not_set():
 def test_ping_server_not_set():
     """Test ping when server is not set."""
     reana_token = "000000"
-    runner = CliRunner()
+    runner = CliRunner(env={"REANA_SERVER_URL": None})
     result = runner.invoke(cli, ["ping", "-t", reana_token])
     message = "REANA client is not connected to any REANA cluster."
     assert message in result.output
@@ -39,7 +39,9 @@ def test_ping_server_not_reachable():
     reana_token = "000000"
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    result = runner.invoke(cli, ["ping", "-t", reana_token])
+    with patch("reana_client.api.client.current_rs_api_client") as api_client:
+        api_client.api.get_you.return_value.result.side_effect = ConnectionError
+        result = runner.invoke(cli, ["ping", "-t", reana_token])
     message = "ERROR: INVALID SERVER"
     assert message in result.output
 

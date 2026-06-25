@@ -14,6 +14,37 @@ import textwrap
 
 import pytest
 from typing import Dict
+from unittest.mock import Mock
+
+from reana_commons.config import WORKFLOW_SPECIFICATION_BUNDLES_CAPABILITY
+
+
+@pytest.fixture()
+def arm_bundle_capability():
+    """Make a mocked API client answer the bundle-protocol capability check.
+
+    Every bundle upload preflights the unauthenticated ``ping`` operation, so a
+    mocked API client must answer it. Pass ``capabilities`` to simulate a
+    released server that does not advertise the protocol.
+
+    :returns: ``arm(api_client, capabilities=None)`` which arms and returns the
+        given mock. ``capabilities`` defaults to the supported one; use ``[]``
+        for a legacy server that omits the field entirely.
+    """
+
+    def arm(api_client, capabilities=None):
+        if capabilities is None:
+            capabilities = [WORKFLOW_SPECIFICATION_BUNDLES_CAPABILITY]
+        payload = {"message": "OK", "status": "200"}
+        if capabilities:
+            payload["api_capabilities"] = list(capabilities)
+        api_client.api.ping.return_value.result.return_value = (
+            payload,
+            Mock(status_code=200),
+        )
+        return api_client
+
+    return arm
 
 
 @pytest.fixture()

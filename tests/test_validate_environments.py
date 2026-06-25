@@ -8,180 +8,126 @@
 
 """REANA client validate environments tests."""
 
-from unittest.mock import MagicMock, patch
-import pytest
+from types import SimpleNamespace
+from unittest.mock import patch
+import subprocess
 
-from reana_client.errors import EnvironmentValidationError
-from reana_client.validation.environments import EnvironmentValidatorSerial
-
-
-@pytest.mark.parametrize(
-    "image, output, exit_",
-    [
-        ("foo:bar", "has the correct format", False),
-        ("foo/bar:baz", "has the correct format", False),
-        ("foo/bar", "not have an explicit tag", False),
-        ("foo/bar:", "tag is not recommended", False),
-        ("foo/bar:latest", "tag is not recommended", False),
-        ("foo:master", "tag is not recommended", False),
-        ("foo:bar:baz", "has invalid tag", True),
-        ("foo:bar:", "has invalid tag", True),
-        ("foo:bar ", "contains illegal characters", True),
-    ],
-)
-def test_validate_environment_image_tag(image, output, exit_):
-    """Validate workflow environment image tags."""
-    validator = EnvironmentValidatorSerial()
-    if exit_:
-        with pytest.raises(EnvironmentValidationError) as e:
-            validator._validate_image_tag(image)
-        assert output in str(e)
-    else:
-        validator._validate_image_tag(image)
-        assert output in validator.messages.pop()["message"]
+from reana_client.validation.environments import check_images_locally
 
 
-@pytest.mark.parametrize(
-    "image, tag, full_image_name",
-    [
-        ("foo", "bar", "foo:bar"),
-        ("foo", "", "foo"),
-        ("foo", None, "foo"),
-        ("foo", "latest", "foo:latest"),
-    ],
-)
-def test_get_full_image_name(image, tag, full_image_name):
-    validator = EnvironmentValidatorSerial()
-    assert validator._get_full_image_name(image, tag) == full_image_name
-
-
-@pytest.mark.parametrize(
-    "full_image, expected_url",
-    [
-        (
-            "reanahub/reana-env-aliphysics:vAN-20180614-1",
-            "https://hub.docker.com/v2/repositories/reanahub/reana-env-aliphysics/tags/vAN-20180614-1",
-        ),
-        (
-            "docker.io/reanahub/reana-env-aliphysics:vAN-20180614-1",
-            "https://hub.docker.com/v2/repositories/reanahub/reana-env-aliphysics/tags/vAN-20180614-1",
-        ),
-        (
-            "python:2.7",
-            "https://hub.docker.com/v2/repositories/library/python/tags/2.7",
-        ),
-    ],
-)
-def test_image_exists_in_dockerhub(full_image, expected_url):
-    """Test that URL is correct when querying DockerHub."""
-    validator = EnvironmentValidatorSerial()
-    image, tag = validator._validate_image_tag(full_image)
-    get_mock = MagicMock()
-    get_mock.return_value.ok = True
-    with patch("requests.get", get_mock):
-        assert validator._image_exists_in_dockerhub(image, tag)
-        get_mock.assert_called_once_with(expected_url)
-
-
-@pytest.mark.parametrize(
-    "access_token, vetting_enabled, allowlist, image, expected_message_type, expected_message_content, should_raise",
-    [
-        # Test case 1: No access token provided
-        (
-            None,
-            True,
-            ["python:3.8"],
-            "python:3.8",
-            "warning",
-            "No access token provided",
-            False,
-        ),
-        # Test case 2: Vetting enabled, image in allowlist
-        (
-            "test_token",
-            True,
-            ["python:3.8", "ubuntu:20.04"],
-            "python:3.8",
-            None,
-            None,
-            False,
-        ),
-        # Test case 3: Vetting enabled, image not in allowlist
-        (
-            "test_token",
-            True,
-            ["python:3.8", "ubuntu:20.04"],
-            "nginx:latest",
-            None,
-            "Environment image is not allowed: nginx:latest",
-            True,
-        ),
-        # Test case 4: Vetting disabled, image not in allowlist (should pass)
-        ("test_token", False, ["python:3.8"], "nginx:latest", None, None, False),
-        # Test case 5: Vetting enabled, empty allowlist
-        (
-            "test_token",
-            True,
-            [],
-            "python:3.8",
-            None,
-            "Environment image is not allowed: python:3.8",
-            True,
-        ),
-    ],
-)
-def test_check_vetting(
-    access_token,
-    vetting_enabled,
-    allowlist,
-    image,
-    expected_message_type,
-    expected_message_content,
-    should_raise,
-):
-    """Test the check_vetting function with various scenarios."""
-    validator = EnvironmentValidatorSerial(access_token=access_token)
-
-    mock_cluster_info = {
-        "vetted_container_images_enabled": {"value": vetting_enabled},
-        "vetted_container_images_allowlist": {"value": allowlist},
+def _environment(image, runtime_uid=1000, runtime_gid=0):
+    """Build an image environment record returned by the server."""
+    return {
+        "image": image,
+        "runtime_uid": runtime_uid,
+        "runtime_gid": runtime_gid,
     }
 
-    def _invoke():
-        if access_token:
-            with patch("reana_client.api.client.info", return_value=mock_cluster_info):
-                validator.check_image_authorized(image)
-        else:
-            validator.check_image_authorized(image)
 
-    if should_raise:
-        with pytest.raises(EnvironmentValidationError) as exc_info:
-            _invoke()
-        assert expected_message_content in str(exc_info.value)
-    else:
-        _invoke()
-        if expected_message_type is None:
-            assert len(validator.messages) == 0
-        else:
-            assert len(validator.messages) == 1
-            message = validator.messages[0]
-            assert message["type"] == expected_message_type
-            assert expected_message_content in message["message"]
+def _fake_run(uid_line="0", gid_line="0", pull_rc=0, run_rc=0):
+    """Build a subprocess.run stub for a (pull, id) command pair."""
+
+    def runner(args, **kwargs):
+        if args[1] == "pull":
+            return SimpleNamespace(returncode=pull_rc, stdout="", stderr="err")
+        return SimpleNamespace(
+            returncode=run_rc, stdout=f"{uid_line}\n{gid_line}\n", stderr="err"
+        )
+
+    return runner
 
 
-def test_check_vetting_api_error():
-    """Test check_vetting function when API call fails."""
-    validator = EnvironmentValidatorSerial(access_token="test_token")
-
-    # Mock the info function to raise an exception
+def test_check_images_locally_no_container_engine():
     with patch(
-        "reana_client.api.client.info", side_effect=Exception("API connection failed")
+        "reana_client.validation.environments._local_container_cli",
+        return_value=None,
     ):
-        validator.check_image_authorized("python:3.8")
+        findings = check_images_locally([_environment("busybox:1.36")])
+    assert [f["code"] for f in findings] == ["container_cli_unavailable"]
 
-    # Check that a warning message was added
-    assert len(validator.messages) == 1
-    message = validator.messages[0]
-    assert message["type"] == "warning"
-    assert "Could not check if container images are authorised" in message["message"]
-    assert "API connection failed" in message["message"]
+
+def test_check_images_locally_uid_mismatch():
+    with patch(
+        "reana_client.validation.environments._local_container_cli",
+        return_value="docker",
+    ), patch(
+        "reana_client.validation.environments.subprocess.run",
+        side_effect=_fake_run(uid_line="0", gid_line="0"),
+    ):
+        findings = check_images_locally([_environment("busybox:1.36")])
+    # UID 0 != 1000 -> uid warning; GID 0 present -> no gid warning.
+    assert [f["code"] for f in findings] == ["image_uid"]
+
+
+def test_check_images_locally_gid_not_member():
+    with patch(
+        "reana_client.validation.environments._local_container_cli",
+        return_value="docker",
+    ), patch(
+        "reana_client.validation.environments.subprocess.run",
+        side_effect=_fake_run(uid_line="1000", gid_line="1000"),
+    ):
+        findings = check_images_locally([_environment("busybox:1.36")])
+    # UID matches but GID 0 absent -> gid warning only.
+    assert [f["code"] for f in findings] == ["image_gid"]
+
+
+def test_check_images_locally_inspect_failure():
+    # A best-effort pull failure is ignored; the failure surfaces at `docker run`
+    # (e.g. a missing image, or one without /bin/sh).
+    with patch(
+        "reana_client.validation.environments._local_container_cli",
+        return_value="docker",
+    ), patch(
+        "reana_client.validation.environments.subprocess.run",
+        side_effect=_fake_run(pull_rc=1, run_rc=1),
+    ):
+        findings = check_images_locally([_environment("does/not:exist")])
+    assert [f["code"] for f in findings] == ["image_inspect_failed"]
+
+
+def test_check_images_locally_no_images():
+    assert check_images_locally([]) == []
+
+
+def test_check_images_locally_checks_same_image_under_each_runtime_uid():
+    """Image inspection is reused, but every effective identity is compared."""
+    environments = [
+        {"image": "busybox:1.36", "runtime_uid": 1000, "runtime_gid": 0},
+        {"image": "busybox:1.36", "runtime_uid": 2000, "runtime_gid": 0},
+    ]
+    with patch(
+        "reana_client.validation.environments._local_container_cli",
+        return_value="docker",
+    ), patch(
+        "reana_client.validation.environments.subprocess.run",
+        side_effect=_fake_run(uid_line="2000", gid_line="0"),
+    ) as run_mock:
+        findings = check_images_locally(environments)
+
+    assert [finding["code"] for finding in findings] == ["image_uid"]
+    assert "UID 1000" in findings[0]["message"]
+    assert run_mock.call_count == 3
+
+
+def test_timed_out_image_inspection_forces_named_container_cleanup():
+    """A timed-out engine client cannot leave its daemon container behind."""
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append(args)
+        if args[1] == "run":
+            raise subprocess.TimeoutExpired(args, kwargs["timeout"])
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    with patch(
+        "reana_client.validation.environments._local_container_cli",
+        return_value="docker",
+    ), patch("reana_client.validation.environments.subprocess.run", side_effect=run):
+        findings = check_images_locally([_environment("busybox:1.36")], timeout=1)
+
+    run_call = next(call for call in calls if call[1] == "run")
+    cleanup_call = next(call for call in calls if call[1:3] == ["rm", "-f"])
+    container_name = run_call[run_call.index("--name") + 1]
+    assert cleanup_call == ["docker", "rm", "-f", container_name]
+    assert [finding["code"] for finding in findings] == ["image_inspect_failed"]

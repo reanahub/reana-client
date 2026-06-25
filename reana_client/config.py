@@ -37,25 +37,6 @@ RUN_STATUSES = [
 ]
 """Available run statuses."""
 
-ENVIRONMENT_IMAGE_SUSPECTED_TAGS_VALIDATOR = ["latest", "master", ""]
-"""Warns user if above environment image tags are used."""
-
-DOCKER_REGISTRY_INDEX_URL = (
-    "https://hub.docker.com/v2/repositories/{repository}{image}/tags/{tag}"
-)
-"""Docker Hub registry index URL."""
-
-GITLAB_CERN_REGISTRY_INDEX_URL = (
-    "https://gitlab.cern.ch/api/v4/projects/{image}/registry/repositories?tags=1"
-)
-"""GitLab CERN registry index URL."""
-
-GITLAB_CERN_REGISTRY_PREFIX = "gitlab-registry.cern.ch"
-"""Prefix for GitLab image registry at CERN."""
-
-DOCKER_REGISTRY_PREFIX = "docker.io"
-"""Prefix for DockerHub image registry."""
-
 PRINTER_COLOUR_SUCCESS = "green"
 """Default colour for success messages on terminal."""
 

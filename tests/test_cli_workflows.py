@@ -10,28 +10,26 @@
 
 import copy
 import json
-import sys
 from typing import List
-from pathlib import Path
 
 import pytest
 import yaml
 from click.testing import CliRunner
 from mock import Mock, patch
 from reana_commons.testing import make_mock_api_client
-from reana_client.api.client import create_workflow_from_json
 from reana_client.cli import cli
 from reana_client.config import RUN_STATUSES
 from reana_client.utils import get_workflow_status_change_msg
 from reana_commons.api_client import BaseAPIClient
 from reana_commons.config import INTERACTIVE_SESSION_TYPES
+from reana_commons.errors import REANAValidationError
 from reana_commons.specification import load_workflow_spec_from_reana_yaml
 from reana_commons.validation.images import extract_images
 
 
 def test_workflows_server_not_connected():
     """Test workflows command when server is not connected."""
-    runner = CliRunner()
+    runner = CliRunner(env={"REANA_SERVER_URL": None})
     reana_token = "000000"
     result = runner.invoke(cli, ["list", "-t", reana_token])
     message = "REANA client is not connected to any REANA cluster."
@@ -69,6 +67,155 @@ def test_workflows_no_token():
     message = "Please provide your access token by using the -t"
     assert result.exit_code == 1
     assert message in result.output
+
+
+@pytest.mark.parametrize(
+    "replacement_content",
+    [
+        "workflow:\n  type: serial\n  specification:\n    steps: []\n",
+        "",
+        "{}\n",
+        "inputs:\n  parameters:\n    when: 2026-07-20\n    flag: yes\n    1: value\n",
+    ],
+)
+def test_restart_posts_noncanonical_spec_atomically(tmp_path, replacement_content):
+    """Restart sends the exact replacement through the atomic operation."""
+    replacement = tmp_path / "myreana.yaml"
+    replacement.write_text(replacement_content)
+    runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
+    start_response = {
+        "workflow_name": "test",
+        "run_number": "1.1",
+        "validation_warnings": [{"message": "using latest tag"}],
+    }
+
+    with patch(
+        "reana_client.api.client.restart_workflow", return_value=start_response
+    ) as restart_workflow_mock, patch(
+        "reana_client.api.client.get_workflow_status",
+        return_value={"status": "running"},
+    ):
+        result = runner.invoke(
+            cli,
+            [
+                "restart",
+                "-t",
+                "000000",
+                "-w",
+                "test.1",
+                "-f",
+                str(replacement),
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert "using latest tag" in result.output
+    restart_workflow_mock.assert_called_once_with(
+        "test.1",
+        str(replacement),
+        "000000",
+        {"input_parameters": {}, "operational_options": {}},
+    )
+
+
+def test_restart_override_uses_bounded_specification_loader(tmp_path):
+    """Replacement override parsing uses the shared bounded secure loader."""
+    replacement = tmp_path / "replacement.yaml"
+    replacement.write_text("workflow: {type: serial}\n")
+    runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
+
+    with patch(
+        "reana_client.cli.workflow.load_raw_reana_spec",
+        side_effect=REANAValidationError("specification exceeds the byte limit"),
+    ) as load_specification, patch(
+        "reana_client.api.client.restart_workflow"
+    ) as restart_workflow_mock:
+        result = runner.invoke(
+            cli,
+            [
+                "restart",
+                "-t",
+                "000000",
+                "-w",
+                "test.1",
+                "-f",
+                str(replacement),
+                "-p",
+                "value=2",
+            ],
+        )
+
+    assert result.exit_code == 1
+    assert "specification exceeds the byte limit" in result.output
+    load_specification.assert_called_once_with(str(replacement))
+    restart_workflow_mock.assert_not_called()
+
+
+def test_restart_api_uses_generated_multipart_operation(
+    tmp_path, arm_bundle_capability
+):
+    """The Python client delegates replacement restart transport to Bravado."""
+    from reana_client.api.client import restart_workflow
+
+    replacement = tmp_path / "replacement.yaml"
+    replacement.write_bytes(b"workflow: {type: serial}\n")
+    response = {"status": "queued"}
+    http_response = Mock(status_code=200)
+    captured = {}
+
+    def generated_operation(**kwargs):
+        captured.update(kwargs)
+        captured["contents"] = kwargs["replacement"][1].read()
+        return Mock(result=Mock(return_value=(response, http_response)))
+
+    mock_api_client = arm_bundle_capability(Mock())
+    mock_api_client.api.restart_workflow.side_effect = generated_operation
+    with patch("reana_client.api.client.current_rs_api_client", mock_api_client):
+        result = restart_workflow(
+            "workflow.1",
+            str(replacement),
+            "token",
+            {"input_parameters": {}, "operational_options": {}},
+        )
+
+    assert result == response
+    assert captured["workflow_id_or_name"] == "workflow.1"
+    assert captured["access_token"] == "token"
+    assert captured["contents"] == replacement.read_bytes()
+    assert json.loads(captured["parameters"]) == {
+        "input_parameters": {},
+        "operational_options": {},
+    }
+
+
+def test_restart_api_rejects_specification_that_grows_while_streaming(
+    monkeypatch, tmp_path, arm_bundle_capability
+):
+    """Replacement streaming aborts if the securely opened file grows."""
+    from reana_client.api import client as client_module
+    from reana_client.api.client import restart_workflow
+    from reana_client.errors import FileUploadError
+
+    replacement = tmp_path / "replacement.yaml"
+    replacement.write_bytes(b"1234")
+    monkeypatch.setattr(client_module, "SPECIFICATION_BUNDLE_MAX_BYTES", 8)
+
+    def generated_operation(**kwargs):
+        with replacement.open("ab") as stream:
+            stream.write(b"56789")
+        replacement_reader = kwargs["replacement"][1]
+        try:
+            replacement_reader.read()
+        except FileUploadError:
+            pass
+        # The failure is sticky: a transport retry must not expose the remainder.
+        replacement_reader.read()
+
+    mock_api_client = arm_bundle_capability(Mock())
+    mock_api_client.api.restart_workflow.side_effect = generated_operation
+    with patch("reana_client.api.client.current_rs_api_client", mock_api_client):
+        with pytest.raises(FileUploadError, match="too large"):
+            restart_workflow("workflow.1", str(replacement), "token", {})
 
 
 def test_workflows_server_ok():
@@ -674,8 +821,11 @@ def test_workflow_create_failed():
 
 
 def test_workflow_create_successful(create_yaml_workflow_schema):
-    """Test workflow create when creation is successfull."""
-    status_code = 201
+    """Test workflow create when creation is successful.
+
+    The specification bundle is loaded and validated server-side; the client
+    uploads the raw bundle and renders the returned workflow name.
+    """
     response = {
         "message": "The workflow has been successfully created.",
         "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac",
@@ -683,26 +833,22 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
     }
     env = {"REANA_SERVER_URL": "localhost"}
     reana_token = "000000"
-    mock_http_response, mock_response = Mock(), Mock()
-    mock_http_response.status_code = status_code
-    mock_response = response
     runner = CliRunner(env=env)
-    with runner.isolation():
+    with runner.isolated_filesystem():
+        with open("reana.yaml", "w") as f:
+            f.write(create_yaml_workflow_schema)
         with patch(
-            "reana_client.api.client.current_rs_api_client",
-            make_mock_api_client("reana-server")(mock_response, mock_http_response),
-        ), patch("reana_client.api.client.requests.post") as upload_request:
-            with runner.isolated_filesystem():
-                with open("reana.yaml", "w") as f:
-                    f.write(create_yaml_workflow_schema)
-                result = runner.invoke(
-                    cli, ["create", "-t", reana_token, "--skip-validation"]
-                )
-                assert result.exit_code == 0
-                assert response["workflow_name"] in result.output
-
-                upload_request.assert_called_once()
-                assert "File /reana.yaml was successfully uploaded." in result.output
+            "reana_client.api.client.create_workflow_from_bundle",
+            return_value=response,
+        ) as create_mock, patch(
+            "reana_client.cli.workflow.upload_files"
+        ) as upload_mock:
+            result = runner.invoke(cli, ["create", "-t", reana_token])
+        assert result.exit_code == 0
+        assert response["workflow_name"] in result.output
+        create_mock.assert_called_once()
+        # The server seeds the spec into the workspace; create must not upload it.
+        upload_mock.assert_not_called()
 
 
 def test_workflow_create_not_valid_name(create_yaml_workflow_schema):
@@ -719,96 +865,26 @@ def test_workflow_create_not_valid_name(create_yaml_workflow_schema):
 
 
 def test_workflow_create_image_not_authorized(create_yaml_workflow_schema):
-    """Test that create exits with code 1 when the workflow image is not in the allowlist."""
+    """Test that create surfaces a server-side image validation error (exit 1).
+
+    Image vetting now happens server-side; the client renders whatever error the
+    server returns when creating from the raw bundle.
+    """
     env = {"REANA_SERVER_URL": "localhost"}
     reana_token = "000000"
-    mock_cluster_info = {
-        "compute_backends": {"value": ["kubernetes"]},
-        "vetted_container_images_enabled": {"value": True},
-        "vetted_container_images_allowlist": {"value": ["ubuntu:20.04"]},
-    }
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
         with open("reana.yaml", "w") as f:
             f.write(create_yaml_workflow_schema)
-        with patch("reana_client.api.client.info", return_value=mock_cluster_info):
+        with patch(
+            "reana_client.api.client.create_workflow_from_bundle",
+            side_effect=Exception("Image not allowed: malicious:latest"),
+        ):
             result = runner.invoke(
                 cli, ["create", "-t", reana_token, "--file", "reana.yaml"]
             )
     assert result.exit_code == 1
-    assert "Environment image is not allowed" in result.output
-
-
-def test_create_workflow_from_json(create_yaml_workflow_schema):
-    """Test create workflow from json specification."""
-    status_code = 201
-    response = {
-        "message": "The workflow has been successfully created.",
-        "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac",
-        "workflow_name": "mytest",
-    }
-    env = {"REANA_SERVER_URL": "localhost"}
-    reana_token = "000000"
-    mock_http_response, mock_response = Mock(), Mock()
-    mock_http_response.status_code = status_code
-    mock_response = response
-    workflow_json = yaml.load(create_yaml_workflow_schema, Loader=yaml.FullLoader)
-    with patch.dict("os.environ", env):
-        with patch(
-            "reana_client.api.client.current_rs_api_client",
-            make_mock_api_client("reana-server")(mock_response, mock_http_response),
-        ):
-            result = create_workflow_from_json(
-                workflow_json=workflow_json["workflow"],
-                name=response["workflow_name"],
-                access_token=reana_token,
-                parameters=workflow_json["inputs"],
-                workflow_engine="serial",
-            )
-            assert response["workflow_name"] == result["workflow_name"]
-            assert response["message"] == result["message"]
-
-
-def test_create_snakemake_workflow_from_json_parameters(
-    create_snakemake_yaml_external_input_workflow_schema,
-    tmp_path,
-    snakemake_workflow_spec_step_param,
-    external_parameter_yaml_file,
-):
-    """Test create workflow from json with external parameters."""
-    status_code = 201
-    response = {
-        "message": "The workflow has been successfully created.",
-        "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac",
-        "workflow_name": "mytest",
-    }
-    env = {"REANA_SERVER_URL": "localhost"}
-    reana_token = "000000"
-    mock_http_response, mock_response = Mock(), Mock()
-    mock_http_response.status_code = status_code
-    mock_response = response
-    workflow_json = yaml.load(
-        create_snakemake_yaml_external_input_workflow_schema, Loader=yaml.FullLoader
-    )
-    with open(tmp_path / "Snakefile", "w") as f:
-        f.write(snakemake_workflow_spec_step_param)
-    with open(tmp_path / "config.yaml", "w") as f:
-        f.write(external_parameter_yaml_file)
-    with patch.dict("os.environ", env):
-        with patch(
-            "reana_client.api.client.current_rs_api_client",
-            make_mock_api_client("reana-server")(mock_response, mock_http_response),
-        ):
-            result = create_workflow_from_json(
-                workflow_file=str(tmp_path / "Snakefile"),
-                name=response["workflow_name"],
-                access_token=reana_token,
-                parameters=workflow_json["inputs"],
-                workflow_engine="snakemake",
-                workspace_path=Path(tmp_path),
-            )
-            assert response["workflow_name"] == result["workflow_name"]
-            assert response["message"] == result["message"]
+    assert "Image not allowed" in result.output
 
 
 @pytest.mark.parametrize(
@@ -833,6 +909,7 @@ def test_workflow_start_successful(status, exit_code):
         "id": "256b25f4-4cfb-4684-b7a8-73872ef455a1",
         "workflow_name": workflow_name,
         "user": "00000000-0000-0000-0000-000000000000",
+        "validation_warnings": [{"message": "using latest tag"}],
     }
     status_code = 200
     reana_token = "000000"
@@ -851,6 +928,7 @@ def test_workflow_start_successful(status, exit_code):
                 cli, ["start", "-t", reana_token, "-w", response["workflow_name"]]
             )
             assert result.exit_code == exit_code
+            assert "using latest tag" in result.output
             assert expected_message in result.output
 
 
@@ -930,56 +1008,140 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
 
 
 def test_workflows_validate(create_yaml_workflow_schema):
-    """Test validation of REANA specification file."""
-    message = "Valid REANA specification file"
+    """Test that a valid server-side validation report is rendered as success."""
     env = {"REANA_SERVER_URL": "localhost"}
     reana_token = "000000"
-    runner = CliRunner(env=env)
-    with runner.isolated_filesystem():
-        with open("reana.yaml", "w") as f:
-            f.write(create_yaml_workflow_schema)
-        result = runner.invoke(
-            cli,
-            ["validate", "-t", reana_token, "--file", "reana.yaml"],
-        )
-        assert result.exit_code == 0
-        assert message in result.output
-
-
-def test_workflows_validate_image_not_authorized(create_yaml_workflow_schema):
-    """Test that validate exits with code 1 when the workflow image is not in the allowlist."""
-    from reana_client.validation.environments import EnvironmentValidatorSerial
-
-    env = {"REANA_SERVER_URL": "localhost"}
-    reana_token = "000000"
-    mock_cluster_info = {
-        "vetted_container_images_enabled": {"value": True},
-        "vetted_container_images_allowlist": {"value": ["ubuntu:20.04"]},
+    report = {
+        "valid": True,
+        "errors": [],
+        "warnings": [],
+        "reana_specification": {},
     }
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
         with open("reana.yaml", "w") as f:
             f.write(create_yaml_workflow_schema)
         with patch(
-            "reana_client.api.client.info", return_value=mock_cluster_info
-        ), patch.object(
-            EnvironmentValidatorSerial,
-            "_image_exists",
-            return_value=(False, True),
+            "reana_client.api.client.validate_workflow_spec_bundle",
+            return_value=report,
         ):
+            result = runner.invoke(
+                cli, ["validate", "-t", reana_token, "--file", "reana.yaml"]
+            )
+        assert result.exit_code == 0
+        assert "Valid REANA specification file." in result.output
+
+
+def test_workflows_validate_forwards_environment_flags(create_yaml_workflow_schema):
+    """Only --environments is forwarded; --pull remains a local operation."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    report = {
+        "valid": True,
+        "errors": [],
+        "warnings": [],
+        "reana_specification": {},
+        "environments_truncated": True,
+    }
+    runner = CliRunner(env=env)
+    with runner.isolated_filesystem():
+        with open("reana.yaml", "w") as f:
+            f.write(create_yaml_workflow_schema)
+        with patch(
+            "reana_client.api.client.validate_workflow_spec_bundle",
+            return_value=report,
+        ) as validate_mock:
             result = runner.invoke(
                 cli,
                 [
                     "validate",
-                    "--environments",
                     "-t",
-                    reana_token,
+                    "000000",
                     "--file",
                     "reana.yaml",
+                    "--environments",
+                    "--pull",
                 ],
             )
+        assert result.exit_code == 0
+        assert validate_mock.call_args.kwargs.get("environments") is True
+        assert "pull" not in validate_mock.call_args.kwargs
+        assert "local environment checks were incomplete" in result.output
+
+
+def test_workflows_validate_uses_per_identity_environment_records(
+    create_yaml_workflow_schema,
+):
+    """The deep image check receives per-step runtime identities from server."""
+    env = {"REANA_SERVER_URL": "localhost"}
+    environments = [
+        {"image": "busybox:1.36", "runtime_uid": 1000, "runtime_gid": 0},
+        {"image": "busybox:1.36", "runtime_uid": 2000, "runtime_gid": 0},
+    ]
+    report = {
+        "valid": True,
+        "errors": [],
+        "warnings": [],
+        "reana_specification": {},
+        "environments": environments,
+    }
+    runner = CliRunner(env=env)
+    with runner.isolated_filesystem():
+        with open("reana.yaml", "w") as f:
+            f.write(create_yaml_workflow_schema)
+        with patch(
+            "reana_client.api.client.validate_workflow_spec_bundle",
+            return_value=report,
+        ), patch(
+            "reana_client.cli.workflow.check_images_locally",
+            return_value=[],
+        ) as check_mock:
+            result = runner.invoke(
+                cli,
+                [
+                    "validate",
+                    "-t",
+                    "000000",
+                    "--file",
+                    "reana.yaml",
+                    "--environments",
+                    "--pull",
+                ],
+            )
+
+    assert result.exit_code == 0
+    assert check_mock.call_args.args[0] == environments
+
+
+def test_workflows_validate_image_not_authorized(create_yaml_workflow_schema):
+    """Test that an invalid server-side report exits with code 1 and shows errors.
+
+    Image vetting now runs server-side; the client renders the structured report.
+    """
+    env = {"REANA_SERVER_URL": "localhost"}
+    reana_token = "000000"
+    report = {
+        "valid": False,
+        "warnings": [],
+        "errors": [
+            {
+                "message": "Image not allowed: malicious:latest",
+                "code": "image_not_allowed",
+            }
+        ],
+    }
+    runner = CliRunner(env=env)
+    with runner.isolated_filesystem():
+        with open("reana.yaml", "w") as f:
+            f.write(create_yaml_workflow_schema)
+        with patch(
+            "reana_client.api.client.validate_workflow_spec_bundle",
+            return_value=report,
+        ):
+            result = runner.invoke(
+                cli, ["validate", "-t", reana_token, "--file", "reana.yaml"]
+            )
         assert result.exit_code == 1
-        assert "Environment image is not allowed" in result.output
+        assert "Image not allowed" in result.output
 
 
 def test_get_workflow_status_ok():
@@ -1370,15 +1532,21 @@ def test_multiple_specifications(create_yaml_workflow_schema):
 def test_yml_ext_specification(create_yaml_workflow_schema):
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
-    message = "Valid REANA specification file"
     reana_token = "000000"
+    report = {"valid": True, "errors": [], "warnings": [], "reana_specification": {}}
+    # A ``reana.yml`` file is resolved like ``reana.yaml`` and validated server-side.
     with runner.isolated_filesystem():
         with open("reana.yml", "w") as reana_schema:
             reana_schema.write(create_yaml_workflow_schema)
-        result = runner.invoke(cli, ["validate", "-t", reana_token])
+        with patch(
+            "reana_client.api.client.validate_workflow_spec_bundle",
+            return_value=report,
+        ):
+            result = runner.invoke(cli, ["validate", "-t", reana_token])
         assert result.exit_code == 0
-        assert message in result.output
+        assert "Valid REANA specification file." in result.output
 
+    # A bundle without a reana.yaml/reana.yml is rejected client-side.
     message = "ERROR: No REANA specification file (reana.yaml) found."
     with runner.isolated_filesystem():
         with open("reana.json", "w") as reana_schema:

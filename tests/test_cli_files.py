@@ -24,7 +24,7 @@ def test_list_files_server_not_reachable():
     """Test list workflow workspace files when not connected to any cluster."""
     reana_token = "000000"
     message = "REANA client is not connected to any REANA cluster."
-    runner = CliRunner()
+    runner = CliRunner(env={"REANA_SERVER_URL": None})
     result = runner.invoke(cli, ["ls", "-t", reana_token, "-w", "workflow.1"])
     assert result.exit_code == 1
     assert message in result.output
@@ -107,26 +107,18 @@ def test_list_files_url():
 
 def test_download_file():
     """Test file downloading."""
-    status_code = 200
     response = "Content of file to download"
     env = {"REANA_SERVER_URL": "localhost"}
     file = "dummy_file.txt"
-    mock_http_response = Mock()
-    mock_http_response.status_code = status_code
-    mock_http_response.content = str(response).encode()
-    mock_http_response.headers = {
-        "Content-Disposition": "attachment; filename={}".format(file),
-        "Content-Type": "multipart/form-data",
-    }
-    mock_requests = Mock()
-    mock_requests.get = Mock(return_value=mock_http_response)
-
     reana_token = "000000"
     response_md5 = hashlib.md5(response.encode("utf-8")).hexdigest()
     message = "File {0} downloaded to".format(file)
     runner = CliRunner(env=env)
     with runner.isolation():
-        with patch("reana_client.api.client.requests", mock_requests):
+        with patch(
+            "reana_client.api.client.download_file",
+            return_value=(response.encode(), file, False),
+        ):
             result = runner.invoke(
                 cli, ["download", "-t", reana_token, "--workflow", "mytest.1", file]
             )
@@ -143,20 +135,13 @@ def test_download_file_stdout():
     env = {"REANA_SERVER_URL": "localhost"}
     filename = "dummy_file.txt"
     file_content = "Content of file to download"
-    mock_http_response = Mock()
-    mock_http_response.status_code = 200
-    mock_http_response.content = file_content.encode()
-    mock_http_response.headers = {
-        "Content-Disposition": "attachment; filename={}".format(filename),
-        "Content-Type": "multipart/form-data",
-    }
-    mock_requests = Mock()
-    mock_requests.get = Mock(return_value=mock_http_response)
-
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
-        with patch("reana_client.api.client.requests", mock_requests):
+        with patch(
+            "reana_client.api.client.download_file",
+            return_value=(file_content.encode(), filename, False),
+        ):
             result = runner.invoke(
                 cli,
                 [
@@ -187,20 +172,13 @@ def test_download_multiple_files_stdout():
         for filename, content in files:
             zip_file.writestr(filename, content)
 
-    mock_http_response = Mock()
-    mock_http_response.status_code = 200
-    mock_http_response.content = return_file.getvalue()
-    mock_http_response.headers = {
-        "Content-Disposition": "attachment; filename=files.zip",
-        "Content-Type": "application/zip",
-    }
-    mock_requests = Mock()
-    mock_requests.get = Mock(return_value=mock_http_response)
-
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
-        with patch("reana_client.api.client.requests", mock_requests):
+        with patch(
+            "reana_client.api.client.download_file",
+            return_value=(return_file.getvalue(), "files.zip", True),
+        ):
             result = runner.invoke(
                 cli,
                 [
@@ -226,7 +204,10 @@ def test_upload_file(create_yaml_workflow_schema):
     message = "was successfully uploaded."
     runner = CliRunner(env=env)
     with runner.isolation():
-        with patch("reana_client.api.client.requests.post") as post_request:
+        with patch(
+            "reana_client.api.client.upload_file",
+            return_value={"message": "File was successfully uploaded."},
+        ) as upload:
             with runner.isolated_filesystem():
                 with open(file, "w") as f:
                     f.write("test")
@@ -235,7 +216,7 @@ def test_upload_file(create_yaml_workflow_schema):
                 result = runner.invoke(
                     cli, ["upload", "-t", reana_token, "--workflow", "mytest.1", file]
                 )
-                post_request.assert_called_once()
+                upload.assert_called_once()
                 assert result.exit_code == 0
                 assert message in result.output
 
@@ -251,7 +232,10 @@ def test_upload_file_with_test_files_from_spec(
 
     with patch(
         "reana_client.api.client.get_workflow_specification"
-    ) as mock_specification, patch("reana_client.api.client.requests.post"):
+    ) as mock_specification, patch(
+        "reana_client.api.client.upload_file",
+        return_value={"message": "File was successfully uploaded."},
+    ):
         with runner.isolated_filesystem():
             with open(file, "w") as f:
                 f.write("Scenario: Test scenario")
@@ -280,7 +264,7 @@ def test_upload_file_respect_gitignore(
     with runner.isolation():
         with patch(
             "reana_client.api.client.get_workflow_specification", mock_specification
-        ), patch("reana_client.api.client.requests.post") as post_request:
+        ), patch("reana_client.api.client.upload_file") as upload:
             with runner.isolated_filesystem():
                 with open(".gitignore", "w") as f:
                     f.write("data/should_not_upload.txt\n")
@@ -297,7 +281,7 @@ def test_upload_file_respect_gitignore(
                     "==> Detected .gitignore file. Some files might get ignored."
                     in result.output
                 )
-                post_request.assert_not_called()
+                upload.assert_not_called()
                 assert result.exit_code == 0
 
 
@@ -315,7 +299,10 @@ def test_upload_file_skip_empty_git_and_reana_ignore_files(
     with runner.isolation():
         with patch(
             "reana_client.api.client.get_workflow_specification", mock_specification
-        ), patch("reana_client.api.client.requests.post") as post_request:
+        ), patch(
+            "reana_client.api.client.upload_file",
+            return_value={"message": "File was successfully uploaded."},
+        ) as upload:
             with runner.isolated_filesystem():
                 with open(".gitignore", "w") as f:
                     f.write("\n")
@@ -339,7 +326,7 @@ def test_upload_file_skip_empty_git_and_reana_ignore_files(
                     "==> Detected .reanaignore file. Some files might get ignored."
                     in result.output
                 )
-                post_request.assert_called_once()
+                upload.assert_called_once()
                 assert "should_upload.txt" in result.output
                 assert result.exit_code == 0
 
@@ -355,7 +342,10 @@ def test_upload_file_respect_reanaignore_and_gitignore(
     with runner.isolation():
         with patch(
             "reana_client.api.client.get_workflow_specification", mock_specification
-        ), patch("reana_client.api.client.requests.post"):
+        ), patch(
+            "reana_client.api.client.upload_file",
+            return_value={"message": "File was successfully uploaded."},
+        ):
             with runner.isolated_filesystem():
                 with open(".gitignore", "w") as f:
                     f.write("data/ignored_in_gitignore.txt\n")

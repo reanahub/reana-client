@@ -19,11 +19,9 @@ from typing import Dict, Optional, Tuple, Union
 from uuid import UUID
 
 from reana_commons.utils import get_workflow_status_change_verb
-from reana_commons.specification import load_reana_spec
 
 from reana_client.config import reana_yaml_valid_file_names
 from reana_client.printer import display_message
-from reana_client.validation.utils import validate_reana_spec
 
 
 # NOTE: Keep this month-boundary arithmetic in sync with reana_db/utils.py
@@ -132,45 +130,6 @@ def workflow_uuid_or_name(ctx, param, value):
         sys.exit(1)
     else:
         return value
-
-
-def load_validate_reana_spec(
-    filepath,
-    access_token=None,
-    skip_validation=False,
-    skip_validate_environments=True,
-    pull_environment_image=False,
-    server_capabilities=False,
-):
-    """Load and validate reana specification file.
-
-    :raises IOError: Error while reading REANA spec file from given `filepath`.
-    :raises ValidationError: Given REANA spec file does not validate against
-        REANA specification.
-    """
-
-    try:
-        reana_yaml = load_reana_spec(filepath)
-        validate_reana_spec(
-            reana_yaml,
-            filepath,
-            access_token=access_token,
-            skip_validation=skip_validation,
-            skip_validate_environments=skip_validate_environments,
-            pull_environment_image=pull_environment_image,
-            server_capabilities=server_capabilities,
-        )
-
-        if reana_yaml["workflow"]["type"] == "yadage":
-            # We don't send the loaded Yadage workflow spec to the cluster as
-            # it may result in inconsistencies between what's displayed in the
-            # UI and the actual spec loaded at the workflow engine level.
-            # More info: https://github.com/reanahub/reana-client/pull/462#discussion_r585794297
-            reana_yaml["workflow"]["specification"] = None
-
-        return reana_yaml
-    except Exception as e:
-        raise e
 
 
 def is_uuid_v4(uuid_or_name):

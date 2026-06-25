@@ -7,7 +7,6 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA REST API client."""
 
-import json
 import logging
 import os
 import traceback
@@ -17,17 +16,11 @@ from urllib.parse import urljoin
 import requests
 from bravado.exception import HTTPError
 from reana_client.api.utils import get_content_disposition_filename
-from reana_client.config import ERROR_MESSAGES
 from reana_client.errors import FileDeletionError, FileUploadError
-from reana_client.utils import is_regular_path, is_uuid_v4
+from reana_client.utils import is_regular_path
 from reana_commons.api_client import get_current_api_client
-from reana_commons.config import REANA_WORKFLOW_ENGINES
 from reana_commons.errors import REANASecretAlreadyExists, REANASecretDoesNotExist
-from reana_commons.specification import (
-    load_input_parameters,
-    load_workflow_spec_from_reana_yaml,
-)
-from reana_commons.validation.utils import validate_reana_yaml, validate_workflow_name
+from reana_commons.validation.sandbox import REANA_SPEC_FILENAMES
 from werkzeug.local import LocalProxy
 
 current_rs_api_client = LocalProxy(
@@ -213,142 +206,291 @@ def get_workflow_status(workflow, access_token):
         raise e
 
 
-def create_workflow(reana_specification, name, access_token):
-    """Create a workflow.
+_SPEC_BUNDLE_EXCLUDED_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    ".snakemake",
+    ".pytest_cache",
+    "__pycache__",
+}
+_SPEC_BUNDLE_EXCLUDED_FILES = {
+    ".coverage",
+    "coverage.xml",
+}
 
-    :param reana_specification: a dictionary representing the REANA specification of the workflow.
+
+def _is_excluded_spec_bundle_path(parts, filename=None):
+    """Return whether a path should be omitted from an uploaded spec bundle."""
+    if any(part in _SPEC_BUNDLE_EXCLUDED_DIRS for part in parts):
+        return True
+    return filename in _SPEC_BUNDLE_EXCLUDED_FILES
+
+
+def _load_spec_mapping(reana_file):
+    """Best-effort parse of a REANA spec into a mapping.
+
+    Used only to scope the upload bundle; if the file is malformed the server is
+    the authority that produces the real validation error, so we return an empty
+    mapping and let the (still uploaded) ``reana.yaml`` fail server-side.
+    """
+    import yaml
+
+    try:
+        with open(reana_file) as spec_file:
+            loaded = yaml.safe_load(spec_file)
+    except (OSError, yaml.YAMLError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _is_within_base(base_dir, abs_path):
+    """Whether ``abs_path`` resolves to a location inside ``base_dir``.
+
+    Uses ``realpath`` on both sides so a symlink or ``..`` segment that escapes
+    the spec directory is detected and the file is never read or uploaded.
+    """
+    real_base = os.path.realpath(base_dir)
+    real_path = os.path.realpath(abs_path)
+    return real_path == real_base or real_path.startswith(real_base + os.sep)
+
+
+def _add_file_member(members, base_dir, rel_path):
+    """Add ``rel_path`` to ``members`` if it is a regular file inside ``base_dir``.
+
+    Path containment is enforced client-side, before the file is opened: a
+    member that is absolute, escapes ``base_dir`` (``../secret``, ``/etc/...``),
+    or is a symlink (or sits under a symlinked parent) is skipped, so building
+    the bundle never reads or transmits files from outside the spec directory.
+    """
+    abs_path = os.path.normpath(os.path.join(base_dir, rel_path))
+    if not _is_within_base(base_dir, abs_path):
+        return
+    # ``is_regular_path`` rejects symlinks and symlinked parents.
+    if not is_regular_path(abs_path) or not os.path.isfile(abs_path):
+        return
+    member = os.path.relpath(abs_path, base_dir)
+    if member in REANA_SPEC_FILENAMES:
+        # Keep the explicitly selected spec canonical; never clobber it.
+        return
+    members[member] = abs_path
+
+
+def _add_workflow_file_members(members, base_dir, workflow_file):
+    """Add ``workflow.file`` to the bundle, with its sub-tree if it lives in one.
+
+    A workflow file in a sub-directory (e.g. ``workflow/snakemake/Snakefile``)
+    typically imports co-located files (``include:``/``$import``/stage files), so
+    its whole sub-tree is bundled. A top-level workflow file is bundled on its
+    own — we do not fall back to gathering the entire spec directory.
+    """
+    abs_path = os.path.normpath(os.path.join(base_dir, workflow_file))
+    workflow_dir = os.path.dirname(abs_path)
+
+    # Never read or walk outside the spec directory: a workflow.file that escapes
+    # the base dir (``../x``, an absolute path, a symlink) is not bundled. Per-file
+    # containment is also enforced in ``_add_file_member`` below.
+    if not _is_within_base(base_dir, workflow_dir):
+        return
+
+    same_dir = os.path.realpath(workflow_dir) == os.path.realpath(base_dir)
+    if same_dir or not os.path.isdir(workflow_dir):
+        _add_file_member(members, base_dir, workflow_file)
+        return
+
+    for root, dirs, files in os.walk(workflow_dir):
+        root_parts = os.path.relpath(root, base_dir).split(os.sep)
+        dirs[:] = [
+            directory
+            for directory in dirs
+            if not _is_excluded_spec_bundle_path(root_parts + [directory])
+        ]
+        for filename in files:
+            if _is_excluded_spec_bundle_path(root_parts, filename):
+                continue
+            _add_file_member(
+                members,
+                base_dir,
+                os.path.relpath(os.path.join(root, filename), base_dir),
+            )
+
+
+def _gather_spec_members(reana_file):
+    """Return ``{bundle_relative_path: local_path}`` for a scoped spec bundle.
+
+    Bundles only what the server needs to load and validate the specification
+    authoritatively:
+
+    - the selected spec, always uploaded as the canonical ``reana.yaml``;
+    - ``workflow.file`` (the engine workflow definition) and, when it lives in a
+      sub-directory, that whole sub-tree, to capture co-located includes/imports
+      (e.g. ``include: "rules/*.smk"`` in a Snakefile);
+    - ``inputs.parameters.input`` when it points to an existing file (the
+      Snakemake config / CWL job file read while loading the spec).
+
+    Input *data* (``inputs.files``/``inputs.directories``) is intentionally NOT
+    bundled here: it is uploaded separately into the workspace. Scoping the
+    bundle keeps it small and avoids seeding unrelated/large files (``.venv``,
+    sibling spec variants, datasets) into the workspace.
+
+    :param reana_file: path to the local ``reana.yaml`` specification file.
+    """
+    base_dir = os.path.dirname(os.path.abspath(reana_file))
+    reana_file = os.path.abspath(reana_file)
+
+    # Preserve compatibility with callers passing ``-f myreana.yaml``: the
+    # server still receives it under the canonical top-level name it searches.
+    members = {"reana.yaml": reana_file}
+
+    spec = _load_spec_mapping(reana_file)
+    workflow = spec.get("workflow") or {}
+    workflow_file = workflow.get("file")
+    if isinstance(workflow_file, str) and workflow_file:
+        _add_workflow_file_members(members, base_dir, workflow_file)
+
+    parameters = (spec.get("inputs") or {}).get("parameters") or {}
+    param_input = parameters.get("input")
+    if isinstance(param_input, str) and param_input:
+        _add_file_member(members, base_dir, param_input)
+
+    return members
+
+
+def _members_from_dir(bundle_dir):
+    """Return ``{relative_path: local_path}`` for every file under a directory."""
+    members = {}
+    for root, dirs, files in os.walk(bundle_dir):
+        rel_root = os.path.relpath(root, bundle_dir)
+        root_parts = [] if rel_root == "." else rel_root.split(os.sep)
+        dirs[:] = [
+            directory
+            for directory in dirs
+            if not _is_excluded_spec_bundle_path(root_parts + [directory])
+        ]
+        for filename in files:
+            abs_path = os.path.join(root, filename)
+            if _is_excluded_spec_bundle_path(root_parts, filename):
+                continue
+            members[os.path.relpath(abs_path, bundle_dir)] = abs_path
+    return members
+
+
+def _post_spec_members(path, members, params):
+    """POST a spec bundle (mapping of relative path -> local path) as multipart.
+
+    Field names are the paths relative to the bundle root so the server's loader
+    can resolve referenced files.
+
+    :param path: API path to POST to (e.g. ``/api/workflows``).
+    :param members: mapping of bundle-relative path to local file path.
+    :param params: query parameters (e.g. ``access_token``, ``workflow_name``).
+    :return: the ``requests`` response object.
+    """
+    from reana_client.utils import get_api_url
+
+    open_files = {}
+    try:
+        for member, local_path in members.items():
+            if not os.path.isfile(local_path):
+                raise FileUploadError(
+                    "Specification bundle file not found: {}".format(member)
+                )
+            open_files[member] = open(local_path, "rb")
+        return requests.post(
+            urljoin(get_api_url(), path),
+            params=params,
+            files=open_files,
+            verify=False,
+        )
+    finally:
+        for file_handle in open_files.values():
+            file_handle.close()
+
+
+def _raise_for_spec_response(http_response):
+    """Raise an :class:`Exception` carrying the server's error message."""
+    try:
+        message = http_response.json().get("message", http_response.text)
+    except ValueError:
+        message = http_response.text
+    raise Exception(message)
+
+
+def _handle_create_response(http_response):
+    """Return the create response JSON or raise with the server message."""
+    if http_response.status_code == 201:
+        return http_response.json()
+    _raise_for_spec_response(http_response)
+
+
+def create_workflow_from_bundle(reana_file, name, access_token):
+    """Create a workflow by uploading the raw specification bundle.
+
+    The server loads and validates the specification authoritatively (in a
+    sandbox for Snakemake/CWL/Yadage), so the client does not run the workflow
+    engines locally.
+
+    :param reana_file: path to the local ``reana.yaml`` specification file.
     :param name: name of the workflow.
     :param access_token: access token of the current user.
-
-    :return: if the workflow was created successfully, a dictionary with the information about
-             the ``workflow_id`` and ``workflow_name``, along with a ``message`` of success.
+    :return: server response dict with ``workflow_id``, ``workflow_name`` and
+             (optionally) ``validation_warnings``.
     """
-    try:
-        response, http_response = current_rs_api_client.api.create_workflow(
-            reana_specification=json.loads(
-                json.dumps(reana_specification, sort_keys=True)
-            ),
-            workflow_name=name,
-            access_token=access_token,
-        ).result()
-        if http_response.status_code == 201:
-            return response
-        else:
-            raise Exception(
-                "Expected status code 201 but replied with "
-                "{status_code}".format(status_code=http_response.status_code)
-            )
-
-    except HTTPError as e:
-        logging.debug(
-            "Workflow creation failed: "
-            "\nStatus: {}\nReason: {}\n"
-            "Message: {}".format(
-                e.response.status_code, e.response.reason, e.response.json()["message"]
-            )
-        )
-        raise Exception(e.response.json()["message"])
-    except Exception as e:
-        raise e
+    http_response = _post_spec_members(
+        "/api/workflows",
+        _gather_spec_members(reana_file),
+        {"workflow_name": name, "access_token": access_token},
+    )
+    return _handle_create_response(http_response)
 
 
-def create_workflow_from_json(
-    name,
-    access_token,
-    workflow_json=None,
-    workflow_file=None,
-    parameters=None,
-    workflow_engine="yadage",
-    outputs=None,
-    workspace_path=None,
-):
-    """Create a workflow from JSON specification.
+def create_workflow_from_bundle_dir(bundle_dir, name, access_token):
+    """Create a workflow by uploading every file under ``bundle_dir``.
 
-    :param name: name or UUID of the workflow to be started.
+    Used when the caller has already assembled a complete, self-contained bundle
+    directory (e.g. the ``reana-cwl-runner`` entrypoint, which stages the CWL
+    workflow and all its file dependencies).
+
+    :param bundle_dir: directory whose entire contents form the bundle.
+    :param name: name of the workflow.
     :param access_token: access token of the current user.
-    :param workflow_json: workflow specification in JSON format.
-    :param workflow_file: workflow specification file path.
-                          Ignores ``workflow_json`` if provided.
-    :param parameters: workflow input parameters dictionary.
-    :param workflow_engine: one of the workflow engines (yadage, serial, cwl)
-    :param outputs: dictionary with expected workflow outputs.
-    :param workspace_path: path to the workspace where the workflow is located.
-
-    :return: if the workflow was created successfully, a dictionary with the information about
-             the ``workflow_id`` and ``workflow_name``, along with a ``message`` of success.
-
-    :Example:
-
-      .. code:: python
-
-        create_workflow_from_json(
-            workflow_json=workflow_json,
-            name='workflow_name.1',
-            access_token='access_token',
-            parameters={'files': ['file.txt'],
-                'parameters': {'key': 'value'}},
-            workflow_engine='serial')
+    :return: server response dict.
     """
-    validate_workflow_name(name)
-    if is_uuid_v4(name):
-        raise ValueError("Workflow name cannot be a valid UUIDv4")
-    if not access_token:
-        raise Exception(ERROR_MESSAGES["missing_access_token"])
-    if os.environ.get("REANA_SERVER_URL") is None:
-        raise Exception("Environment variable REANA_SERVER_URL is not set")
-    workflow_engine = workflow_engine.lower()
-    if workflow_engine not in REANA_WORKFLOW_ENGINES:
-        raise Exception(
-            "Workflow engine - {} not found. You must use one of "
-            "these engines - {}".format(workflow_engine, REANA_WORKFLOW_ENGINES)
-        )
-    try:
-        reana_yaml = dict(workflow={})
-        reana_yaml["workflow"]["type"] = workflow_engine
-        if parameters:
-            reana_yaml["inputs"] = parameters
-        if outputs:
-            reana_yaml["outputs"] = outputs
-        if workflow_file:
-            reana_yaml["workflow"]["file"] = workflow_file
-            reana_yaml["workflow"]["specification"] = (
-                load_workflow_spec_from_reana_yaml(reana_yaml, workspace_path)
-            )
-        else:
-            reana_yaml["workflow"]["specification"] = workflow_json
-        # The function below loads the input parameters into the reana_yaml dictionary
-        # taking them from the parameters yaml files (used by CWL and Snakemake workflows),
-        # and replacing the `input.parameters.input` field with the actual parameters values.
-        # For this reason, we have to load the workflow specification first, as otherwise
-        # the specification validation would fail.
-        input_params = load_input_parameters(reana_yaml, workspace_path)
-        if input_params is not None:
-            reana_yaml["inputs"]["parameters"] = input_params
-        validate_reana_yaml(reana_yaml)
-        response, http_response = current_rs_api_client.api.create_workflow(
-            reana_specification=json.loads(json.dumps(reana_yaml, sort_keys=True)),
-            workflow_name=name,
-            access_token=access_token,
-        ).result()
-        if http_response.status_code == 201:
-            return response
-        else:
-            raise Exception(
-                "Expected status code 201 but replied with "
-                "{status_code}".format(status_code=http_response.status_code)
-            )
+    http_response = _post_spec_members(
+        "/api/workflows",
+        _members_from_dir(bundle_dir),
+        {"workflow_name": name, "access_token": access_token},
+    )
+    return _handle_create_response(http_response)
 
-    except HTTPError as e:
-        logging.debug(
-            "Workflow creation failed: "
-            "\nStatus: {}\nReason: {}\n"
-            "Message: {}".format(
-                e.response.status_code, e.response.reason, e.response.json()["message"]
-            )
-        )
-        raise Exception(e.response.json()["message"])
-    except Exception as e:
-        raise e
+
+def validate_workflow_spec_bundle(
+    reana_file, access_token, environments=False, pull=False
+):
+    """Validate a raw specification bundle server-side.
+
+    :param reana_file: path to the local ``reana.yaml`` specification file.
+    :param access_token: access token of the current user.
+    :param environments: if True, ask the server to also check the runtime
+        environment images (existence and tag) against their registry.
+    :param pull: if True (with ``environments``), also have the server inspect
+        each image's default user and warn on a UID mismatch.
+    :return: validation report dict ``{valid, reana_specification, errors,
+             warnings}``.
+    """
+    params = {"access_token": access_token}
+    if environments:
+        params["environments"] = "true"
+    if pull:
+        params["pull"] = "true"
+    http_response = _post_spec_members(
+        "/api/workflows/validate",
+        _gather_spec_members(reana_file),
+        params,
+    )
+    if http_response.ok:
+        return http_response.json()
+    _raise_for_spec_response(http_response)
 
 
 def start_workflow(workflow, access_token, parameters):

@@ -1329,6 +1329,138 @@ def test_open_interactive_session(
                 assert expected_auto_closure_message not in result.output
 
 
+def test_open_interactive_session_forwards_secret_names():
+    """Test opening an interactive session with an explicit secret allowlist."""
+    mock_http_response = Mock(status_code=200)
+    mock_api_client = Mock()
+    mock_api_client.api.open_interactive_session.return_value.result.return_value = (
+        {"path": "/workflow-id"},
+        mock_http_response,
+    )
+    runner = CliRunner(env={"REANA_SERVER_URL": "http://localhost"})
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            mock_api_client,
+        ), patch(
+            "reana_client.api.client.info",
+            return_value={},
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "open",
+                    "-t",
+                    "000000",
+                    "-w",
+                    "workflow-id",
+                    "jupyter",
+                    "--secret-name",
+                    "alpha",
+                    "--secret-name",
+                    "beta",
+                ],
+            )
+
+    assert result.exit_code == 0
+    assert mock_api_client.api.open_interactive_session.call_args.kwargs[
+        "interactive_session_configuration"
+    ] == {"image": None, "secret_names": ["alpha", "beta"]}
+
+
+def test_open_interactive_session_omits_secret_names_when_flags_are_absent():
+    """Test opening an interactive session without overriding secret exposure."""
+    mock_http_response = Mock(status_code=200)
+    mock_api_client = Mock()
+    mock_api_client.api.open_interactive_session.return_value.result.return_value = (
+        {"path": "/workflow-id"},
+        mock_http_response,
+    )
+    runner = CliRunner(env={"REANA_SERVER_URL": "http://localhost"})
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            mock_api_client,
+        ), patch(
+            "reana_client.api.client.info",
+            return_value={},
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "open",
+                    "-t",
+                    "000000",
+                    "-w",
+                    "workflow-id",
+                    "jupyter",
+                ],
+            )
+
+    assert result.exit_code == 0
+    assert mock_api_client.api.open_interactive_session.call_args.kwargs[
+        "interactive_session_configuration"
+    ] == {"image": None}
+
+
+def test_open_interactive_session_forwards_no_secrets():
+    """Test opening an interactive session with an explicit empty allowlist."""
+    mock_http_response = Mock(status_code=200)
+    mock_api_client = Mock()
+    mock_api_client.api.open_interactive_session.return_value.result.return_value = (
+        {"path": "/workflow-id"},
+        mock_http_response,
+    )
+    runner = CliRunner(env={"REANA_SERVER_URL": "http://localhost"})
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            mock_api_client,
+        ), patch(
+            "reana_client.api.client.info",
+            return_value={},
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "open",
+                    "-t",
+                    "000000",
+                    "-w",
+                    "workflow-id",
+                    "jupyter",
+                    "--no-secrets",
+                ],
+            )
+
+    assert result.exit_code == 0
+    assert mock_api_client.api.open_interactive_session.call_args.kwargs[
+        "interactive_session_configuration"
+    ] == {"image": None, "secret_names": []}
+
+
+def test_open_interactive_session_rejects_conflicting_secret_options():
+    """Test opening an interactive session with conflicting secret options."""
+    runner = CliRunner(env={"REANA_SERVER_URL": "http://localhost"})
+    result = runner.invoke(
+        cli,
+        [
+            "open",
+            "-t",
+            "000000",
+            "-w",
+            "workflow-id",
+            "jupyter",
+            "--secret-name",
+            "alpha",
+            "--no-secrets",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--no-secrets and --secret-name cannot be used together" in result.output
+
+
 def test_close_interactive_session():
     """Test closing an interactive session."""
     status_code = 200

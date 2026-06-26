@@ -1627,11 +1627,31 @@ def interactive_group():
     help="Docker image which will be used to spawn the interactive session. "
     "Overrides the default image for the selected type.",
 )
+@click.option(
+    "--secret-name",
+    "secret_names",
+    multiple=True,
+    help="Name of a user secret to expose in the interactive session. "
+    "Repeat the option to expose multiple secrets. If omitted, the session "
+    "inherits workflow.resources.secret_names when present; otherwise, all "
+    "user secrets are exposed.",
+)
+@click.option(
+    "--no-secrets",
+    is_flag=True,
+    help="Do not expose any user secrets in the interactive session.",
+)
 @add_access_token_options
 @check_connection
 @click.pass_context
 def workflow_open_interactive_session(
-    ctx, workflow, interactive_session_type, image, access_token
+    ctx,
+    workflow,
+    interactive_session_type,
+    image,
+    secret_names,
+    no_secrets,
+    access_token,
 ):  # noqa: D301
     """Open an interactive session inside the workspace.
 
@@ -1645,12 +1665,21 @@ def workflow_open_interactive_session(
     """
     from reana_client.api.client import info, open_interactive_session
 
+    if no_secrets and secret_names:
+        raise click.UsageError(
+            "Options --no-secrets and --secret-name cannot be used together."
+        )
+
     if workflow:
         try:
             logging.info("Opening an interactive session on {}".format(workflow))
             interactive_session_configuration = {
                 "image": image or None,
             }
+            if no_secrets:
+                interactive_session_configuration["secret_names"] = []
+            elif secret_names:
+                interactive_session_configuration["secret_names"] = list(secret_names)
             path = open_interactive_session(
                 workflow,
                 access_token,

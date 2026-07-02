@@ -16,7 +16,6 @@ import traceback
 
 import click
 import yaml
-from jsonschema.exceptions import ValidationError
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (
     add_access_token_options,
@@ -54,14 +53,19 @@ from reana_client.utils import (
     get_workflow_name_and_run_number,
     get_workflow_status_change_msg,
     is_uuid_v4,
-    load_validate_reana_spec,
     workflow_uuid_or_name,
 )
+from reana_client.validation.environments import check_images_locally
 from reana_client.validation.utils import (
     validate_input_parameters,
     validate_workflow_name_parameter,
 )
-from reana_commons.config import INTERACTIVE_SESSION_TYPES, REANA_COMPUTE_BACKENDS
+from reana_commons.config import (
+    INTERACTIVE_SESSION_TYPES,
+    REANA_COMPUTE_BACKENDS,
+    WORKFLOW_RUNTIME_USER_GID,
+    WORKFLOW_RUNTIME_USER_UID,
+)
 from reana_commons.errors import REANAValidationError
 from reana_commons.validation.operational_options import validate_operational_options
 
@@ -437,7 +441,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
     \t $ reana-client create -w myanalysis\n
     \t $ reana-client create -w myanalysis -f myreana.yaml\n
     """
-    from reana_client.api.client import create_workflow
+    from reana_client.api.client import create_workflow_from_bundle
     from reana_client.utils import get_api_url
 
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
@@ -453,16 +457,24 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
 
     specification_filename = click.format_filename(file)
 
-    try:
-        reana_specification = load_validate_reana_spec(
-            specification_filename,
-            access_token=access_token,
-            skip_validation=skip_validation,
-            server_capabilities=True,
+    if skip_validation:
+        display_message(
+            "The specification is now always validated server-side; the "
+            "`--skip-validation` flag is ignored.",
+            msg_type="warning",
         )
+
+    try:
         logging.info("Connecting to {0}".format(get_api_url()))
-        response = create_workflow(reana_specification, name, access_token)
+        # The specification is loaded and validated server-side (in a sandbox for
+        # Snakemake/CWL/Yadage); the client just uploads the raw bundle.
+        response = create_workflow_from_bundle(
+            specification_filename, name, access_token
+        )
         workflow_name = response["workflow_name"]
+
+        for warning in response.get("validation_warnings") or []:
+            display_message(warning.get("message", str(warning)), msg_type="warning")
 
         click.echo(click.style(workflow_name, fg="green"))
         # check if command is called from wrapper command
@@ -476,13 +488,9 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         )
         sys.exit(1)
 
-    # upload specification file by default
-    ctx.invoke(
-        upload_files,
-        workflow=workflow_name,
-        filenames=(specification_filename,),
-        access_token=access_token,
-    )
+    # The server seeds the workspace from the uploaded specification bundle, so
+    # there is no separate specification upload here (the workspace is the
+    # authoritative copy of the spec).
 
 
 @workflow_execution_group.command("start")
@@ -686,9 +694,13 @@ def workflow_restart(
     }
     if file:
         specification_filename = click.format_filename(file)
-        parsed_parameters["reana_specification"] = load_validate_reana_spec(
-            click.format_filename(file)
-        )
+        # The server re-loads and validates the uploaded specification from the
+        # workspace at start (the binding gate), so a lightweight raw parse is
+        # enough here: the dict is only used locally afterwards to read the
+        # workflow type and input parameters for the input-parameter pre-check,
+        # and server-side for the restart type.
+        with open(specification_filename) as f:
+            parsed_parameters["reana_specification"] = yaml.safe_load(f)
         # upload new specification
         ctx.invoke(
             upload_files,
@@ -1053,8 +1065,9 @@ def workflow_logs(
     "--server-capabilities",
     is_flag=True,
     default=False,
-    help="If set, check the server capabilities such as workspace validation. "
-    "[default=False]",
+    help="Deprecated and no longer needed: server capabilities (compute "
+    "backends, workspace, vetted images) are now always validated "
+    "server-side. [default=False]",
 )
 @add_access_token_options_not_required
 @click.pass_context
@@ -1069,48 +1082,66 @@ def workflow_validate(
     Examples:\n
     \t $ reana-client validate -f reana.yaml
     """
-    if server_capabilities:
-        if access_token:
-            check_connection(lambda: None)()
-        else:
-            display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
-            ctx.exit(1)
+    from reana_client.api.client import validate_workflow_spec_bundle
+
+    if not access_token:
+        display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
+        ctx.exit(1)
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
-    try:
-        load_validate_reana_spec(
-            click.format_filename(file),
-            access_token=access_token,
-            skip_validate_environments=not environments,
-            pull_environment_image=pull,
-            server_capabilities=server_capabilities,
+
+    if server_capabilities:
+        display_message(
+            "Server capabilities (compute backends, workspace, vetted images) "
+            "are now always validated server-side; the `--server-capabilities` "
+            "flag is no longer needed and has no effect.",
+            msg_type="warning",
         )
 
-    except (ValidationError, REANAValidationError) as e:
-        logging.debug(traceback.format_exc())
-        logging.debug(str(e))
-        display_message(
-            "{0} is not a valid REANA specification:\n{1}".format(
-                click.format_filename(file), e.message
-            ),
-            msg_type="error",
+    filename = click.format_filename(file)
+    display_message(
+        "Verifying REANA specification file... {}".format(filename),
+        msg_type="info",
+    )
+    try:
+        report = validate_workflow_spec_bundle(
+            filename, access_token, environments=environments, pull=pull
         )
-        sys.exit(1)
-    except yaml.parser.ParserError as e:
-        logging.debug(traceback.format_exc())
-        display_message(
-            "{0} is not a valid YAML file:\n{1}".format(
-                click.format_filename(file, shorten=True), e
-            ),
-            msg_type="error",
-        )
-        sys.exit(1)
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
         display_message(
-            "Something went wrong when trying to validate {}".format(file),
+            "Something went wrong when trying to validate {}:\n{}".format(file, e),
+            msg_type="error",
+        )
+        sys.exit(1)
+
+    for warning in report.get("warnings") or []:
+        display_message(
+            warning.get("message", str(warning)), msg_type="warning", indented=True
+        )
+
+    if pull:
+        # Deep image checks run locally: pull each image the server reported and
+        # inspect its UID/GIDs against the cluster runtime user. Needs a local
+        # container engine; degrades to a warning if none is available.
+        for finding in check_images_locally(
+            report.get("images") or [],
+            report.get("runtime_uid", WORKFLOW_RUNTIME_USER_UID),
+            report.get("runtime_gid", WORKFLOW_RUNTIME_USER_GID),
+        ):
+            display_message(finding["message"], msg_type="warning", indented=True)
+
+    if report.get("valid"):
+        display_message("Valid REANA specification file.", msg_type="success")
+    else:
+        for error in report.get("errors") or []:
+            display_message(
+                error.get("message", str(error)), msg_type="error", indented=True
+            )
+        display_message(
+            "{0} is not a valid REANA specification.".format(filename),
             msg_type="error",
         )
         sys.exit(1)

@@ -11,7 +11,9 @@ import io
 import logging
 import os
 import re
+import shutil
 import sys
+import tempfile
 import traceback
 from time import sleep
 
@@ -20,8 +22,6 @@ import yaml
 from bravado.exception import HTTPServerError
 from cwltool.load_tool import fetch_document
 from cwltool.main import printdeps
-
-from reana_commons.specification import load_workflow_spec
 
 from reana_client.cli.utils import add_access_token_options
 from reana_client.version import __version__
@@ -99,6 +99,60 @@ def upload_files(files, basedir, workflow_id, access_token):
                 logging.error("File {} uploaded.".format(file_path))
 
 
+def _create_cwl_workflow(processfile, jobfile, basedir, access_token):
+    """Bundle a CWL workflow and its file dependencies and create it server-side.
+
+    The workflow file (optionally selecting a tool via a ``#fragment``), its CWL
+    file dependencies, and the job file are staged into a self-contained bundle
+    directory which is uploaded; the server loads and validates it in the
+    sandbox, so the CWL spec is never loaded on the client.
+
+    :returns: ``(response, job)`` where ``job`` is the parsed job parameters.
+    """
+    from reana_client.api.client import create_workflow_from_bundle_dir
+
+    # A '#fragment' on the process file selects a specific tool within it.
+    document, _, fragment = processfile.partition("#")
+    workflow_rel = os.path.relpath(document, basedir)
+    workflow_file = workflow_rel + ("#" + fragment if fragment else "")
+
+    job = {}
+    job_rel = None
+    if jobfile:
+        with open(jobfile) as f:
+            job = yaml.load(f, Loader=yaml.FullLoader)
+        job_rel = os.path.relpath(jobfile, basedir)
+
+    cwl_dependencies = findfiles([get_file_dependencies_obj(processfile, basedir)])
+    bundle_dir = tempfile.mkdtemp()
+    try:
+
+        def stage(location):
+            source = os.path.join(basedir, location)
+            if not os.path.isfile(source):
+                return
+            destination = os.path.join(bundle_dir, location)
+            os.makedirs(os.path.dirname(destination) or bundle_dir, exist_ok=True)
+            shutil.copyfile(source, destination)
+
+        stage(workflow_rel)
+        for dependency in cwl_dependencies:
+            stage(dependency.get("location"))
+        if job_rel:
+            stage(job_rel)
+
+        reana_spec = {"workflow": {"type": "cwl", "file": workflow_file}}
+        if job_rel:
+            reana_spec["inputs"] = {"parameters": {"input": job_rel}}
+        with open(os.path.join(bundle_dir, "reana.yaml"), "w") as bundle_yaml:
+            yaml.dump(reana_spec, bundle_yaml)
+
+        response = create_workflow_from_bundle_dir(bundle_dir, "cwl-test", access_token)
+    finally:
+        shutil.rmtree(bundle_dir, ignore_errors=True)
+    return response, job
+
+
 @click.command()
 @click.version_option(version=__version__)
 @click.option("--quiet", is_flag=True, help="No diagnostic output")
@@ -114,13 +168,10 @@ def upload_files(files, basedir, workflow_id, access_token):
 @click.pass_context
 def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
     """Run CWL files in a standard format <workflow.cwl> <job.json>."""
-    import json
     from reana_client.utils import get_api_url
     from reana_client.api.client import (
-        create_workflow,
         get_workflow_logs,
         start_workflow,
-        upload_file,
     )
 
     logging.basicConfig(
@@ -130,23 +181,12 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
     )
     try:
         basedir = basedir or os.path.abspath(os.path.dirname(processfile))
-        reana_spec = {"workflow": {"type": "cwl"}}
-        job = {}
-        if jobfile:
-            with open(jobfile) as f:
-                job = yaml.load(f, Loader=yaml.FullLoader)
-
-        if processfile:
-            reana_spec["inputs"] = {"parameters": job}
-            reana_spec["workflow"]["specification"] = load_workflow_spec(
-                reana_spec["workflow"]["type"], processfile
-            )
-        reana_spec["workflow"]["specification"] = replace_location_in_cwl_spec(
-            reana_spec["workflow"]["specification"]
-        )
         logging.info("Connecting to {0}".format(get_api_url()))
-        reana_specification = json.loads(json.dumps(reana_spec, sort_keys=True))
-        response = create_workflow(reana_specification, "cwl-test", access_token)
+
+        response, job = _create_cwl_workflow(
+            processfile, jobfile, basedir, access_token
+        )
+
         logging.error(response)
         workflow_name = response["workflow_name"]
         workflow_id = response["workflow_id"]
@@ -161,9 +201,7 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
             file_dependencies_list.append(file_dependencies_obj)
         files_to_upload = findfiles(file_dependencies_list)
         upload_files(files_to_upload, basedir, workflow_id, access_token)
-        response = start_workflow(
-            workflow_id, access_token, reana_spec["inputs"]["parameters"]
-        )
+        response = start_workflow(workflow_id, access_token, job)
         logging.error(response)
 
         first_logs = ""
@@ -183,8 +221,6 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
                 # click.echo(response['status'])
                 break
         try:
-            import ast
-
             out = (
                 re.search(r"FinalOutput[\s\S]*?FinalOutput", logs)
                 .group()
@@ -206,59 +242,6 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
         logging.error(e)
     except Exception:
         logging.error(traceback.print_exc())
-
-
-def replace_location_in_cwl_spec(spec):
-    """Replace absolute paths with relative in a workflow.
-
-    Recursively replace absolute paths with relative in a normalized (packed)
-    workflow.
-    """
-    if spec.get("$graph"):
-        result = spec.copy()
-        result["$graph"] = []
-        for tool in spec["$graph"]:
-            result["$graph"].append(replace_location_in_cwl_tool(tool))
-        return result
-    elif spec.get("inputs"):
-        return replace_location_in_cwl_tool(spec)
-    else:
-        return spec
-
-
-def replace_location_in_cwl_tool(spec):
-    """Recursively replace absolute paths with relative."""
-    # tools
-    inputs_parameters = []
-    for param in spec["inputs"]:
-        if param["type"] == "File":
-            if param.get("default", ""):
-                location = "location" if param["default"].get("location") else "path"
-                param["default"][location] = param["default"][location].split("/")[-1]
-        inputs_parameters.append(param)
-    spec["inputs"] = inputs_parameters
-    # workflows
-    if spec.get("steps"):
-        steps = []
-        for tool in spec["steps"]:
-            tool_inputs = []
-            for param in tool["in"]:
-                if param.get("default") and type(param["default"]) is dict:
-                    if (
-                        param["default"].get("class", param["default"].get("type"))
-                        == "File"
-                    ):
-                        location = (
-                            "location" if param["default"].get("location") else "path"
-                        )
-                        param["default"][location] = param["default"][location].split(
-                            "/"
-                        )[-1]
-                tool_inputs.append(param)
-            tool["in"] = tool_inputs
-            steps.append(tool)
-        spec["steps"] = steps
-    return spec
 
 
 if __name__ == "__main__":

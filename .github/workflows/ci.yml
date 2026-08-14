@@ -290,7 +290,7 @@ jobs:
         run: ./run-tests.sh --python-tests
 
       - name: Codecov Coverage
-        if: matrix.python == '3.12'
+        if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

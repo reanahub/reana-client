@@ -19,3 +19,12 @@ class FileDeletionError(Exception):
 
 class EnvironmentValidationError(Exception):
     """REANA workflow environment validation didn't succeed."""
+
+
+class WorkflowLogsPrunedError(Exception):
+    """Workflow logs were removed by the cluster retention policy."""
+
+    def __init__(self, message, logs_pruned_at=None):
+        """Store the server message and optional pruning timestamp."""
+        super().__init__(message)
+        self.logs_pruned_at = logs_pruned_at

@@ -45,6 +45,7 @@ from reana_client.config import (
     CLI_WORKFLOWS_LIST_MAX_RESULTS,
     JSON,
 )
+from reana_client.errors import WorkflowLogsPrunedError
 from reana_client.printer import display_message
 from reana_client.utils import (
     get_reana_yaml_file_path,
@@ -1049,6 +1050,20 @@ def workflow_logs(
                 page,
                 size,
             )
+    except WorkflowLogsPrunedError as e:
+        if json_format:
+            click.echo(
+                json.dumps(
+                    {
+                        "message": str(e),
+                        "logs_pruned_at": e.logs_pruned_at,
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            display_message(str(e), msg_type="error")
+        sys.exit(1)
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))

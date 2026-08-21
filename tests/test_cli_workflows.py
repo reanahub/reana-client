@@ -17,8 +17,9 @@ import yaml
 from click.testing import CliRunner
 from mock import Mock, patch
 from reana_commons.testing import make_mock_api_client
+from reana_client.api import client as api_client
 from reana_client.cli import cli
-from reana_client.config import RUN_STATUSES
+from reana_client.config import ERROR_MESSAGES, RUN_STATUSES
 from reana_client.utils import get_workflow_status_change_msg
 from reana_commons.api_client import BaseAPIClient
 from reana_commons.config import INTERACTIVE_SESSION_TYPES
@@ -27,9 +28,13 @@ from reana_commons.specification import load_workflow_spec_from_reana_yaml
 from reana_commons.validation.images import extract_images
 
 
-def test_workflows_server_not_connected():
+def test_workflows_server_not_connected(tmp_path, monkeypatch):
     """Test workflows command when server is not connected."""
-    runner = CliRunner(env={"REANA_SERVER_URL": None})
+    monkeypatch.setenv(
+        "REANA_CLIENT_CONFIG", str(tmp_path / "missing-client-config.json")
+    )
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
+    runner = CliRunner()
     reana_token = "000000"
     result = runner.invoke(cli, ["list", "-t", reana_token])
     message = "REANA client is not connected to any REANA cluster."
@@ -59,14 +64,19 @@ rule create_output:
     assert extract_images(reana_yaml) == ["docker.io/library/ubuntu:24.04"]
 
 
-def test_workflows_no_token():
+def test_workflows_no_token(monkeypatch):
     """Test workflows command when token is not set."""
     env = {"REANA_SERVER_URL": "localhost"}
     runner = CliRunner(env=env)
+    monkeypatch.setattr(
+        "reana_client.cli.utils.get_access_token",
+        lambda: (_ for _ in ()).throw(
+            Exception(ERROR_MESSAGES["missing_access_token"])
+        ),
+    )
     result = runner.invoke(cli, ["list"])
-    message = "Please provide your access token by using the -t"
     assert result.exit_code == 1
-    assert message in result.output
+    assert ERROR_MESSAGES["missing_access_token"] in result.output
 
 
 @pytest.mark.parametrize(
@@ -180,7 +190,7 @@ def test_restart_api_uses_generated_multipart_operation(
 
     assert result == response
     assert captured["workflow_id_or_name"] == "workflow.1"
-    assert captured["access_token"] == "token"
+    assert captured["_request_options"]["headers"] == {"Authorization": "Bearer token"}
     assert captured["contents"] == replacement.read_bytes()
     assert json.loads(captured["parameters"]) == {
         "input_parameters": {},
@@ -377,11 +387,23 @@ def test_workflows_sessions():
                 "name": "workflow.1",
                 "session_type": "jupyter",
                 "session_uri": "/29136cd0-b259-4d48-8c1e-afe3572df408",
+                "session_secret": "notebook-secret",
                 "size": {"raw": 0, "human_readable": "0 Bytes"},
                 "status": "created",
                 "user": "00000000-0000-0000-0000-000000000000",
                 "session_status": "created",
-            }
+            },
+            {
+                "created": "2019-03-19T14:38:58",
+                "id": "39136cd0-b259-4d48-8c1e-afe3572df409",
+                "name": "workflow.2",
+                "session_type": "jupyter",
+                "session_uri": "/39136cd0-b259-4d48-8c1e-afe3572df409",
+                "size": {"raw": 0, "human_readable": "0 Bytes"},
+                "status": "created",
+                "user": "00000000-0000-0000-0000-000000000000",
+                "session_status": "created",
+            },
         ]
     }
     status_code = 200
@@ -391,18 +413,33 @@ def test_workflows_sessions():
     env = {"REANA_SERVER_URL": "localhost", "REANA_WORKON": "mytest.1"}
     reana_token = "000000"
     runner = CliRunner(env=env)
+    mock_api_client = make_mock_api_client("reana-server")(
+        mock_response, mock_http_response
+    )
     with runner.isolation():
         with patch(
             "reana_client.api.client.current_rs_api_client",
-            make_mock_api_client("reana-server")(mock_response, mock_http_response),
-        ):
+            mock_api_client,
+        ), patch(
+            "reana_client.api.client.get_workflows",
+            wraps=api_client.get_workflows,
+        ) as get_workflows_mock:
             result = runner.invoke(cli, ["list", "-t", reana_token, "--sessions"])
             message = "RUN_NUMBER"
             assert result.exit_code == 0
             assert message in result.output
+            assert "?token=notebook-secret" in result.output
+            assert (
+                "https://localhost/39136cd0-b259-4d48-8c1e-afe3572df409"
+                in result.output
+            )
+            assert get_workflows_mock.call_count == 1
+            assert (
+                get_workflows_mock.call_args.kwargs["include_session_secrets"] is True
+            )
 
 
-def test_workflows_valid_json():
+def test_workflows_valid_json(monkeypatch):
     """Test workflows command with --json and -v flags."""
     response = {
         "items": [
@@ -422,6 +459,7 @@ def test_workflows_valid_json():
     mock_http_response.status_code = status_code
     mock_response = response
     env = {"REANA_SERVER_URL": "localhost"}
+    monkeypatch.setenv("REANA_SERVER_URL", "localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -832,7 +870,6 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
         "workflow_name": "mytest.1",
     }
     env = {"REANA_SERVER_URL": "localhost"}
-    reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
         with open("reana.yaml", "w") as f:
@@ -843,7 +880,7 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
         ) as create_mock, patch(
             "reana_client.cli.workflow.upload_files"
         ) as upload_mock:
-            result = runner.invoke(cli, ["create", "-t", reana_token])
+            result = runner.invoke(cli, ["create", "-t", "000000"])
         assert result.exit_code == 0
         assert response["workflow_name"] in result.output
         create_mock.assert_called_once()
@@ -1454,7 +1491,7 @@ def test_open_interactive_session(
     status_code = 200
     workflow_id = "d9304bdf-0d19-45d9-ae87-d5fd18059193"
     response = {"path": "/{}".format(workflow_id)}
-    reana_server_url = "http://localhost"
+    reana_server_url = "https://localhost"
     env = {"REANA_SERVER_URL": reana_server_url}
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
@@ -1468,6 +1505,9 @@ def test_open_interactive_session(
         ), patch(
             "reana_client.api.client.info",
             return_value=reana_info,
+        ), patch(
+            "reana_client.api.client.get_interactive_session_secret",
+            return_value={"session_secret": "notebook-secret"},
         ):
             expected_url_session = "{reana_server_url}/{workflow_id}".format(
                 reana_server_url=reana_server_url, workflow_id=workflow_id
@@ -1485,6 +1525,7 @@ def test_open_interactive_session(
                 ],
             )
             assert expected_url_session in result.output
+            assert "?token=notebook-secret" in result.output
             if is_autoclosure_message_expected:
                 assert expected_auto_closure_message in result.output
             else:
@@ -1499,7 +1540,7 @@ def test_close_interactive_session():
         "Interactive session for workflow {} "
         "was successfully closed\n".format(workflow)
     )
-    reana_server_url = "http://localhost"
+    reana_server_url = "https://localhost"
     env = {"REANA_SERVER_URL": reana_server_url}
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code

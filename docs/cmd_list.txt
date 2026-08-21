@@ -12,6 +12,8 @@ Quota commands:
 
 Configuration commands:
   info     List cluster general information.
+  login    Authenticate against REANA server using OIDC.
+  logout   Logout from the active REANA server.
   ping     Check connection to REANA server.
   version  Show version.
 

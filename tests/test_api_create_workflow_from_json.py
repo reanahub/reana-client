@@ -132,7 +132,7 @@ def test_translated_bundle_contains_only_the_specification(
     assert bundled["workflow"] == {"type": "serial", "specification": WORKFLOW_JSON}
     assert bundled["inputs"] == {"files": ["nonexistent-input.txt"]}
     assert captured["workflow_name"] == "my-analysis"
-    assert captured["access_token"] == "token"
+    assert captured["_request_options"]["headers"] == {"Authorization": "Bearer token"}
 
 
 def test_deprecation_warning_points_at_the_caller(delegated):
@@ -245,7 +245,7 @@ def test_unknown_engine_keeps_the_historical_error(delegated):
 
 def test_missing_access_token_is_reported(delegated):
     """The historical access-token validation is preserved."""
-    with pytest.deprecated_call(), pytest.raises(Exception, match="access token"):
+    with pytest.deprecated_call(), pytest.raises(Exception, match="reana-client login"):
         client_module.create_workflow_from_json(
             name="my-analysis",
             access_token="",

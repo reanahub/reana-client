@@ -9,18 +9,22 @@
 
 import functools
 import json
+import logging
 import os
 import shlex
 import sys
 import time
 import re
 from typing import Callable, NoReturn, Optional, List, Tuple, Union, Iterable
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import click
 import tablib
+from click.core import ParameterSource
 
 from reana_commons.utils import click_table_printer
 
+from reana_client.auth.oidc import AuthenticationError, get_access_token
 from reana_client.config import (
     ERROR_MESSAGES,
     RUN_STATUSES,
@@ -35,16 +39,14 @@ from reana_client.utils import workflow_uuid_or_name
 
 
 def _access_token_option_decorator(func: Callable, required: bool) -> Callable:
-    """Add access token related options to click commands."""
+    """Resolve authenticated access token for click commands."""
 
     @click.option(
         "-t",
         "--access-token",
-        default=os.getenv("REANA_ACCESS_TOKEN"),
-        callback=lambda ctx, _, access_token: access_token_check(
-            ctx, _, access_token, required
-        ),
-        help="Access token of the current user.",
+        envvar="REANA_ACCESS_TOKEN",
+        callback=functools.partial(access_token_check, required=required),
+        help="Access token of the current user. Overrides OIDC login credentials.",
     )
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -80,6 +82,26 @@ def human_readable_or_raw_option(func):
     return wrapper
 
 
+def _looks_like_jwt(token: str) -> bool:
+    """Return whether a token has the three non-empty JWT compact segments."""
+    segments = token.split(".")
+    return len(segments) == 3 and all(segments)
+
+
+def _reject_malformed_env_token(ctx, source, access_token):
+    """Exit with a useful error when the environment token is not a JWT."""
+    if source != ParameterSource.ENVIRONMENT or _looks_like_jwt(access_token):
+        return
+    display_message(
+        "REANA_ACCESS_TOKEN must contain a JWT. Run `reana-client login` or "
+        "provide a valid JWT.",
+        msg_type="error",
+    )
+    if ctx:
+        ctx.exit(1)
+    sys.exit(1)
+
+
 def access_token_check(
     ctx: click.core.Context,
     _: click.core.Option,
@@ -87,11 +109,41 @@ def access_token_check(
     required: bool,
 ) -> Union[str, NoReturn]:
     """Check if access token is present."""
-    if not access_token and required:
-        display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
-        ctx.exit(1)
-    else:
+    source = ctx.get_parameter_source("access_token") if ctx else None
+    # An explicitly supplied token stays an override of any stored login, as
+    # the option help promises. A legacy opaque value in the environment is
+    # rejected outright rather than silently shadowing a valid OIDC login.
+    if access_token and source in (
+        ParameterSource.COMMANDLINE,
+        ParameterSource.ENVIRONMENT,
+    ):
+        _reject_malformed_env_token(ctx, source, access_token)
         return access_token
+    try:
+        return get_access_token()
+    except (AuthenticationError, ValueError) as exc:
+        if not required:
+            return None
+        display_message(
+            str(exc) or ERROR_MESSAGES["missing_access_token"], msg_type="error"
+        )
+        if ctx:
+            ctx.exit(1)
+        sys.exit(1)
+    except Exception:
+        # get_access_token()'s documented failure modes are
+        # AuthenticationError/ValueError, handled above -- anything else
+        # reaching here is unexpected (e.g. an OSError from the credential
+        # store, or a future bug). Log it before falling back to the generic
+        # message, so a bug report contains the real error instead of always
+        # reading "missing access token" regardless of actual cause.
+        logging.exception("Unexpected error while resolving the access token")
+        if not required:
+            return None
+        display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
+        if ctx:
+            ctx.exit(1)
+        sys.exit(1)
 
 
 def check_connection(func):
@@ -268,11 +320,17 @@ def display_formatted_output(
             click_table_printer(headers, _format, data)
 
 
-def format_session_uri(reana_server_url, path, access_token):
+def format_session_uri(reana_server_url, path, session_secret=None):
     """Format interactive session URI."""
-    return "{reana_server_url}{path}?token={access_token}".format(
-        reana_server_url=reana_server_url, path=path, access_token=access_token
+    session_uri = "{reana_server_url}{path}".format(
+        reana_server_url=reana_server_url, path=path
     )
+    if not session_secret:
+        return session_uri
+    parsed_uri = urlsplit(session_uri)
+    query = parse_qsl(parsed_uri.query, keep_blank_values=True)
+    query.append(("token", session_secret))
+    return urlunsplit(parsed_uri._replace(query=urlencode(query)))
 
 
 def get_formatted_progress(progress):

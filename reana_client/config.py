@@ -7,13 +7,62 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA client configuration."""
 
+import os
+import logging
+from typing import Union
+
+import urllib3
+
 reana_yaml_valid_file_names = ["reana.yaml", "reana.yml"]
 """REANA specification valid file names."""
 
+CA_CERTS_ENV = "REANA_SERVER_CA_CERTS"
+"""Environment variable pointing to a CA bundle (PEM) to trust."""
+
+INSECURE_ENV = "REANA_INSECURE"
+"""Environment variable to disable TLS verification (local testing only)."""
+
+_INSECURE_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+_LOGGER = logging.getLogger(__name__)
+_insecure_warning_emitted = False
+
+
+def tls_verify() -> Union[bool, str]:
+    """Return the ``verify`` value used for REANA server HTTP requests.
+
+    TLS verification is enabled by default. For local deployments that use
+    self-signed certificates it can be adjusted through environment variables:
+
+    * ``REANA_SERVER_CA_CERTS``: path to a CA bundle (PEM) to trust, e.g. the
+      certificate of a local REANA deployment. Verification stays enabled.
+    * ``REANA_INSECURE`` (``true``/``1``/``yes``/``on``): disable verification
+      altogether. Intended for local testing only, never for production.
+
+    ``REANA_SERVER_CA_CERTS`` takes precedence over ``REANA_INSECURE``. When
+    neither is set the standard ``REQUESTS_CA_BUNDLE`` environment variable is
+    still honoured by ``requests``.
+    """
+    ca_certs = os.getenv(CA_CERTS_ENV)
+    if ca_certs:
+        return ca_certs
+    if os.getenv(INSECURE_ENV, "").strip().lower() in _INSECURE_TRUE_VALUES:
+        global _insecure_warning_emitted
+        if not _insecure_warning_emitted:
+            _LOGGER.warning(
+                "TLS certificate verification is disabled by %s.", INSECURE_ENV
+            )
+            _insecure_warning_emitted = True
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        return False
+    return True
+
+
 ERROR_MESSAGES = {
-    "missing_access_token": "Please provide your access token by using"
-    " the -t/--access-token flag, or by setting the"
-    " REANA_ACCESS_TOKEN environment variable."
+    "missing_access_token": (
+        "Please run `reana-client login` to authenticate, or provide an access "
+        "token using -t/--access-token or the REANA_ACCESS_TOKEN environment "
+        "variable."
+    )
 }
 
 JSON = "json"

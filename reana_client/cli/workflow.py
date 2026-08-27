@@ -21,6 +21,7 @@ from reana_client.cli.utils import (
     add_access_token_options_not_required,
     add_pagination_options,
     add_workflow_option,
+    access_token_check,
     check_connection,
     display_formatted_output,
     format_session_uri,
@@ -37,7 +38,6 @@ from reana_client.cli.utils import (
     format_run_label_list,
 )
 from reana_client.config import (
-    ERROR_MESSAGES,
     RUN_STATUSES,
     TIMECHECK,
     CLI_LOGS_FOLLOW_DEFAULT_INTERVAL,
@@ -295,6 +295,7 @@ def workflows_list(  # noqa: C901
             search=search_filter,
             include_progress=include_progress,
             include_workspace_size=include_workspace_size,
+            include_session_secrets=type == "interactive",
             workflow=workflow,
             shared=shared,
             shared_by=shared_by,
@@ -349,7 +350,7 @@ def workflows_list(  # noqa: C901
                 workflow["session_uri"] = format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
                     path=workflow["session_uri"],
-                    access_token=access_token,
+                    session_secret=workflow.get("session_secret"),
                 )
             row = []
             for header in headers[type]:
@@ -1106,9 +1107,9 @@ def workflow_validate(
     """
     from reana_client.api.client import validate_workflow_spec_bundle
 
-    if not access_token:
-        display_message(ERROR_MESSAGES["missing_access_token"], msg_type="error")
-        ctx.exit(1)
+    access_token = access_token_check(ctx, None, access_token, True)
+    if server_capabilities:
+        check_connection(lambda: None)()
     logging.debug("command: {}".format(ctx.command_path.replace(" ", ".")))
     for p in ctx.params:
         logging.debug("{param}: {value}".format(param=p, value=ctx.params[p]))
@@ -1699,7 +1700,11 @@ def workflow_open_interactive_session(
     Examples:\n
     \t $ reana-client open -w myanalysis.42 jupyter
     """
-    from reana_client.api.client import info, open_interactive_session
+    from reana_client.api.client import (
+        get_interactive_session_secret,
+        info,
+        open_interactive_session,
+    )
 
     if workflow:
         try:
@@ -1713,6 +1718,9 @@ def workflow_open_interactive_session(
                 interactive_session_type,
                 interactive_session_configuration,
             )
+            session_secret = get_interactive_session_secret(workflow, access_token)[
+                "session_secret"
+            ]
             display_message(
                 "Interactive session opened successfully", msg_type="success"
             )
@@ -1720,7 +1728,7 @@ def workflow_open_interactive_session(
                 format_session_uri(
                     reana_server_url=ctx.obj.reana_server_url,
                     path=path,
-                    access_token=access_token,
+                    session_secret=session_secret,
                 ),
                 fg="green",
             )

@@ -23,7 +23,11 @@ import yaml
 from bravado.exception import BravadoConnectionError, BravadoTimeoutError, HTTPError
 from reana_client.api.utils import get_content_disposition_filename
 from reana_client.config import ERROR_MESSAGES
-from reana_client.errors import FileDeletionError, FileUploadError
+from reana_client.errors import (
+    FileDeletionError,
+    FileUploadError,
+    WorkflowLogsPrunedError,
+)
 from reana_client.utils import is_regular_path, is_uuid_v4
 from reana_commons.api_client import get_current_api_client
 from reana_commons.config import (
@@ -786,14 +790,19 @@ def get_workflow_logs(workflow, access_token, steps=None, page=None, size=None):
             )
 
     except HTTPError as e:
+        error_data = e.response.json()
         logging.debug(
             "Workflow logs could not be retrieved: "
             "\nStatus: {}\nReason: {}\n"
             "Message: {}".format(
-                e.response.status_code, e.response.reason, e.response.json()["message"]
+                e.response.status_code, e.response.reason, error_data["message"]
             )
         )
-        raise Exception(e.response.json()["message"])
+        if e.response.status_code == 410:
+            raise WorkflowLogsPrunedError(
+                error_data["message"], error_data.get("logs_pruned_at")
+            )
+        raise Exception(error_data["message"])
     except Exception as e:
         raise e
 

@@ -15,10 +15,12 @@ from typing import List
 import pytest
 import yaml
 from click.testing import CliRunner
-from mock import Mock, patch
+from bravado.exception import HTTPError
+from mock import MagicMock, Mock, patch
 from reana_commons.testing import make_mock_api_client
 from reana_client.cli import cli
 from reana_client.config import RUN_STATUSES
+from reana_client.errors import WorkflowLogsPrunedError
 from reana_client.utils import get_workflow_status_change_msg
 from reana_commons.api_client import BaseAPIClient
 from reana_commons.config import INTERACTIVE_SESSION_TYPES
@@ -1214,6 +1216,63 @@ def test_get_workflow_logs():
             assert result.exit_code == 0
             assert isinstance(json_response, dict)
             assert json_response["workflow_logs"] in "workflow logs test"
+
+
+def test_get_pruned_workflow_logs():
+    """Test the friendly machine-readable response for expired logs."""
+    error_response = Mock(status_code=410, reason="Gone")
+    error_response.json.return_value = {
+        "message": (
+            "The logs for this run were pruned by the cluster's retention policy "
+            "on 2026-07-13T03:00:00Z and are no longer available."
+        ),
+        "logs_pruned_at": "2026-07-13T03:00:00Z",
+    }
+    api_client = MagicMock()
+    api_client.api.get_workflow_logs.return_value.result.side_effect = HTTPError(
+        error_response
+    )
+
+    runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
+    with patch("reana_client.api.client.current_rs_api_client", api_client):
+        result = runner.invoke(
+            cli,
+            ["logs", "-t", "000000", "--json", "-w", "workflow.1"],
+        )
+
+    assert result.exit_code == 1
+    assert json.loads(result.output) == error_response.json.return_value
+
+
+def test_follow_pruned_workflow_logs_ignores_json():
+    """Test that --follow --json reports expired logs as plain text."""
+    message = (
+        "The logs for this run were pruned by the cluster's retention policy "
+        "on 2026-07-13T03:00:00Z and are no longer available."
+    )
+    runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
+
+    with patch(
+        "reana_client.cli.workflow.follow_workflow_logs",
+        side_effect=WorkflowLogsPrunedError(message, "2026-07-13T03:00:00Z"),
+    ):
+        result = runner.invoke(
+            cli,
+            [
+                "logs",
+                "-t",
+                "000000",
+                "--follow",
+                "--json",
+                "-w",
+                "workflow.1",
+            ],
+        )
+
+    assert result.exit_code == 1
+    assert "Ignoring --json" in result.output
+    assert message in result.output
+    assert '"logs_pruned_at"' not in result.output
 
 
 def test_follow_job_logs():

@@ -10,7 +10,7 @@
 import logging
 import os
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -183,6 +183,131 @@ def test_get_access_token_refreshes_expiring_token(tmp_path, monkeypatch):
     server_entry = get_server_entry("https://reana.example.org")
     assert server_entry["access_token"] == "new-access"
     assert server_entry["refresh_token"] == "new-refresh"
+
+
+def test_parse_timestamp_returns_none_for_absent_value():
+    """No stored expiry is not the same as an unusable one."""
+    assert oidc.parse_timestamp(None) is None
+    assert oidc.parse_timestamp("") is None
+
+
+def test_parse_timestamp_accepts_timezone_aware_value():
+    assert oidc.parse_timestamp("2024-01-01T00:00:00Z") == datetime(
+        2024, 1, 1, tzinfo=timezone.utc
+    )
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["not-a-timestamp", "2024-13-40T00:00:00Z"],
+    ids=["not-iso8601", "invalid-calendar-date"],
+)
+def test_parse_timestamp_rejects_malformed_value(value):
+    with pytest.raises(ValueError):
+        oidc.parse_timestamp(value)
+
+
+def test_parse_timestamp_rejects_timezone_naive_value():
+    """A naive datetime can't be safely compared against aware ``utcnow()``."""
+    with pytest.raises(ValueError, match="UTC offset"):
+        oidc.parse_timestamp("2024-01-01T00:00:00")
+
+
+def test_access_token_valid_true_for_future_expiry():
+    entry = {
+        "access_token": "token",
+        "access_token_expires_at": oidc.format_timestamp(
+            oidc.utcnow() + timedelta(hours=1)
+        ),
+    }
+    assert oidc._access_token_valid(entry) is True
+
+
+def test_access_token_valid_false_for_expired_expiry():
+    entry = {
+        "access_token": "token",
+        "access_token_expires_at": oidc.format_timestamp(
+            oidc.utcnow() - timedelta(hours=1)
+        ),
+    }
+    assert oidc._access_token_valid(entry) is False
+
+
+@pytest.mark.parametrize(
+    "expires_at",
+    ["not-a-timestamp", "2024-01-01T00:00:00"],
+    ids=["malformed", "timezone-naive"],
+)
+def test_access_token_valid_fails_closed_on_unusable_expiry(expires_at):
+    """A malformed or timezone-less stored expiry must not be trusted forever.
+
+    Mirrors reana-client-go's ``accessTokenValid``, which also fails closed
+    (triggers a refresh) rather than treating an unparseable expiry as valid.
+    """
+    entry = {"access_token": "token", "access_token_expires_at": expires_at}
+    assert oidc._access_token_valid(entry) is False
+
+
+@pytest.mark.parametrize(
+    "expires_at",
+    ["not-a-timestamp", "2024-01-01T00:00:00"],
+    ids=["malformed", "timezone-naive"],
+)
+def test_get_access_token_refreshes_when_stored_expiry_is_unusable(
+    tmp_path, monkeypatch, expires_at
+):
+    """An unusable stored expiry follows the normal refresh path, not a crash."""
+    config_path = tmp_path / "reana-client.json"
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
+    monkeypatch.setenv("REANA_SERVER_URL", "https://reana.example.org")
+    upsert_server_entry(
+        "https://reana.example.org",
+        {
+            "issuer": "https://issuer.example.org",
+            "client_id": "reana-cli",
+            "token_endpoint": "https://issuer.example.org/token",
+            "access_token": "old-access",
+            "access_token_expires_at": expires_at,
+            "refresh_token": "old-refresh",
+        },
+    )
+
+    def fake_post(url, data, timeout, allow_redirects, verify):
+        assert data["grant_type"] == "refresh_token"
+        assert data["refresh_token"] == "old-refresh"
+        return MockResponse(
+            {
+                "access_token": "new-access",
+                "refresh_token": "new-refresh",
+                "expires_in": 3600,
+            }
+        )
+
+    monkeypatch.setattr(oidc.requests, "post", fake_post)
+
+    assert oidc.get_access_token() == "new-access"
+
+
+def test_get_access_token_reports_login_instruction_when_expiry_unusable_and_no_refresh_token(
+    tmp_path, monkeypatch
+):
+    """No refresh credentials plus an unusable expiry must fail closed, not crash."""
+    config_path = tmp_path / "reana-client.json"
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
+    monkeypatch.setenv("REANA_SERVER_URL", "https://reana.example.org")
+    upsert_server_entry(
+        "https://reana.example.org",
+        {
+            "issuer": "https://issuer.example.org",
+            "client_id": "reana-cli",
+            "token_endpoint": "https://issuer.example.org/token",
+            "access_token": "old-access",
+            "access_token_expires_at": "2024-01-01T00:00:00",
+        },
+    )
+
+    with pytest.raises(oidc.AuthenticationError, match="reana-client login"):
+        oidc.get_access_token()
 
 
 def test_refresh_credentials_releases_lock_before_network_call(tmp_path, monkeypatch):

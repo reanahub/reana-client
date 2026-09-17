@@ -121,12 +121,22 @@ def utcnow() -> datetime:
 
 
 def parse_timestamp(value: Optional[str]) -> Optional[datetime]:
-    """Parse ISO timestamp stored in credential file."""
+    """Parse ISO timestamp stored in credential file.
+
+    Raises ``ValueError`` if ``value`` is set but cannot be interpreted as an
+    unambiguous point in time -- either because it is not valid ISO 8601, or
+    because it has no UTC offset and so cannot be safely compared against the
+    timezone-aware ``utcnow()``. Callers must not treat that the same as no
+    stored expiry at all.
+    """
     if not value:
         return None
     if value.endswith("Z"):
         value = value[:-1] + "+00:00"
-    return datetime.fromisoformat(value)
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        raise ValueError(f"Timestamp '{value}' is missing a UTC offset.")
+    return parsed
 
 
 def format_timestamp(value: datetime) -> str:
@@ -698,8 +708,18 @@ def login_with_device_flow(
 def _access_token_valid(server_entry: Dict) -> bool:
     """Return whether stored access token can be used now."""
     access_token = server_entry.get("access_token")
-    expires_at = parse_timestamp(server_entry.get("access_token_expires_at"))
     if not access_token:
+        return False
+    try:
+        expires_at = parse_timestamp(server_entry.get("access_token_expires_at"))
+    except ValueError:
+        # A malformed or timezone-less stored expiry cannot be trusted to
+        # judge freshness. Fail closed -- treat the token as unusable so the
+        # caller falls through to refresh_credentials(), which either
+        # refreshes it or reports a clean "please login" error, instead of
+        # this crashing out or being silently accepted forever. This matches
+        # reana-client-go's accessTokenValid, which fails closed on any
+        # unparseable expiry the same way.
         return False
     if not expires_at:
         return True

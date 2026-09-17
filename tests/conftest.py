@@ -321,3 +321,28 @@ def spec_without_inputs():
             ],
         }
     }
+
+
+@pytest.fixture(autouse=True)
+def isolated_client_config(tmp_path, monkeypatch):
+    """Never read the developer's credentials or connection exports in tests."""
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(tmp_path / "client.json"))
+    for name in (
+        "REANA_SERVER_URL",
+        "REANA_SERVER_TLS_VERIFY",
+        "REANA_SERVER_CA_CERTS",
+        "REANA_ACCESS_TOKEN",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture
+def client_config():
+    """Seed a saved server and return the subprocess configuration environment."""
+    from reana_client.auth.storage import get_config_path, upsert_server_entry
+
+    def configure(server="https://localhost", verify=True):
+        upsert_server_entry(server, {"tls": {"verify": verify}})
+        return {"REANA_CLIENT_CONFIG": get_config_path()}
+
+    return configure

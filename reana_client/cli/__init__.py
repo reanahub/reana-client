@@ -78,6 +78,28 @@ class ReanaCLI(click.Group):
             for cmd in group.commands.items():
                 self.add_command(cmd=cmd[1], name=cmd[0])
 
+    def invoke(self, ctx):
+        """Keep all requests and links on one invocation's selected server."""
+        from reana_client.config import connection_scope, check_retired_environment
+        from reana_client.printer import display_message
+
+        protected = getattr(ctx, "_protected_args", None)
+        if protected is None:  # Click before 8.2
+            protected = ctx.protected_args
+        arguments = list(protected) + ctx.args
+        if (
+            arguments
+            and arguments[0] not in ("version", "help")
+            and "--help" not in arguments
+        ):
+            try:
+                check_retired_environment()
+            except ValueError as error:
+                display_message(str(error), msg_type="error")
+                ctx.exit(1)
+        with connection_scope():
+            return super().invoke(ctx)
+
     def format_commands(self, ctx, formatter):
         """Overides default click cmd display."""
         if ReanaCLI.cmd_groups:

@@ -365,13 +365,23 @@ def save_config(config: Dict) -> None:
 
 
 def get_active_server(config: Optional[Dict] = None) -> Optional[str]:
-    """Return active server URL from environment or credential store."""
-    env_server = os.getenv("REANA_SERVER_URL")
-    if env_server:
-        return normalize_server_url(env_server)
+    """Return the invocation destination or saved active server."""
+    from reana_client.config import (
+        bind_server,
+        selected_server,
+        check_retired_environment,
+    )
+
+    check_retired_environment()
+    if selected_server():
+        return selected_server()
     config = config or load_config()
     active_server = config.get("active_server")
-    return normalize_server_url(active_server) if active_server else None
+    return (
+        bind_server(normalize_server_url(active_server), "saved login")
+        if active_server
+        else None
+    )
 
 
 def get_server_entry(server_url: str, config: Optional[Dict] = None) -> Dict:

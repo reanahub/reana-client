@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
+# This file is part of REANA.
+# Copyright (C) 2017, 2018, 2019, 2020, 2022, 2023, 2024, 2026 CERN.
+#
+# REANA is free software; you can redistribute it and/or modify it
+# under the terms of the MIT License; see LICENSE file for more details.
+#
 # reana documentation build configuration file, created by
 # sphinx-quickstart on Mon Jan 23 14:17:34 2017.
 #
@@ -40,6 +46,12 @@ import sphinx.environment
 # Note that autodoc_mock_imports does not work.
 MOCK_MODULES = ["reana_commons.api_client"]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+# Autodoc inspects the lazy API proxy, but building documentation must not
+# require a saved login or read the builder's client configuration.
+from reana_client.api import client
+
+client.current_rs_api_client = Mock()
 
 # Do not warn on external images.
 suppress_warnings = ["image.nonlocal_uri"]

@@ -75,13 +75,13 @@ def test_api_client_uses_active_oidc_server(monkeypatch):
     )
 
 
-def test_api_client_and_auth_agree_on_normalised_server(monkeypatch):
+def test_api_client_and_auth_agree_on_normalised_server(monkeypatch, client_config):
     """Generated calls must address the same origin as authentication."""
     _force_default_tls_verification(monkeypatch)
-    monkeypatch.setenv("REANA_SERVER_URL", "localhost")
+    client_config("localhost")
     monkeypatch.setattr(
         "reana_client.auth.storage.load_config",
-        lambda: {"active_server": None, "servers": {}},
+        lambda: {"active_server": "localhost", "servers": {}},
     )
     from reana_client.auth.storage import get_active_server
 

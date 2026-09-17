@@ -124,15 +124,15 @@ def issuer(certificate):
 def isolated_environment(monkeypatch, tmp_path):
     """Keep credentials and certificate trust independent of the developer."""
     monkeypatch.setenv("REANA_CLIENT_CONFIG", str(tmp_path / "credentials.json"))
-    monkeypatch.setenv(config.TLS_VERIFY_ENV, "no")
     monkeypatch.setenv("NO_PROXY", "127.0.0.1,localhost")
     for name in (config.CA_CERTS_ENV, "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE"):
         monkeypatch.delenv(name, raising=False)
 
 
-def test_bundled_issuer_login_refresh_and_logout(issuer, monkeypatch):
+def test_bundled_issuer_login_refresh_and_logout(issuer, monkeypatch, client_config):
     """Browser and device grants, refresh and revocation honour the bypass."""
     base, metadata, received = issuer
+    client_config(base, verify=False)
     query = {}
 
     def display(url):
@@ -178,6 +178,7 @@ def test_external_issuer_requires_trust(issuer, certificate, monkeypatch, truste
         "revocation_endpoint": metadata["revocation_endpoint"],
         "refresh_token": "refresh",
     }
+    entry["tls"] = {"verify": False}
     storage.upsert_server_entry(server_url, entry)
     operations = [
         lambda: oidc._exchange_authorization_code(
@@ -221,4 +222,39 @@ def test_external_issuer_requires_trust(issuer, certificate, monkeypatch, truste
 )
 def test_endpoint_origin_boundary(server, endpoint, same):
     """Only an exact HTTPS origin match can inherit disabled verification."""
-    assert config.tls_verify_for_url(server, endpoint) is (not same)
+    from reana_client.auth.diagnostics import connection_error
+
+    with config.connection_scope(server, verify=False):
+        assert config.tls_verify_for_url(server, endpoint) is (not same)
+    cause = ssl.SSLCertVerificationError("self-signed certificate")
+    cause.verify_code = 18
+    message = connection_error(server, endpoint, requests.exceptions.SSLError(cause))
+    assert ("--no-tls-verify" in message) is same
+
+
+def test_cli_first_login_and_relogin_with_saved_bypass(
+    issuer, certificate, monkeypatch
+):
+    """A real self-signed endpoint works from first login through later refresh."""
+    from click.testing import CliRunner
+    from reana_client.cli import cli
+
+    base, _, _ = issuer
+    runner = CliRunner()
+    rejected = runner.invoke(cli, ["login", "--server", base, "--headless"])
+    assert rejected.exit_code == 1
+    assert "certificate is not trusted" in rejected.output
+    assert "from login option" in rejected.output
+    assert storage.get_active_server() is None
+    accepted = runner.invoke(
+        cli, ["login", "--server", base, "--headless", "--no-tls-verify"]
+    )
+    assert accepted.exit_code == 0, accepted.output
+    assert storage.get_server_entry(base)["tls"]["verify"] is False
+    assert oidc.refresh_credentials(base)["access_token"] == "access"
+    assert runner.invoke(cli, ["login", "--headless"]).exit_code == 0
+    monkeypatch.setenv(config.CA_CERTS_ENV, certificate[0])
+    restored = runner.invoke(cli, ["login", "--headless", "--tls-verify"])
+    assert restored.exit_code == 0, restored.output
+    assert "TLS verification: enabled" in restored.output
+    assert storage.get_server_entry(base)["tls"]["verify"] is True

@@ -34,7 +34,13 @@ from reana_client.auth.storage import (
     upsert_server_entry,
     wait_for_refresh_lock,
 )
-from reana_client.config import tls_verify, tls_verify_for_url
+from reana_client.config import (
+    NO_SERVER,
+    server_description,
+    tls_verify,
+    tls_verify_for_url,
+)
+from reana_client.auth.diagnostics import connection_error
 
 DEFAULT_SCOPES = "openid profile email offline_access"
 EXPIRY_LEEWAY_SECONDS = 60
@@ -296,11 +302,11 @@ def discover(server_url: str) -> Dict:
             urljoin(normalized_url + "/", DISCOVERY_PATH.lstrip("/")),
             timeout=30,
             allow_redirects=False,
-            verify=tls_verify(),
+            verify=tls_verify(normalized_url),
         )
     except requests.RequestException as exc:
         raise AuthenticationError(
-            f"Could not connect to the REANA server at {normalized_url}."
+            connection_error(normalized_url, normalized_url, exc)
         ) from exc
     _reject_redirect(response, "Authentication metadata discovery")
     if not response.ok:
@@ -364,7 +370,7 @@ def _store_token_response(
             # another response field is malformed. Preserve the replacement
             # without accepting the rejected access token, so the next command
             # can retry instead of orphaning live issuer-side credentials.
-            upsert_server_entry(server_url, recovery_entry, make_active=make_active)
+            upsert_server_entry(server_url, recovery_entry, make_active=False)
         raise
     entry = {
         **recovery_entry,
@@ -372,6 +378,11 @@ def _store_token_response(
         "access_token_expires_at": access_token_expires_at,
         "refresh_token_expires_at": refresh_token_expires_at,
     }
+    from reana_client.config import requested_tls_verify
+
+    choice = requested_tls_verify(server_url)
+    if make_active and choice is not None:
+        entry["tls"] = {**get_server_entry(server_url).get("tls", {}), "verify": choice}
     return upsert_server_entry(server_url, entry, make_active=make_active)
 
 
@@ -538,7 +549,7 @@ def _exchange_authorization_code(
         )
     except requests.RequestException as exc:
         raise AuthenticationError(
-            "Could not exchange the authorization code. Please try again."
+            connection_error(server_url, metadata["token_endpoint"], exc)
         ) from exc
     _reject_redirect(response, "Authorization code exchange")
     payload = _response_json(response)
@@ -619,7 +630,7 @@ def _start_device_authorization(server_url: str, metadata: Dict, pkce: Dict) -> 
         )
     except requests.RequestException as exc:
         raise AuthenticationError(
-            "Could not start device login. Please try again."
+            connection_error(server_url, metadata["device_authorization_endpoint"], exc)
         ) from exc
     _reject_redirect(response, "Device authorization")
     payload = _response_json(response)
@@ -672,7 +683,7 @@ def login_with_device_flow(
             )
         except requests.RequestException as exc:
             raise AuthenticationError(
-                "Could not complete device login. Please try again."
+                connection_error(normalized_url, metadata["token_endpoint"], exc)
             ) from exc
         _reject_redirect(response, "Device token polling")
         payload = _response_json(response)
@@ -766,7 +777,9 @@ def refresh_credentials(server_url: str, server_entry: Optional[Dict] = None) ->
             server_entry = get_server_entry(normalized_url) or server_entry or {}
             refresh_token = server_entry.get("refresh_token")
             if not refresh_token:
-                raise AuthenticationError("Please run `reana-client login`.")
+                raise AuthenticationError(
+                    f"No usable credentials for {server_description(normalized_url)}. Run `reana-client login --server {normalized_url}`."
+                )
             _validate_oidc_https_urls(
                 server_entry, required=("issuer", "token_endpoint")
             )
@@ -787,7 +800,7 @@ def refresh_credentials(server_url: str, server_entry: Optional[Dict] = None) ->
             )
         except requests.RequestException as exc:
             raise AuthenticationError(
-                "Could not refresh authentication credentials. Please try again."
+                connection_error(normalized_url, server_entry["token_endpoint"], exc)
             ) from exc
         _reject_redirect(response, "Token refresh")
         payload = _response_json(response)
@@ -799,7 +812,9 @@ def refresh_credentials(server_url: str, server_entry: Optional[Dict] = None) ->
                 # one that was just rejected, so a losing process's failure
                 # here can never destroy a winning process's fresh credentials.
                 if clear_token_material_if_matches(normalized_url, refresh_token):
-                    raise AuthenticationError("Please run `reana-client login`.")
+                    raise AuthenticationError(
+                        f"No usable credentials for {server_description(normalized_url)}. Run `reana-client login --server {normalized_url}`."
+                    )
                 raise AuthenticationError(
                     "Credentials were changed by another process (login, "
                     "logout, or refresh). Please retry, or run "
@@ -837,7 +852,9 @@ def refresh_credentials(server_url: str, server_entry: Optional[Dict] = None) ->
         # A concurrent credential change superseded this refresh. Revoke its
         # discarded tokens without blocking unrelated credential-store users.
         _revoke_discarded_tokens(normalized_url, metadata, payload)
-        raise AuthenticationError("Please run `reana-client login`.")
+        raise AuthenticationError(
+            f"No usable credentials for {server_description(normalized_url)}. Run `reana-client login --server {normalized_url}`."
+        )
     finally:
         if refresh_lock_file is not None:
             release_refresh_lock(refresh_lock_file)
@@ -848,9 +865,7 @@ def get_access_token() -> str:
     with credential_store_lock():
         server_url = get_active_server()
         if not server_url:
-            raise AuthenticationError(
-                "REANA client is not connected to any REANA cluster."
-            )
+            raise AuthenticationError(NO_SERVER)
         # Re-read after acquiring the lock: a waiting process can reuse the
         # access token produced by the refresh that just completed.
         server_entry = get_server_entry(server_url)
@@ -882,9 +897,7 @@ def logout(server_url: Optional[str] = None) -> Optional[str]:
     with credential_store_lock():
         server_url = server_url or get_active_server()
         if not server_url:
-            raise AuthenticationError(
-                "REANA client is not connected to any REANA cluster."
-            )
+            raise AuthenticationError(NO_SERVER)
         server_entry = get_server_entry(server_url)
         refresh_token = server_entry.get("refresh_token")
         revocation_endpoint = server_entry.get("revocation_endpoint")

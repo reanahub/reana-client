@@ -278,7 +278,7 @@ def test_check_connection_exits_when_not_connected(monkeypatch):
     runner = CliRunner()
     result = runner.invoke(cmd, [])
     assert result.exit_code == 1
-    assert "not connected to any REANA cluster" in result.output
+    assert "No REANA server is configured" in result.output
 
 
 def test_add_workflow_option_uses_callback(monkeypatch):

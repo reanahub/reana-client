@@ -56,10 +56,15 @@ def _get_current_reana_server_api_client():
     """
     from reana_client.auth.storage import get_active_server
 
+    from reana_client.config import NO_SERVER
+
+    server_url = get_active_server()
+    if not server_url:
+        raise ValueError(NO_SERVER)
     return get_current_api_client(
         component="reana-server",
-        ssl_verify=tls_verify(),
-        server_url=get_active_server(),
+        ssl_verify=tls_verify(server_url),
+        server_url=server_url,
     )
 
 
@@ -219,6 +224,9 @@ def ping(access_token):
         if e.response.status_code == 403:
             return {"status": "ERROR: INVALID ACCESS TOKEN", "error": True}
         raise Exception(e.response)
+    except requests.RequestException:
+        # Preserve transport failures for the caller's connection diagnostics.
+        raise
     except Exception:
         return {"status": "ERROR: INVALID SERVER", "error": True}
 

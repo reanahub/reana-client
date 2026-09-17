@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2022 CERN.
+# Copyright (C) 2022, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -15,7 +15,9 @@ from reana_client.cli import cli
 
 
 @patch("reana_client.cli.retention_rules.get_workflow_retention_rules")
-def test_retention_rules_list(mock_get_workflow_retention_rules: MagicMock):
+def test_retention_rules_list(
+    mock_get_workflow_retention_rules: MagicMock, client_config
+):
     """Test retention-rules-list command."""
     workflow_id = "123456"
     workflow_name = "workflow"
@@ -34,7 +36,7 @@ def test_retention_rules_list(mock_get_workflow_retention_rules: MagicMock):
         ],
     }
 
-    runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
+    runner = CliRunner(env=client_config("localhost"))
     result = runner.invoke(
         cli, ["retention-rules-list", "-w", workflow_name, "-t", access_token]
     )

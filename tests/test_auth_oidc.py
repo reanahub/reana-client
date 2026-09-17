@@ -148,7 +148,6 @@ def test_get_access_token_refreshes_expiring_token(tmp_path, monkeypatch):
     """Test refresh-token grant updates stored credentials."""
     config_path = tmp_path / "reana-client.json"
     monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
-    monkeypatch.setenv("REANA_SERVER_URL", "https://reana.example.org")
     upsert_server_entry(
         "https://reana.example.org",
         {
@@ -198,7 +197,6 @@ def test_refresh_credentials_releases_lock_before_network_call(tmp_path, monkeyp
 
     config_path = tmp_path / "reana-client.json"
     monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
-    monkeypatch.setenv("REANA_SERVER_URL", "https://reana.example.org")
     upsert_server_entry(
         "https://reana.example.org",
         {
@@ -346,7 +344,7 @@ def test_refresh_network_error_preserves_credentials(tmp_path, monkeypatch):
 
     with pytest.raises(
         oidc.AuthenticationError,
-        match="Could not refresh authentication credentials. Please try again.",
+        match="Could not connect to .*network request failed",
     ):
         oidc.refresh_credentials(server_url)
 
@@ -964,63 +962,53 @@ def test_tls_verify_defaults_to_enabled(monkeypatch):
     assert config.tls_verify() is True
 
 
-@pytest.mark.parametrize("value", ["0", "false", "FALSE", "no", "No", "off", "  off  "])
-def test_tls_verify_disabled_by_server_tls_verify(value, monkeypatch):
-    """Test explicit false values disable REANA server verification."""
-    monkeypatch.delenv(config.CA_CERTS_ENV, raising=False)
-    monkeypatch.setenv(config.TLS_VERIFY_ENV, value)
-
-    assert config.tls_verify() is False
+@pytest.mark.parametrize("value", [True, False])
+def test_tls_verify_uses_saved_choice(value, client_config):
+    """Stored booleans determine verification for the selected server."""
+    client_config(verify=value)
+    assert config.tls_verify() is value
 
 
-@pytest.mark.parametrize(
-    "value", ["1", "true", "TRUE", "yes", "Yes", "on", "  true  ", "", "   "]
-)
-def test_tls_verify_enabled_by_server_tls_verify(value, monkeypatch):
-    """Test true and empty values keep REANA server verification enabled."""
-    monkeypatch.delenv(config.CA_CERTS_ENV, raising=False)
-    monkeypatch.setenv(config.TLS_VERIFY_ENV, value)
-
-    assert config.tls_verify() is True
-
-
-@pytest.mark.parametrize("value", ["banana", "2", "tru", "null"])
-def test_tls_verify_rejects_invalid_values(value, monkeypatch):
-    """Reject invalid settings before contacting the REANA server."""
-    monkeypatch.delenv(config.CA_CERTS_ENV, raising=False)
-    monkeypatch.setenv(config.TLS_VERIFY_ENV, value)
-    with pytest.raises(ValueError, match=config.TLS_VERIFY_ENV):
+@pytest.mark.parametrize("value", ["false", 0, None, []])
+def test_tls_verify_rejects_invalid_saved_values(value, client_config):
+    """Invalid stored JSON settings fail before contacting the server."""
+    client_config("https://reana.example.org", verify=value)
+    with pytest.raises(ValueError, match="Invalid saved TLS"):
         oidc.discover("https://reana.example.org")
 
 
-@pytest.mark.parametrize("value", ["false", "banana"])
-def test_tls_verify_uses_ca_bundle_over_server_tls_verify(value, monkeypatch):
-    """An explicit CA bundle takes precedence over the verification setting."""
-    monkeypatch.setenv(config.TLS_VERIFY_ENV, value)
+def test_tls_verify_uses_ca_bundle_over_saved_choice(client_config, monkeypatch):
+    """A CA bundle takes precedence over a saved bypass."""
+    client_config(verify=False)
     monkeypatch.setenv(config.CA_CERTS_ENV, "/etc/reana/ca.pem")
-
     assert config.tls_verify() == "/etc/reana/ca.pem"
 
 
-def test_tls_verify_warns_once_when_disabled(monkeypatch, caplog):
+def test_tls_verify_warns_once_when_disabled(monkeypatch, caplog, client_config):
     """Warn once when server verification is disabled and never for strict TLS."""
     monkeypatch.delenv(config.CA_CERTS_ENV, raising=False)
     monkeypatch.setattr(config, "_tls_warning_emitted", False)
-    monkeypatch.setenv(config.TLS_VERIFY_ENV, "false")
+    client_config("https://reana.example.org", verify=False)
 
     assert config.tls_verify_strict() is True
     assert not caplog.records
     assert config.tls_verify() is False
     assert config.tls_verify() is False
-    assert sum(config.TLS_VERIFY_ENV in r.message for r in caplog.records) == 1
+    assert (
+        sum(
+            "TLS certificate verification is disabled for" in r.message
+            for r in caplog.records
+        )
+        == 1
+    )
 
 
 @pytest.mark.parametrize("ca_bundle", [None, "/etc/reana/ca.pem"])
 def test_server_tls_override_keeps_identity_provider_verification(
-    ca_bundle, monkeypatch
+    ca_bundle, monkeypatch, client_config
 ):
     """Apply the server override to discovery and retain strict IdP requests."""
-    monkeypatch.setenv(config.TLS_VERIFY_ENV, "false")
+    client_config("https://reana.example.org", verify=False)
     monkeypatch.delenv(config.CA_CERTS_ENV, raising=False)
     if ca_bundle:
         monkeypatch.setenv(config.CA_CERTS_ENV, ca_bundle)
@@ -1220,7 +1208,6 @@ def test_login_accepts_access_token_without_refresh_token(tmp_path, monkeypatch)
     """Test issuers may return an access token without offline credentials."""
     config_path = tmp_path / "reana-client.json"
     monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
-    monkeypatch.setenv("REANA_SERVER_URL", "https://reana.example.org")
 
     entry = oidc._store_token_response(
         "https://reana.example.org",
@@ -1489,7 +1476,6 @@ def test_get_access_token_rechecks_credentials_after_lock(tmp_path, monkeypatch)
     config_path = tmp_path / "reana-client.json"
     server_url = "https://reana.example.org"
     monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
-    monkeypatch.setenv("REANA_SERVER_URL", server_url)
     upsert_server_entry(
         server_url,
         {
@@ -1676,20 +1662,21 @@ def test_refresh_lock_file_refuses_to_follow_a_symlink(tmp_path, monkeypatch):
         storage.try_acquire_refresh_lock(server_url)
 
 
-@pytest.mark.parametrize("value", ["false", "banana"])
-def test_tls_verify_strict_ignores_server_tls_verify(value, monkeypatch):
+def test_tls_verify_strict_ignores_saved_bypass(monkeypatch, client_config):
     """The server TLS override must not disable IdP certificate verification."""
-    monkeypatch.setenv(config.TLS_VERIFY_ENV, value)
+    client_config(verify=False)
     monkeypatch.delenv(config.CA_CERTS_ENV, raising=False)
 
     assert config.tls_verify_strict() is True
 
 
-def test_tls_verify_strict_still_honours_a_custom_ca_bundle(monkeypatch, tmp_path):
+def test_tls_verify_strict_still_honours_a_custom_ca_bundle(
+    monkeypatch, tmp_path, client_config
+):
     """A custom CA bundle is an explicit trust anchor, not a bypass."""
     ca_path = tmp_path / "ca.pem"
     ca_path.write_text("not a real certificate")
     monkeypatch.setenv(config.CA_CERTS_ENV, str(ca_path))
-    monkeypatch.setenv(config.TLS_VERIFY_ENV, "false")
+    client_config("https://reana.example.org", verify=False)
 
     assert config.tls_verify_strict() == str(ca_path)

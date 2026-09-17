@@ -8,6 +8,14 @@
 
 """REANA client ping tests."""
 
+import socket
+import ssl
+
+import pytest
+import requests
+from bravado.exception import HTTPError
+from bravado.http_future import HttpFuture
+from bravado.requests_client import RequestsClient
 from click.testing import CliRunner
 from mock import Mock, patch
 from reana_commons.testing import make_mock_api_client
@@ -17,9 +25,9 @@ from reana_client.auth.storage import CredentialStoreError
 from reana_client.config import ERROR_MESSAGES
 
 
-def test_ping_token_not_set(monkeypatch):
+def test_ping_token_not_set(monkeypatch, client_config):
     """Test ping when token is not set."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     monkeypatch.setattr(
         "reana_client.cli.utils.get_access_token",
@@ -41,26 +49,84 @@ def test_ping_server_not_set(tmp_path, monkeypatch):
     reana_token = "000000"
     runner = CliRunner()
     result = runner.invoke(cli, ["ping", "-t", reana_token])
-    message = "REANA client is not connected to any REANA cluster."
+    message = "No REANA server is configured."
     assert message in result.output
 
 
-def test_ping_server_not_reachable():
-    """Test ping when server is set, but unreachable."""
-    reana_token = "000000"
-    env = {"REANA_SERVER_URL": "localhost"}
+@pytest.mark.parametrize(
+    "command, operation",
+    [("ping", "get_you"), ("list", "get_workflows"), ("info", "info")],
+)
+@pytest.mark.parametrize("failure", ["certificate", "dns", "refused", "timeout"])
+def test_commands_report_transport_failures(
+    command, operation, failure, client_config, monkeypatch, caplog
+):
+    """Bravado transport failures reach the CLI with safe, actionable diagnostics."""
+    server = "https://reana.example.org"
+    env = client_config(server)
+    certificate = ssl.SSLCertVerificationError("secret-request-data")
+    certificate.verify_code = 18
+    failures = {
+        "certificate": (requests.exceptions.SSLError(certificate), "not trusted"),
+        "dns": (
+            requests.exceptions.ConnectionError(socket.gaierror("secret-request-data")),
+            "hostname could not be resolved",
+        ),
+        "refused": (
+            requests.exceptions.ConnectionError(
+                ConnectionRefusedError("secret-request-data")
+            ),
+            "connection was refused",
+        ),
+        "timeout": (
+            requests.exceptions.ReadTimeout("secret-request-data"),
+            "connection timed out",
+        ),
+    }
+    error, expected = failures[failure]
+    transport = RequestsClient()
+    monkeypatch.setattr(transport.session, "send", Mock(side_effect=error))
+    future = transport.request({"method": "GET", "url": server + "/api?secret=query"})
+    assert isinstance(future, HttpFuture)
     runner = CliRunner(env=env)
     with patch("reana_client.api.client.current_rs_api_client") as api_client:
-        api_client.api.get_you.return_value.result.side_effect = ConnectionError
-        result = runner.invoke(cli, ["ping", "-t", reana_token])
-    message = "ERROR: INVALID SERVER"
-    assert message in result.output
+        getattr(api_client.api, operation).return_value = future
+        with caplog.at_level("DEBUG"):
+            result = runner.invoke(cli, [command, "-t", "synthetic.jwt.token"])
+    assert result.exit_code == 1
+    assert f"Could not connect to {server} (from saved login)" in result.output
+    assert expected in result.output
+    assert ("--no-tls-verify" in result.output) == (failure == "certificate")
+    for unwanted in (
+        "INVALID SERVER",
+        "Authenticated as:",
+        "REANA server version:",
+        "secret-request-data",
+        "secret=query",
+        "synthetic.jwt.token",
+    ):
+        assert unwanted not in result.output + caplog.text
 
 
-def test_ping_ok():
+@pytest.mark.parametrize(
+    "status, message", [(403, "INVALID ACCESS TOKEN"), (404, "INVALID SERVER")]
+)
+def test_ping_preserves_http_status_errors(status, message, client_config):
+    """Transport classification does not intercept Bravado HTTP responses."""
+    client_config("https://reana.example.org")
+    with patch("reana_client.api.client.current_rs_api_client") as api_client:
+        api_client.api.get_you.return_value.result.side_effect = HTTPError(
+            response=Mock(status_code=status)
+        )
+        result = CliRunner().invoke(cli, ["ping", "-t", "synthetic.jwt.token"])
+    assert result.exit_code == 1
+    assert f"ERROR: {message}" in result.output
+
+
+def test_ping_ok(client_config):
     """Test ping server is set and reachable."""
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     status_code = 200
     response = {
         "email": "johndoe@example.org",

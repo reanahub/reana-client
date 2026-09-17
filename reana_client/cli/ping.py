@@ -13,6 +13,8 @@ import sys
 import traceback
 
 import click
+import requests
+from reana_client.auth.diagnostics import connection_error
 from reana_client.auth.oidc import (
     AuthenticationError,
     login_with_device_flow,
@@ -22,7 +24,7 @@ from reana_client.auth.oidc import (
 from reana_client.auth.storage import CredentialStoreError
 from reana_client.auth.storage import get_active_server, normalize_server_url
 from reana_client.cli.utils import add_access_token_options, check_connection
-from reana_client.config import JSON
+from reana_client.config import JSON, NO_SERVER, connection_scope, tls_status
 from reana_client.printer import display_message
 from reana_client.utils import build_cpu_quota_period_info
 from reana_client.version import __version__
@@ -37,8 +39,16 @@ def configuration_group():
 @configuration_group.command("login")
 @click.option(
     "--server-url",
-    envvar="REANA_SERVER_URL",
     help="REANA server URL to authenticate against.",
+)
+@click.option("--server", help="REANA server URL (alias for --server-url).")
+@click.option(
+    "--tls-verify", is_flag=True, help="Verify and save the server certificate policy."
+)
+@click.option(
+    "--no-tls-verify",
+    is_flag=True,
+    help="Disable certificate verification for this server and save the choice.",
 )
 @click.option(
     "--headless",
@@ -48,33 +58,51 @@ def configuration_group():
     "Use this on machines without a browser (e.g. over SSH).",
 )
 @click.pass_context
-def login(ctx, server_url, headless):  # noqa: D301
+def login(ctx, server_url, server, headless, tls_verify, no_tls_verify):  # noqa: D301
     """Authenticate against REANA server using OIDC.
 
     By default the browser-based loopback flow (authorization code with PKCE)
     is used. On headless machines pass ``--headless`` to use the device flow.
 
-    TLS certificate verification is enabled by default. For local deployments,
-    set ``REANA_SERVER_CA_CERTS`` to a trusted CA bundle (PEM) for both REANA and
-    the identity provider. This takes precedence over ``REANA_SERVER_TLS_VERIFY``.
-
-    ``REANA_SERVER_TLS_VERIFY`` accepts ``1``/``true``/``yes``/``on`` to enable
-    verification and ``0``/``false``/``no``/``off`` to disable it for requests to
-    the REANA server's HTTPS hostname and port (local testing). This includes
-    bundled Keycloak endpoints under ``/keycloak``. Identity providers on other
-    hostnames or ports are always verified. Values are case-insensitive and
-    ignore surrounding whitespace. Unset or empty values enable verification;
-    other values are errors.
+    TLS certificate verification is enabled by default. An explicit TLS flag
+    applies during login and is saved only after success. Later logins inherit
+    the saved setting. REANA_SERVER_CA_CERTS supplies a trusted CA bundle and
+    takes precedence. Identity providers on other HTTPS origins stay verified.
     """
+    from reana_client.config import tls_verify as resolve_tls
+
+    selected = None
+    source = "login option" if server or server_url else "saved login"
     try:
-        server_url = normalize_server_url(server_url or get_active_server())
-        if headless:
-            _device_login(server_url)
-        else:
-            _browser_login(server_url)
-        display_message(f"Logged in to {server_url}")
+        if (
+            server
+            and server_url
+            and normalize_server_url(server) != normalize_server_url(server_url)
+        ):
+            raise ValueError("--server and --server-url specify different servers.")
+        if tls_verify and no_tls_verify:
+            raise ValueError(
+                "--tls-verify and --no-tls-verify cannot be used together."
+            )
+        selected = server or server_url or get_active_server()
+        if not selected:
+            raise ValueError(NO_SERVER)
+        selected = normalize_server_url(selected)
+        choice = True if tls_verify else False if no_tls_verify else None
+        with connection_scope(selected, choice, source):
+            resolve_tls(selected, warn=False)
+            if headless:
+                _device_login(selected)
+            else:
+                _browser_login(selected)
+            display_message(
+                f"Logged in to {selected}\nTLS verification: {tls_status(selected)}"
+            )
     except (AuthenticationError, CredentialStoreError, ValueError) as e:
-        display_message(str(e), msg_type="error")
+        message = str(e)
+        if isinstance(e, AuthenticationError) and selected and selected not in message:
+            message = f"REANA server: {selected} (from {source})\n{message}"
+        display_message(message, msg_type="error")
         ctx.exit(1)
 
 
@@ -160,17 +188,19 @@ def ping(ctx, access_token):  # noqa: D301
             ),
             fg=msg_color,
         )
+        click.echo(f"TLS verification: {tls_status()}")
         logging.debug("Server response:\n{}".format(response))
         if error:
             sys.exit(1)
     except Exception as e:
-        logging.debug(traceback.format_exc())
-        logging.debug(str(e))
-        display_message(
-            "Could not connect to the selected REANA cluster "
-            "server at {0}:\n{1}".format(get_api_url(), e),
-            msg_type="error",
-        )
+        from reana_client.config import server_description
+
+        server = get_api_url()
+        if isinstance(e, requests.RequestException):
+            message = connection_error(server, server, e)
+        else:
+            message = f"REANA server: {server_description(server)}\nCould not complete ping: {e}"
+        display_message(message, msg_type="error")
         ctx.exit(1)
 
 
@@ -229,6 +259,12 @@ def info(ctx, access_token: str, output_format: str):  # noqa: D301
                 value = ", ".join(value) if isinstance(value, list) else value
                 display_message(f"{item.get('title')}: {value}")
 
+    except requests.RequestException as e:
+        from reana_client.utils import get_api_url
+
+        server = get_api_url()
+        display_message(connection_error(server, server, e), msg_type="error")
+        ctx.exit(1)
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))

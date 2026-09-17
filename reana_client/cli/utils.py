@@ -28,6 +28,7 @@ from reana_client.auth.oidc import AuthenticationError, get_access_token
 from reana_client.auth.storage import CredentialStoreError
 from reana_client.config import (
     ERROR_MESSAGES,
+    NO_SERVER,
     RUN_STATUSES,
     JOB_STATUS_TO_MSG_COLOR,
     JSON,
@@ -111,7 +112,8 @@ def _reject_malformed_env_token(ctx, source, access_token):
     if source != ParameterSource.ENVIRONMENT or _looks_like_jwt(access_token):
         return
     display_message(
-        "REANA_ACCESS_TOKEN must contain a JWT. Run `reana-client login` or "
+        "REANA_ACCESS_TOKEN must contain a JWT. REANA 0.95 uses OIDC login; "
+        "unset an old REANA 0.9 token and run `reana-client login`, or "
         "provide a valid JWT.",
         msg_type="error",
     )
@@ -142,9 +144,11 @@ def access_token_check(
     except (AuthenticationError, CredentialStoreError, ValueError) as exc:
         if not required:
             return None
-        display_message(
-            str(exc) or ERROR_MESSAGES["missing_access_token"], msg_type="error"
-        )
+        message = str(exc) or ERROR_MESSAGES["missing_access_token"]
+        server = getattr(ctx.obj, "reana_server_url", None) if ctx else None
+        if isinstance(exc, AuthenticationError) and server and server not in message:
+            message = f"REANA server: {server} (from saved login)\n{message}"
+        display_message(message, msg_type="error")
         if ctx:
             ctx.exit(1)
         sys.exit(1)
@@ -174,7 +178,7 @@ def check_connection(func):
         api_url = get_api_url()
         if not api_url:
             display_message(
-                "REANA client is not connected to any REANA cluster.",
+                NO_SERVER,
                 msg_type="error",
             )
             sys.exit(1)

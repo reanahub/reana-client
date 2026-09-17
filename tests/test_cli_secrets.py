@@ -24,7 +24,7 @@ def test_secrets_list_server_not_reachable(tmp_path, monkeypatch):
         "REANA_CLIENT_CONFIG", str(tmp_path / "missing-client-config.json")
     )
     monkeypatch.delenv("REANA_SERVER_URL", raising=False)
-    message = "REANA client is not connected to any REANA cluster."
+    message = "No REANA server is configured."
     reana_token = "000000"
     runner = CliRunner()
     result = runner.invoke(cli, ["secrets-list", "-t", reana_token])
@@ -32,9 +32,9 @@ def test_secrets_list_server_not_reachable(tmp_path, monkeypatch):
     assert message in result.output
 
 
-def test_secrets_list_server_no_token(monkeypatch):
+def test_secrets_list_server_no_token(monkeypatch, client_config):
     """Test list secrets when access token is not set."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     monkeypatch.setattr(
         "reana_client.cli.utils.get_access_token",
@@ -47,11 +47,11 @@ def test_secrets_list_server_no_token(monkeypatch):
     assert ERROR_MESSAGES["missing_access_token"] in result.output
 
 
-def test_secrets_list_ok():
+def test_secrets_list_ok(client_config):
     """Test list secrets successfull."""
     status_code = 200
     response = [{"name": "password", "type": "env"}]
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -69,13 +69,13 @@ def test_secrets_list_ok():
 
 
 @pytest.mark.parametrize("secret", ["USER=reanauser", "USER=reana=user"])
-def test_secrets_add(secret):
+def test_secrets_add(secret, client_config):
     """Test secrets add."""
     status_code = 201
     reana_token = "000000"
     secret_file = "file.txt"
     response = [secret_file]
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     message = "were successfully uploaded."
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
@@ -107,10 +107,10 @@ def test_secrets_add(secret):
 
 
 @pytest.mark.parametrize("secret", ["wrongformat", "PASS:123"])
-def test_secrets_add_wrong_format(secret):
+def test_secrets_add_wrong_format(secret, client_config):
     """Test adding secrets with wrong format."""
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     message = 'For literal strings use "SECRET_NAME=VALUE" format'
 
@@ -119,11 +119,11 @@ def test_secrets_add_wrong_format(secret):
     assert message in result.output
 
 
-def test_secrets_add_already_exist():
+def test_secrets_add_already_exist(client_config):
     """Test adding secrets when they already exist."""
     status_code = 409
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     message = "One of the secrets already exists. No secrets were added."
     mock_http_response = Mock(
         status_code=status_code,
@@ -142,7 +142,7 @@ def test_secrets_add_already_exist():
             assert result.exit_code == 1
 
 
-def test_secrets_delete():
+def test_secrets_delete(client_config):
     """Test secrets delete."""
     status_code = 200
     reana_token = "000000"
@@ -152,7 +152,7 @@ def test_secrets_delete():
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(

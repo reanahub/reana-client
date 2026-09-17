@@ -37,7 +37,7 @@ def test_workflows_server_not_connected(tmp_path, monkeypatch):
     runner = CliRunner()
     reana_token = "000000"
     result = runner.invoke(cli, ["list", "-t", reana_token])
-    message = "REANA client is not connected to any REANA cluster."
+    message = "No REANA server is configured."
     assert message in result.output
     assert result.exit_code == 1
 
@@ -64,9 +64,9 @@ rule create_output:
     assert extract_images(reana_yaml) == ["docker.io/library/ubuntu:24.04"]
 
 
-def test_workflows_no_token(monkeypatch):
+def test_workflows_no_token(monkeypatch, client_config):
     """Test workflows command when token is not set."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     monkeypatch.setattr(
         "reana_client.cli.utils.get_access_token",
@@ -88,11 +88,13 @@ def test_workflows_no_token(monkeypatch):
         "inputs:\n  parameters:\n    when: 2026-07-20\n    flag: yes\n    1: value\n",
     ],
 )
-def test_restart_posts_noncanonical_spec_atomically(tmp_path, replacement_content):
+def test_restart_posts_noncanonical_spec_atomically(
+    tmp_path, replacement_content, client_config
+):
     """Restart sends the exact replacement through the atomic operation."""
     replacement = tmp_path / "myreana.yaml"
     replacement.write_text(replacement_content)
-    runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
+    runner = CliRunner(env=client_config("localhost"))
     start_response = {
         "workflow_name": "test",
         "run_number": "1.1",
@@ -128,11 +130,11 @@ def test_restart_posts_noncanonical_spec_atomically(tmp_path, replacement_conten
     )
 
 
-def test_restart_override_uses_bounded_specification_loader(tmp_path):
+def test_restart_override_uses_bounded_specification_loader(tmp_path, client_config):
     """Replacement override parsing uses the shared bounded secure loader."""
     replacement = tmp_path / "replacement.yaml"
     replacement.write_text("workflow: {type: serial}\n")
-    runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
+    runner = CliRunner(env=client_config("localhost"))
 
     with patch(
         "reana_client.cli.workflow.load_raw_reana_spec",
@@ -228,7 +230,7 @@ def test_restart_api_rejects_specification_that_grows_while_streaming(
             restart_workflow("workflow.1", str(replacement), "token", {})
 
 
-def test_workflows_server_ok():
+def test_workflows_server_ok(client_config):
     """Test workflows command when server is reachable."""
     response = {
         "items": [
@@ -250,7 +252,7 @@ def test_workflows_server_ok():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost", "REANA_WORKON": "mytest.1"}
+    env = {**client_config("localhost"), "REANA_WORKON": "mytest.1"}
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -283,11 +285,13 @@ def test_workflows_server_ok():
         (["--filter", "name=myworkflow", "--all"], RUN_STATUSES),
     ],
 )
-def test_deleted_workflows(cli_options: List[str], expected_status_filter: List[str]):
+def test_deleted_workflows(
+    cli_options: List[str], expected_status_filter: List[str], client_config
+):
     """Test whatever deleted workflows are displayed correctly depending on options and filters."""
     # we do not care what response is in this case
     response = {"items": []}
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -327,7 +331,7 @@ def test_deleted_workflows(cli_options: List[str], expected_status_filter: List[
         ),
     ],
 )
-def test_workflows_sorting(cli_options: List[str], expected_output: str):
+def test_workflows_sorting(cli_options: List[str], expected_output: str, client_config):
     """Test workflows sorting."""
     response = {
         "items": [
@@ -365,7 +369,7 @@ def test_workflows_sorting(cli_options: List[str], expected_output: str):
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost", "REANA_WORKON": "mytest.1"}
+    env = {**client_config("localhost"), "REANA_WORKON": "mytest.1"}
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
@@ -377,7 +381,7 @@ def test_workflows_sorting(cli_options: List[str], expected_output: str):
             assert expected_output in result.output
 
 
-def test_workflows_sessions():
+def test_workflows_sessions(client_config):
     """Test list command for getting interactive sessions."""
     response = {
         "items": [
@@ -410,7 +414,7 @@ def test_workflows_sessions():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost", "REANA_WORKON": "mytest.1"}
+    env = {**client_config("localhost"), "REANA_WORKON": "mytest.1"}
     reana_token = "000000"
     runner = CliRunner(env=env)
     mock_api_client = make_mock_api_client("reana-server")(
@@ -439,7 +443,7 @@ def test_workflows_sessions():
             )
 
 
-def test_workflows_valid_json(monkeypatch):
+def test_workflows_valid_json(monkeypatch, client_config):
     """Test workflows command with --json and -v flags."""
     response = {
         "items": [
@@ -458,8 +462,8 @@ def test_workflows_valid_json(monkeypatch):
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
-    monkeypatch.setenv("REANA_SERVER_URL", "localhost")
+    env = client_config("localhost")
+    client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -471,7 +475,7 @@ def test_workflows_valid_json(monkeypatch):
             assert result.exit_code == 0
 
 
-def test_workflows_include_progress():
+def test_workflows_include_progress(client_config):
     """Test workflows command with --include-progress flag."""
     response = {
         "items": [
@@ -495,7 +499,7 @@ def test_workflows_include_progress():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -511,7 +515,7 @@ def test_workflows_include_progress():
             assert "2/5" in result.output
 
 
-def test_workflows_without_include_progress():
+def test_workflows_without_include_progress(client_config):
     """Test workflows command without --include-progress flag."""
     response = {
         "items": [
@@ -533,7 +537,7 @@ def test_workflows_without_include_progress():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -548,7 +552,7 @@ def test_workflows_without_include_progress():
             assert "2021-05-10T12:55:04" in result.output
 
 
-def test_workflows_include_workspace_size():
+def test_workflows_include_workspace_size(client_config):
     """Test workflows command with --include-workspace-size flag."""
     response = {
         "items": [
@@ -566,7 +570,7 @@ def test_workflows_include_workspace_size():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -582,7 +586,7 @@ def test_workflows_include_workspace_size():
             assert "16741346" in result.output
 
 
-def test_workflows_without_include_workspace_size():
+def test_workflows_without_include_workspace_size(client_config):
     """Test workflows command without --include-workspace-size flag."""
     response = {
         "items": [
@@ -600,7 +604,7 @@ def test_workflows_without_include_workspace_size():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -613,7 +617,7 @@ def test_workflows_without_include_workspace_size():
             assert "SIZE" not in result.output
 
 
-def test_workflows_format():
+def test_workflows_format(client_config):
     """Test workflows command with --format."""
     response = {
         "items": [
@@ -639,7 +643,7 @@ def test_workflows_format():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     _format = "status=failed"
@@ -660,7 +664,7 @@ def test_workflows_format():
             assert json_response[0]["status"] == "failed"
 
 
-def test_workflows_filter():
+def test_workflows_filter(client_config):
     """Test workflows command with --filter."""
     response = {
         "items": [
@@ -678,7 +682,7 @@ def test_workflows_filter():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     filter = "status=running"
@@ -699,7 +703,7 @@ def test_workflows_filter():
             assert "running" in json_response[0]["status"]
 
 
-def test_workflows_shared():
+def test_workflows_shared(client_config):
     """Test workflow list command with --shared flag."""
     response = {
         "items": [
@@ -718,7 +722,7 @@ def test_workflows_shared():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -732,7 +736,7 @@ def test_workflows_shared():
             assert "SHARED_BY" in result.output
 
 
-def test_workflows_shared_with():
+def test_workflows_shared_with(client_config):
     """Test workflow list command with --shared-with flag."""
     response = {
         "items": [
@@ -751,7 +755,7 @@ def test_workflows_shared_with():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -767,7 +771,7 @@ def test_workflows_shared_with():
             assert "SHARED_BY" not in result.output
 
 
-def test_workflows_shared_by():
+def test_workflows_shared_by(client_config):
     """Test workflow list command with --shared-by flag."""
     response = {
         "items": [
@@ -786,7 +790,7 @@ def test_workflows_shared_by():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -802,7 +806,7 @@ def test_workflows_shared_by():
             assert "SHARED_BY" in result.output
 
 
-def test_workflows_shared_with_and_shared_by():
+def test_workflows_shared_with_and_shared_by(client_config):
     """Test workflow list command with --shared-with and --shared-by flags."""
     response = {
         "items": [
@@ -821,7 +825,7 @@ def test_workflows_shared_with_and_shared_by():
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -848,9 +852,9 @@ def test_workflows_shared_with_and_shared_by():
             )
 
 
-def test_workflow_create_failed():
+def test_workflow_create_failed(client_config):
     """Test workflow create when creation fails."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     result = runner.invoke(cli, ["create"])
     message = "ERROR: No REANA specification file (reana.yaml) found"
@@ -858,7 +862,7 @@ def test_workflow_create_failed():
     assert result.exit_code == 1
 
 
-def test_workflow_create_successful(create_yaml_workflow_schema):
+def test_workflow_create_successful(create_yaml_workflow_schema, client_config):
     """Test workflow create when creation is successful.
 
     The specification bundle is loaded and validated server-side; the client
@@ -869,7 +873,7 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
         "workflow_id": "cdcf48b1-c2f3-4693-8230-b066e088c6ac",
         "workflow_name": "mytest.1",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
         with open("reana.yaml", "w") as f:
@@ -888,9 +892,9 @@ def test_workflow_create_successful(create_yaml_workflow_schema):
         upload_mock.assert_not_called()
 
 
-def test_workflow_create_not_valid_name(create_yaml_workflow_schema):
+def test_workflow_create_not_valid_name(create_yaml_workflow_schema, client_config):
     """Test workflow create when creation is successfull."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     illegal_workflow_name = "workflow.name"
     runner = CliRunner(env=env)
     result = runner.invoke(cli, ["create", "-n", illegal_workflow_name])
@@ -901,13 +905,15 @@ def test_workflow_create_not_valid_name(create_yaml_workflow_schema):
     assert result.exit_code == 1
 
 
-def test_workflow_create_image_not_authorized(create_yaml_workflow_schema):
+def test_workflow_create_image_not_authorized(
+    create_yaml_workflow_schema, client_config
+):
     """Test that create surfaces a server-side image validation error (exit 1).
 
     Image vetting now happens server-side; the client renders whatever error the
     server returns when creating from the raw bundle.
     """
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
@@ -937,7 +943,7 @@ def test_workflow_create_image_not_authorized(create_yaml_workflow_schema):
         ("stopped", 1),
     ],
 )
-def test_workflow_start_successful(status, exit_code):
+def test_workflow_start_successful(status, exit_code, client_config):
     """Test workflow start when creation is successfull."""
     workflow_name = "mytest.1"
     response = {
@@ -954,7 +960,7 @@ def test_workflow_start_successful(status, exit_code):
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
@@ -980,7 +986,7 @@ def test_workflow_start_successful(status, exit_code):
     ],
 )
 @patch("reana_client.cli.workflow.TIMECHECK", 0)
-def test_workflow_start_follow(initial_status, final_status, exit_code):
+def test_workflow_start_follow(initial_status, final_status, exit_code, client_config):
     """Test start workflow with follow flag."""
     workflow_name = "mytest.1"
     initial_reponse = {
@@ -1030,7 +1036,7 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
     mock_api_client.swagger_spec.spec_dict = {"paths": {}}
 
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch("reana_client.api.client.current_rs_api_client", mock_api_client):
@@ -1044,9 +1050,9 @@ def test_workflow_start_follow(initial_status, final_status, exit_code):
                 assert "Listing workflow output files..." in result.output
 
 
-def test_workflows_validate(create_yaml_workflow_schema):
+def test_workflows_validate(create_yaml_workflow_schema, client_config):
     """Test that a valid server-side validation report is rendered as success."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     report = {
         "valid": True,
@@ -1069,9 +1075,11 @@ def test_workflows_validate(create_yaml_workflow_schema):
         assert "Valid REANA specification file." in result.output
 
 
-def test_workflows_validate_forwards_environment_flags(create_yaml_workflow_schema):
+def test_workflows_validate_forwards_environment_flags(
+    create_yaml_workflow_schema, client_config
+):
     """Only --environments is forwarded; --pull remains a local operation."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     report = {
         "valid": True,
         "errors": [],
@@ -1106,10 +1114,10 @@ def test_workflows_validate_forwards_environment_flags(create_yaml_workflow_sche
 
 
 def test_workflows_validate_uses_per_identity_environment_records(
-    create_yaml_workflow_schema,
+    create_yaml_workflow_schema, client_config
 ):
     """The deep image check receives per-step runtime identities from server."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     environments = [
         {"image": "busybox:1.36", "runtime_uid": 1000, "runtime_gid": 0},
         {"image": "busybox:1.36", "runtime_uid": 2000, "runtime_gid": 0},
@@ -1149,12 +1157,14 @@ def test_workflows_validate_uses_per_identity_environment_records(
     assert check_mock.call_args.args[0] == environments
 
 
-def test_workflows_validate_image_not_authorized(create_yaml_workflow_schema):
+def test_workflows_validate_image_not_authorized(
+    create_yaml_workflow_schema, client_config
+):
     """Test that an invalid server-side report exits with code 1 and shows errors.
 
     Image vetting now runs server-side; the client renders the structured report.
     """
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     report = {
         "valid": False,
@@ -1181,7 +1191,7 @@ def test_workflows_validate_image_not_authorized(create_yaml_workflow_schema):
         assert "Image not allowed" in result.output
 
 
-def test_get_workflow_status_ok():
+def test_get_workflow_status_ok(client_config):
     """Test workflow status."""
     status_code = 200
     response = {
@@ -1201,7 +1211,7 @@ def test_get_workflow_status_ok():
         "status": "running",
         "user": "00000000-0000-0000-0000-000000000000",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -1223,7 +1233,7 @@ def test_get_workflow_status_ok():
             assert json_response[0]["name"] in response["name"]
 
 
-def test_get_workflow_logs():
+def test_get_workflow_logs(client_config):
     """Test workflow logs."""
     status_code = 200
     response = {
@@ -1232,7 +1242,7 @@ def test_get_workflow_logs():
         "workflow_id": "26a55924-83c9-493b-841b-8fd7629e25c9",
         "workflow_name": "helloworld-serial-kubernetes0.3",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -1253,7 +1263,7 @@ def test_get_workflow_logs():
             assert json_response["workflow_logs"] in "workflow logs test"
 
 
-def test_follow_job_logs():
+def test_follow_job_logs(client_config):
     """Test follow job logs."""
     logs = {
         "workflow_logs": "workflow logs test",
@@ -1286,7 +1296,7 @@ def test_follow_job_logs():
     response_next = copy.deepcopy(response)
     response_next["logs"] = json.dumps(logs_next)
 
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response = Mock()
     mock_http_response.status_code = 200
     reana_token = "000000"
@@ -1302,7 +1312,11 @@ def test_follow_job_logs():
     with runner.isolation():
         with patch(
             "reana_client.api.client.current_rs_api_client",
-            BaseAPIClient("reana-server", http_client=mock_http_client)._client,
+            BaseAPIClient(
+                "reana-server",
+                http_client=mock_http_client,
+                server_url="https://localhost",
+            )._client,
         ):
             result = runner.invoke(
                 cli,
@@ -1326,7 +1340,7 @@ more job logs
 """
 
 
-def test_follow_live_logs_disabled():
+def test_follow_live_logs_disabled(client_config):
     """Test follow job logs when live logs are disabled."""
     logs = {
         "workflow_logs": "",
@@ -1353,7 +1367,7 @@ def test_follow_live_logs_disabled():
         "workflow_name": "helloworld-serial-kubernetes0.3",
     }
 
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response = Mock()
     mock_http_response.status_code = 200
     reana_token = "000000"
@@ -1368,7 +1382,11 @@ def test_follow_live_logs_disabled():
     with runner.isolation():
         with patch(
             "reana_client.api.client.current_rs_api_client",
-            BaseAPIClient("reana-server", http_client=mock_http_client)._client,
+            BaseAPIClient(
+                "reana-server",
+                http_client=mock_http_client,
+                server_url="https://localhost",
+            )._client,
         ):
             result = runner.invoke(
                 cli,
@@ -1401,10 +1419,11 @@ def test_run(
     upload_file_mock,
     workflow_create_mock,
     create_yaml_workflow_schema,
+    client_config,
 ):
     """Test run command, if wrapped commands are called."""
     reana_workflow_schema = "reana.yaml"
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     reana_token = "000000"
     with runner.isolated_filesystem():
@@ -1419,7 +1438,7 @@ def test_run(
     assert workflow_start_mock.called is True
 
 
-def test_workflow_input_parameters():
+def test_workflow_input_parameters(client_config):
     """Test if not existing input parameters from CLI are applied."""
     status_code = 200
     response = {
@@ -1433,7 +1452,7 @@ def test_workflow_input_parameters():
             "sleeptime": 2,
         },
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -1485,14 +1504,14 @@ def test_workflow_input_parameters():
     ],
 )
 def test_open_interactive_session(
-    interactive_session_type, reana_info, is_autoclosure_message_expected
+    interactive_session_type, reana_info, is_autoclosure_message_expected, client_config
 ):
     """Test opening an interactive session."""
     status_code = 200
     workflow_id = "d9304bdf-0d19-45d9-ae87-d5fd18059193"
     response = {"path": "/{}".format(workflow_id)}
     reana_server_url = "https://localhost"
-    env = {"REANA_SERVER_URL": reana_server_url}
+    env = client_config(reana_server_url)
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -1532,13 +1551,15 @@ def test_open_interactive_session(
                 assert expected_auto_closure_message not in result.output
 
 
-def test_open_interactive_session_reports_success_when_secret_fetch_fails():
+def test_open_interactive_session_reports_success_when_secret_fetch_fails(
+    client_config,
+):
     """A transient secret-fetch failure must not be reported as a failed open."""
     status_code = 200
     workflow_id = "d9304bdf-0d19-45d9-ae87-d5fd18059193"
     response = {"path": "/{}".format(workflow_id)}
     reana_server_url = "https://localhost"
-    env = {"REANA_SERVER_URL": reana_server_url}
+    env = client_config(reana_server_url)
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -1572,11 +1593,11 @@ def test_open_interactive_session_reports_success_when_secret_fetch_fails():
             assert "run `reana-client open` again" in result.output
 
 
-def test_open_interactive_session_reports_success_when_info_fetch_fails():
+def test_open_interactive_session_reports_success_when_info_fetch_fails(client_config):
     """Optional policy metadata cannot undo an already-created session."""
     workflow_id = "d9304bdf-0d19-45d9-ae87-d5fd18059193"
     mock_http_response = Mock(status_code=200)
-    runner = CliRunner(env={"REANA_SERVER_URL": "https://localhost"})
+    runner = CliRunner(env=client_config("https://localhost"))
     with runner.isolation(), patch(
         "reana_client.api.client.current_rs_api_client",
         make_mock_api_client("reana-server")(
@@ -1608,7 +1629,7 @@ def test_open_interactive_session_reports_success_when_info_fetch_fails():
     )
 
 
-def test_close_interactive_session():
+def test_close_interactive_session(client_config):
     """Test closing an interactive session."""
     status_code = 200
     workflow = "workflow.1"
@@ -1617,7 +1638,7 @@ def test_close_interactive_session():
         "was successfully closed\n".format(workflow)
     )
     reana_server_url = "https://localhost"
-    env = {"REANA_SERVER_URL": reana_server_url}
+    env = client_config(reana_server_url)
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = expected_message
@@ -1632,8 +1653,8 @@ def test_close_interactive_session():
             assert expected_message in result.output
 
 
-def test_multiple_specifications(create_yaml_workflow_schema):
-    env = {"REANA_SERVER_URL": "localhost"}
+def test_multiple_specifications(create_yaml_workflow_schema, client_config):
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     message = "ERROR: Found 2 REANA specification files " "(reana.yaml, reana.yml)."
     with runner.isolated_filesystem():
@@ -1646,8 +1667,8 @@ def test_multiple_specifications(create_yaml_workflow_schema):
         assert message in result.output
 
 
-def test_yml_ext_specification(create_yaml_workflow_schema):
-    env = {"REANA_SERVER_URL": "localhost"}
+def test_yml_ext_specification(create_yaml_workflow_schema, client_config):
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     reana_token = "000000"
     report = {"valid": True, "errors": [], "warnings": [], "reana_specification": {}}
@@ -1673,9 +1694,9 @@ def test_yml_ext_specification(create_yaml_workflow_schema):
         assert message in result.output
 
 
-def test_run_with_no_inputs(spec_without_inputs):
+def test_run_with_no_inputs(spec_without_inputs, client_config):
     """Test running workflow when specification does not contain inputs."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with patch(
@@ -1700,7 +1721,7 @@ def test_run_with_no_inputs(spec_without_inputs):
         upload_to_server.assert_not_called()
 
 
-def test_share_add_workflow():
+def test_share_add_workflow(client_config):
     """Test share-add workflows."""
     status_code = 200
     response = {
@@ -1708,7 +1729,7 @@ def test_share_add_workflow():
         "workflow_id": "string",
         "workflow_name": "string",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -1739,7 +1760,7 @@ def test_share_add_workflow():
             assert response["message"] in result.output
 
 
-def test_share_remove_workflow():
+def test_share_remove_workflow(client_config):
     """Test share-remove workflows."""
     status_code = 200
     response = {
@@ -1747,7 +1768,7 @@ def test_share_remove_workflow():
         "workflow_id": "string",
         "workflow_name": "string",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -1774,7 +1795,7 @@ def test_share_remove_workflow():
             assert response["message"] in result.output
 
 
-def test_share_status_workflow():
+def test_share_status_workflow(client_config):
     """Test share-status workflows."""
     status_code = 200
     response = {
@@ -1782,7 +1803,7 @@ def test_share_status_workflow():
         "workflow_id": "string",
         "workflow_name": "string",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -1812,7 +1833,7 @@ def test_share_status_workflow():
 # ---------------------------
 
 
-def test_share_add_workflow_json_success():
+def test_share_add_workflow_json_success(client_config):
     """Test share-add --json outputs valid JSON on success."""
     status_code = 200
     response = {
@@ -1820,7 +1841,7 @@ def test_share_add_workflow_json_success():
         "workflow_id": "string",
         "workflow_name": "string",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     reana_token = "000000"
@@ -1850,9 +1871,9 @@ def test_share_add_workflow_json_success():
             assert parsed["errors"] == []
 
 
-def test_share_add_workflow_json_all_fail():
+def test_share_add_workflow_json_all_fail(client_config):
     """Test share-add --json outputs errors and exits 1 when all shares fail."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -1881,9 +1902,9 @@ def test_share_add_workflow_json_all_fail():
             assert "nobody@example.org" in parsed["errors"][0]
 
 
-def test_share_add_workflow_json_partial_failure():
+def test_share_add_workflow_json_partial_failure(client_config):
     """Test share-add --json reports partial results and exits 1 on any error."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -1918,7 +1939,7 @@ def test_share_add_workflow_json_partial_failure():
 # ------------------------------
 
 
-def test_share_remove_workflow_json_success():
+def test_share_remove_workflow_json_success(client_config):
     """Test share-remove --json outputs valid JSON on success."""
     status_code = 200
     response = {
@@ -1926,7 +1947,7 @@ def test_share_remove_workflow_json_success():
         "workflow_id": "string",
         "workflow_name": "string",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     reana_token = "000000"
@@ -1956,9 +1977,9 @@ def test_share_remove_workflow_json_success():
             assert parsed["errors"] == []
 
 
-def test_share_remove_workflow_json_all_fail():
+def test_share_remove_workflow_json_all_fail(client_config):
     """Test share-remove --json outputs errors and exits 1 when all unshares fail."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -1987,9 +2008,9 @@ def test_share_remove_workflow_json_all_fail():
             assert "nobody@example.org" in parsed["errors"][0]
 
 
-def test_share_remove_workflow_json_partial_failure():
+def test_share_remove_workflow_json_partial_failure(client_config):
     """Test share-remove --json reports partial results and exits 1 on any error."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -2024,7 +2045,7 @@ def test_share_remove_workflow_json_partial_failure():
 # ------------------------------
 
 
-def test_share_status_workflow_json_success():
+def test_share_status_workflow_json_success(client_config):
     """Test share-status --json outputs a JSON array when workflow is shared."""
     status_code = 200
     response = {
@@ -2033,7 +2054,7 @@ def test_share_status_workflow_json_success():
             {"user_email": "alice@example.org", "valid_until": None},
         ]
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     reana_token = "000000"
@@ -2063,7 +2084,7 @@ def test_share_status_workflow_json_success():
             assert by_email["alice@example.org"]["valid_until"] is None
 
 
-def test_share_status_workflow_json_empty():
+def test_share_status_workflow_json_empty(client_config):
     """Test share-status --json outputs valid JSON when workflow is not shared."""
     status_code = 200
     response = {
@@ -2071,7 +2092,7 @@ def test_share_status_workflow_json_empty():
         "workflow_id": "string",
         "workflow_name": "string",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response = Mock()
     mock_http_response.status_code = status_code
     reana_token = "000000"
@@ -2097,9 +2118,9 @@ def test_share_status_workflow_json_empty():
             assert parsed == []
 
 
-def test_share_status_workflow_error_exits_nonzero():
+def test_share_status_workflow_error_exits_nonzero(client_config):
     """Test share-status exits 1 when the API call fails."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -2120,9 +2141,9 @@ def test_share_status_workflow_error_exits_nonzero():
             assert result.exit_code == 1
 
 
-def test_share_add_workflow_text_error_exits_nonzero():
+def test_share_add_workflow_text_error_exits_nonzero(client_config):
     """Test share-add exits 1 (text mode) when the API call fails."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -2146,9 +2167,9 @@ def test_share_add_workflow_text_error_exits_nonzero():
             assert "nobody@example.org" in result.output
 
 
-def test_share_remove_workflow_text_error_exits_nonzero():
+def test_share_remove_workflow_text_error_exits_nonzero(client_config):
     """Test share-remove exits 1 (text mode) when the API call fails."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     reana_token = "000000"
     runner = CliRunner(env=env)
     with runner.isolation():

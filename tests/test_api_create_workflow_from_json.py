@@ -20,9 +20,9 @@ from reana_client.api import client as client_module
 
 
 @pytest.fixture(autouse=True)
-def server_url(monkeypatch):
+def server_url(monkeypatch, client_config):
     """The historical API requires a configured server URL."""
-    monkeypatch.setenv("REANA_SERVER_URL", "https://reana.example.org")
+    client_config("https://reana.example.org")
 
 
 @pytest.fixture()

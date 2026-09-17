@@ -15,6 +15,8 @@ import time
 import traceback
 
 import click
+import requests
+from reana_client.auth.diagnostics import connection_error
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (
     add_access_token_options,
@@ -405,6 +407,12 @@ def workflows_list(  # noqa: C901
 
         display_formatted_output(data, headers[type], _format, output_format)
 
+    except requests.RequestException as e:
+        from reana_client.utils import get_api_url
+
+        server = get_api_url()
+        display_message(connection_error(server, server, e), msg_type="error")
+        sys.exit(1)
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))

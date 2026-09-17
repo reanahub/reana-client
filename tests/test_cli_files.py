@@ -28,16 +28,16 @@ def test_list_files_server_not_reachable(tmp_path, monkeypatch):
     )
     monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     reana_token = "000000"
-    message = "REANA client is not connected to any REANA cluster."
+    message = "No REANA server is configured."
     runner = CliRunner()
     result = runner.invoke(cli, ["ls", "-t", reana_token, "-w", "workflow.1"])
     assert result.exit_code == 1
     assert message in result.output
 
 
-def test_list_files_server_no_token(monkeypatch):
+def test_list_files_server_no_token(monkeypatch, client_config):
     """Test list workflow workspace files when access token is not set."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     monkeypatch.setattr(
         "reana_client.cli.utils.get_access_token",
@@ -50,7 +50,7 @@ def test_list_files_server_no_token(monkeypatch):
     assert ERROR_MESSAGES["missing_access_token"] in result.output
 
 
-def test_list_files_ok():
+def test_list_files_ok(client_config):
     """Test list workflow workspace files successfull."""
     status_code = 200
     response = {
@@ -62,7 +62,7 @@ def test_list_files_ok():
             }
         ]
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -83,7 +83,7 @@ def test_list_files_ok():
             assert json_response[0]["name"] in response["items"][0]["name"]
 
 
-def test_list_files_url():
+def test_list_files_url(client_config):
     """Test list workflow workspace files' urls."""
     status_code = 200
     response = {
@@ -95,7 +95,7 @@ def test_list_files_url():
             }
         ]
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -115,10 +115,10 @@ def test_list_files_url():
             assert response["items"][0]["name"] in result.output
 
 
-def test_download_file():
+def test_download_file(client_config):
     """Test file downloading."""
     response = "Content of file to download"
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     file = "dummy_file.txt"
     reana_token = "000000"
     response_md5 = hashlib.md5(response.encode("utf-8")).hexdigest()
@@ -140,9 +140,9 @@ def test_download_file():
             os.remove(file)
 
 
-def test_download_file_stdout():
+def test_download_file_stdout(client_config):
     """Test writing a single file to stdout."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     filename = "dummy_file.txt"
     file_content = "Content of file to download"
     reana_token = "000000"
@@ -169,9 +169,9 @@ def test_download_file_stdout():
             assert result.output == file_content
 
 
-def test_download_multiple_files_stdout():
+def test_download_multiple_files_stdout(client_config):
     """Test writing multiple files to stdout."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     files = [
         ("dir1/dummy1.txt", "Content of dummy1.txt"),
         ("dir1/dummy2.txt", "Content of dummy2.txt"),
@@ -206,11 +206,11 @@ def test_download_multiple_files_stdout():
             assert result.output == "".join([content for _, content in files])
 
 
-def test_upload_file(create_yaml_workflow_schema):
+def test_upload_file(create_yaml_workflow_schema, client_config):
     """Test upload file."""
     reana_token = "000000"
     file = "file.txt"
-    env = {"REANA_SERVER_URL": "https://localhost"}
+    env = client_config("https://localhost")
     message = "was successfully uploaded."
     runner = CliRunner(env=env)
     with runner.isolation():
@@ -232,12 +232,12 @@ def test_upload_file(create_yaml_workflow_schema):
 
 
 def test_upload_file_with_test_files_from_spec(
-    get_workflow_specification_with_directory,
+    get_workflow_specification_with_directory, client_config
 ):
     """Test upload file with test files from the specification, not from the command line."""
     reana_token = "000000"
     file = "upload-this-test.feature"
-    env = {"REANA_SERVER_URL": "https://localhost"}
+    env = client_config("https://localhost")
     runner = CliRunner(env=env)
 
     with patch(
@@ -264,11 +264,11 @@ def test_upload_file_with_test_files_from_spec(
 
 
 def test_upload_file_respect_gitignore(
-    get_workflow_specification_with_directory,
+    get_workflow_specification_with_directory, client_config
 ):
     """If .gitignore exists and is not empty, respect it's rules."""
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "https://localhost"}
+    env = client_config("https://localhost")
     runner = CliRunner(env=env)
     mock_specification = Mock(return_value=get_workflow_specification_with_directory)
     with runner.isolation():
@@ -296,14 +296,14 @@ def test_upload_file_respect_gitignore(
 
 
 def test_upload_file_skip_empty_git_and_reana_ignore_files(
-    get_workflow_specification_with_directory,
+    get_workflow_specification_with_directory, client_config
 ):
     """If .reanaignore or .gitignore files are empty, ignore them.
 
     This is edge case. We do not expect this to happen.
     """
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "https://localhost"}
+    env = client_config("https://localhost")
     runner = CliRunner(env=env)
     mock_specification = Mock(return_value=get_workflow_specification_with_directory)
     with runner.isolation():
@@ -342,11 +342,11 @@ def test_upload_file_skip_empty_git_and_reana_ignore_files(
 
 
 def test_upload_file_respect_reanaignore_and_gitignore(
-    get_workflow_specification_with_directory,
+    get_workflow_specification_with_directory, client_config
 ):
     """Check if file upload respect both reana and git ignore files with input.directories."""
     reana_token = "000000"
-    env = {"REANA_SERVER_URL": "https://localhost"}
+    env = client_config("https://localhost")
     runner = CliRunner(env=env)
     mock_specification = Mock(return_value=get_workflow_specification_with_directory)
     with runner.isolation():
@@ -397,7 +397,7 @@ def test_upload_file_respect_reanaignore_and_gitignore(
                 assert result.exit_code == 0
 
 
-def test_delete_file():
+def test_delete_file(client_config):
     """Test delete file."""
     status_code = 200
     reana_token = "000000"
@@ -413,7 +413,7 @@ def test_delete_file():
     mock_http_response.status_code = status_code
     mock_http_response.raw_bytes = str(response).encode()
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
@@ -429,7 +429,7 @@ def test_delete_file():
                 assert filename2_error_message in result.output
 
 
-def test_delete_non_existing_file():
+def test_delete_non_existing_file(client_config):
     """Test delete non existing file."""
     status_code = 200
     reana_token = "000000"
@@ -440,7 +440,7 @@ def test_delete_non_existing_file():
     mock_http_response.status_code = status_code
     mock_http_response.raw_bytes = str(response).encode()
     mock_response = response
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         with patch(
@@ -455,7 +455,7 @@ def test_delete_non_existing_file():
                 assert message in result.output
 
 
-def test_move_files():
+def test_move_files(client_config):
     """Test move files."""
     reana_token = "000000"
     workflow = "mytest.1"
@@ -469,7 +469,7 @@ def test_move_files():
     mock_result = mock_client.api.move_files.return_value
     mock_result.result.return_value = ({}, mock_http_response)
 
-    runner = CliRunner(env={"REANA_SERVER_URL": "localhost"})
+    runner = CliRunner(env=client_config("localhost"))
     with runner.isolation():
         with patch("reana_client.api.client.current_rs_api_client", mock_client):
             result = runner.invoke(
@@ -489,7 +489,7 @@ def test_move_files():
             assert "successfully" in result.output
 
 
-def test_list_files_filter():
+def test_list_files_filter(client_config):
     """Test list workflow workspace files with filter."""
     status_code = 200
     response = {
@@ -501,7 +501,7 @@ def test_list_files_filter():
             },
         ]
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -534,7 +534,7 @@ def test_list_files_filter():
             assert "names" in json_response[0]["name"]
 
 
-def test_list_disk_usage_with_valid_filter():
+def test_list_disk_usage_with_valid_filter(client_config):
     """Test list disk usage info with valid filter."""
     status_code = 200
     response = {
@@ -548,7 +548,7 @@ def test_list_disk_usage_with_valid_filter():
         "workflow_id": "7767678-766787",
         "workflow_name": "workflow",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -576,7 +576,7 @@ def test_list_disk_usage_with_valid_filter():
             assert "4096" in result.output
 
 
-def test_list_disk_usage_with_invalid_filter():
+def test_list_disk_usage_with_invalid_filter(client_config):
     """Test list disk usage info with invalid filter."""
     status_code = 200
     response = {
@@ -585,7 +585,7 @@ def test_list_disk_usage_with_invalid_filter():
         "workflow_id": "7767678-766787",
         "workflow_name": "workflow",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -612,7 +612,7 @@ def test_list_disk_usage_with_invalid_filter():
             assert "No files matching filter criteria." in result.output
 
 
-def test_list_files_filter_with_filename():
+def test_list_files_filter_with_filename(client_config):
     """Test list workflow workspace files with filter and filename."""
     status_code = 200
     response = {
@@ -634,7 +634,7 @@ def test_list_files_filter_with_filename():
             },
         ]
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response
@@ -667,7 +667,7 @@ def test_list_files_filter_with_filename():
             assert "2021-06-14" in json_response[1]["last-modified"]
 
 
-def test_prune_workspace():
+def test_prune_workspace(client_config):
     """Test prune workspace files."""
     status_code = 200
     response = {
@@ -675,7 +675,7 @@ def test_prune_workspace():
         "workflow_id": "string",
         "workflow_name": "string",
     }
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     mock_http_response, mock_response = Mock(), Mock()
     mock_http_response.status_code = status_code
     mock_response = response

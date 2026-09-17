@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2024 CERN.
+# Copyright (C) 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -35,9 +35,9 @@ failed_test = TestResult(
 )
 
 
-def test_test_workflow_not_found():
+def test_test_workflow_not_found(client_config):
     """Test test command when workflow is not found."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
         result = runner.invoke(
@@ -60,9 +60,9 @@ def test_test_workflow_not_found():
     "reana_client.cli.test.get_workflow_status",
     return_value={"status": "running", "name": "myanalysis"},
 )
-def test_test_workflow_not_finished(mock_get_workflow_status):
+def test_test_workflow_not_finished(mock_get_workflow_status, client_config):
     """Test test command when workflow is not finished."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -88,9 +88,9 @@ def test_test_workflow_not_finished(mock_get_workflow_status):
     "reana_client.cli.test.get_workflow_status",
     return_value={"status": "deleted", "name": "myanalysis"},
 )
-def test_test_workflow_deleted(mock_get_workflow_status):
+def test_test_workflow_deleted(mock_get_workflow_status, client_config):
     """Test test command when workflow is deleted."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -112,9 +112,11 @@ def test_test_workflow_deleted(mock_get_workflow_status):
     "reana_client.cli.test.get_workflow_specification",
     return_value={"specification": {"inputs": {"directories": ["data"]}}},
 )
-def test_test_no_test_files(mock_get_workflow_status, mock_get_workflow_specification):
+def test_test_no_test_files(
+    mock_get_workflow_status, mock_get_workflow_specification, client_config
+):
     """Test test command when no test files are specified."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(cli, ["test", "-w", "myanalysis", "-t", "000000"])
@@ -134,10 +136,10 @@ def test_test_no_test_files(mock_get_workflow_status, mock_get_workflow_specific
     return_value={"specification": {"inputs": {"directories": ["data"]}}},
 )
 def test_test_no_test_files_with_test_file_option(
-    mock_get_workflow_status, mock_get_workflow_specification
+    mock_get_workflow_status, mock_get_workflow_specification, client_config
 ):
     """Test test command when no test files are specified in reana.yml and when the test file option is provided."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -168,12 +170,12 @@ def test_test_no_test_files_with_test_file_option(
     },
 )
 def test_test_multiple_test_files_with_test_file_option(
-    mock_get_workflow_status, mock_get_workflow_specification
+    mock_get_workflow_status, mock_get_workflow_specification, client_config
 ):
     """Test test command when multiple test files are specified in reana.yml and test file option is provided.
     In this case, the test-file option should be used instead of the test files specified in reana.yml.
     """
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -211,10 +213,13 @@ def test_test_multiple_test_files_with_test_file_option(
     ),
 )
 def test_test_files_from_spec(
-    mock_get_workflow_status, get_workflow_specification, mock_parse_and_run_tests
+    mock_get_workflow_status,
+    get_workflow_specification,
+    mock_parse_and_run_tests,
+    client_config,
 ):
     """Test test command when test files are specified in reana.yml."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -233,9 +238,11 @@ def test_test_files_from_spec(
     "reana_client.cli.test.parse_and_run_tests",
     side_effect=FeatureFileError,
 )
-def test_test_parser_error(mock_get_workflow_status, mock_parse_and_run_tests):
+def test_test_parser_error(
+    mock_get_workflow_status, mock_parse_and_run_tests, client_config
+):
     """Test test command when parser error occurs."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -263,10 +270,10 @@ def test_test_parser_error(mock_get_workflow_status, mock_parse_and_run_tests):
     side_effect=FileNotFoundError,
 )
 def test_test_feature_file_not_found(
-    mock_get_workflow_status, mock_parse_and_run_tests
+    mock_get_workflow_status, mock_parse_and_run_tests, client_config
 ):
     """Test test command when a feature file is not found."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -296,9 +303,11 @@ def test_test_feature_file_not_found(
         [passed_test],
     ),
 )
-def test_test_multiple_test_files(mock_workflow_status, mock_parse_and_run_tests):
+def test_test_multiple_test_files(
+    mock_workflow_status, mock_parse_and_run_tests, client_config
+):
     """Test test command when multiple test files are specified."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -330,9 +339,11 @@ def test_test_multiple_test_files(mock_workflow_status, mock_parse_and_run_tests
         [passed_test, replace(passed_test, scenario="scenario2")],
     ),
 )
-def test_test_all_scenarios_pass(mock_workflow_status, mock_parse_and_run_tests):
+def test_test_all_scenarios_pass(
+    mock_workflow_status, mock_parse_and_run_tests, client_config
+):
     """Test test command when tests pass."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
         result = runner.invoke(
@@ -354,9 +365,11 @@ def test_test_all_scenarios_pass(mock_workflow_status, mock_parse_and_run_tests)
         [replace(failed_test, scenario="scenario1"), failed_test],
     ),
 )
-def test_test_all_scenarios_fail(mock_workflow_status, mock_parse_and_run_tests):
+def test_test_all_scenarios_fail(
+    mock_workflow_status, mock_parse_and_run_tests, client_config
+):
     """Test test command when tests fail."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -378,9 +391,11 @@ def test_test_all_scenarios_fail(mock_workflow_status, mock_parse_and_run_tests)
         [passed_test, failed_test],
     ),
 )
-def test_test_some_scenarios_pass(mock_workflow_status, mock_parse_and_run_tests):
+def test_test_some_scenarios_pass(
+    mock_workflow_status, mock_parse_and_run_tests, client_config
+):
     """Test test command when some tests pass and some fail."""
-    env = {"REANA_SERVER_URL": "localhost"}
+    env = client_config("localhost")
     runner = CliRunner(env=env)
     with runner.isolated_filesystem():
         result = runner.invoke(

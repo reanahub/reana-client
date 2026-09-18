@@ -60,6 +60,7 @@ class ReanaCLI(click.Group):
     cmd_groups = [
         quotas.quota_group,
         ping.configuration_group,
+        ping.server_connection_group,
         workflow.workflow_management_group,
         workflow.workflow_execution_group,
         workflow.workflow_sharing_group,
@@ -90,6 +91,7 @@ class ReanaCLI(click.Group):
         if (
             arguments
             and arguments[0] not in ("version", "help")
+            and arguments[0] not in ping.server_connection_group.commands
             and "--help" not in arguments
         ):
             try:

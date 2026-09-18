@@ -17,6 +17,12 @@ Configuration commands:
   ping     Check connection to REANA server.
   version  Show version.
 
+Server connection management commands:
+  server-add     Save a server without authenticating or selecting it.
+  server-list    List saved server connections.
+  server-remove  Revoke credentials and remove a saved server.
+  server-use     Select a saved server without authenticating.
+
 Workflow management commands:
   create  Create a new workflow.
   delete  Delete a workflow.

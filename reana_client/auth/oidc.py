@@ -774,7 +774,7 @@ def refresh_credentials(server_url: str, server_entry: Optional[Dict] = None) ->
         with credential_store_lock():
             # Re-read only after becoming leader. A previous leader may have
             # rotated or cleared credentials while this process waited.
-            server_entry = get_server_entry(normalized_url) or server_entry or {}
+            server_entry = get_server_entry(normalized_url)
             refresh_token = server_entry.get("refresh_token")
             if not refresh_token:
                 raise AuthenticationError(
@@ -899,30 +899,48 @@ def logout(server_url: Optional[str] = None) -> Optional[str]:
         if not server_url:
             raise AuthenticationError(NO_SERVER)
         server_entry = get_server_entry(server_url)
-        refresh_token = server_entry.get("refresh_token")
-        revocation_endpoint = server_entry.get("revocation_endpoint")
-        warning = None
-        if refresh_token and revocation_endpoint:
-            try:
-                _validate_oidc_https_urls({"revocation_endpoint": revocation_endpoint})
-                response = requests.post(
-                    revocation_endpoint,
-                    data={
-                        "client_id": server_entry["client_id"],
-                        "token": refresh_token,
-                        "token_type_hint": "refresh_token",
-                    },
-                    timeout=30,
-                    allow_redirects=False,
-                    verify=tls_verify_for_url(server_url, revocation_endpoint),
-                )
-                _reject_redirect(response, "Token revocation")
-                if not response.ok:
-                    warning = (
-                        "Remote token revocation failed with "
-                        f"HTTP {response.status_code}."
-                    )
-            except (AuthenticationError, requests.RequestException) as exc:
-                warning = f"Remote token revocation failed: {exc}"
+        warning = revoke_credentials(server_url, server_entry)
         clear_token_material(server_url)
         return warning
+
+
+def revoke_credentials(server_url, server_entry, verify=None):
+    """Revoke saved refresh credentials without changing the store."""
+    refresh_token = server_entry.get("refresh_token")
+    revocation_endpoint = server_entry.get("revocation_endpoint")
+    warning = None
+    if refresh_token and revocation_endpoint:
+        try:
+            _validate_oidc_https_urls({"revocation_endpoint": revocation_endpoint})
+            response = requests.post(
+                revocation_endpoint,
+                data={
+                    "client_id": server_entry["client_id"],
+                    "token": refresh_token,
+                    "token_type_hint": "refresh_token",
+                },
+                timeout=30,
+                allow_redirects=False,
+                verify=(
+                    tls_verify_for_url(server_url, revocation_endpoint)
+                    if verify is None
+                    else verify
+                ),
+            )
+            if 300 <= response.status_code < 400:
+                # Do not include a Location URL that may contain credentials.
+                warning = (
+                    f"Remote token revocation for {server_description(server_url)} "
+                    f"failed with HTTP {response.status_code}. "
+                    "Refusing to follow a redirect on an authentication request."
+                )
+            elif not response.ok:
+                warning = (
+                    f"Remote token revocation for {server_description(server_url)} failed with "
+                    f"HTTP {response.status_code}."
+                )
+        except requests.RequestException as exc:
+            warning = connection_error(server_url, revocation_endpoint, exc)
+        except AuthenticationError as exc:
+            warning = f"Remote token revocation for {server_description(server_url)} failed: {exc}"
+    return warning

@@ -104,27 +104,12 @@ def tls_verify(server_url=None, warn=True) -> Union[bool, str]:
     policies = state["policies"] if state else {}
     if server_url not in policies:
         explicit = requested_tls_verify(server_url)
-        ca_certs = os.getenv(CA_CERTS_ENV)
-        if explicit is False and ca_certs:
-            raise ValueError(
-                "--no-tls-verify conflicts with REANA_SERVER_CA_CERTS. "
-                "Unset the CA bundle override first."
-            )
-        if ca_certs:
-            verify = True
-        elif explicit is not None:
-            verify = explicit
-        else:
-            entry = get_server_entry(server_url) if server_url else {}
-            settings = entry.get("tls", {})
-            if not isinstance(settings, dict) or not isinstance(
-                settings.get("verify", True), bool
-            ):
-                raise ValueError(
-                    f"Invalid saved TLS verification setting for {server_url}."
-                )
-            verify = settings.get("verify", True)
-        policies[server_url] = ca_certs or verify
+        entry = (
+            get_server_entry(server_url)
+            if server_url and explicit is None and not os.getenv(CA_CERTS_ENV)
+            else {}
+        )
+        policies[server_url] = resolve_tls_verify(entry, explicit, server_url)
     policy = policies[server_url]
     if warn and policy is False:
         global _tls_warning_emitted
@@ -137,6 +122,26 @@ def tls_verify(server_url=None, warn=True) -> Union[bool, str]:
             _tls_warning_emitted = True
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     return policy
+
+
+def resolve_tls_verify(entry, explicit=None, server_url=None):
+    """Resolve TLS from a loaded record without reading the store or retired inputs."""
+    ca_certs = os.getenv(CA_CERTS_ENV)
+    if explicit is False and ca_certs:
+        raise ValueError(
+            "--no-tls-verify conflicts with REANA_SERVER_CA_CERTS. "
+            "Unset the CA bundle override first."
+        )
+    if ca_certs:
+        return ca_certs
+    if explicit is not None:
+        return explicit
+    settings = entry.get("tls", {})
+    if not isinstance(settings, dict) or not isinstance(
+        settings.get("verify", True), bool
+    ):
+        raise ValueError(f"Invalid saved TLS verification setting for {server_url}.")
+    return settings.get("verify", True)
 
 
 def tls_status(server_url=None):

@@ -270,3 +270,109 @@ def info(ctx, access_token: str, output_format: str):  # noqa: D301
         logging.debug(str(e))
         display_message("Could not list cluster info:\n{0}".format(e), msg_type="error")
         ctx.exit(1)
+
+
+@click.group(help="Server connection management commands")
+def server_connection_group():
+    """Server connection management commands."""
+    pass
+
+
+@server_connection_group.command("server-add")
+@click.argument("url")
+@click.option(
+    "--tls-verify", is_flag=True, help="Save certificate verification as enabled."
+)
+@click.option(
+    "--no-tls-verify", is_flag=True, help="Save certificate verification as disabled."
+)
+@click.pass_context
+def server_add(ctx, url, tls_verify, no_tls_verify):
+    """Save a server without authenticating or selecting it.
+
+    Verification is enabled by default. Existing records are not overwritten;
+    use login --server URL to authenticate and update their TLS settings.
+    """
+    from reana_client.auth.servers import add_server
+
+    try:
+        if tls_verify and no_tls_verify:
+            raise ValueError(
+                "--tls-verify and --no-tls-verify cannot be used together."
+            )
+        choice = True if tls_verify else False if no_tls_verify else None
+        server = add_server(url, choice)
+        display_message(f"Saved REANA server: {server} (not selected)")
+    except (CredentialStoreError, ValueError, OSError) as error:
+        display_message(str(error), msg_type="error")
+        ctx.exit(1)
+
+
+@server_connection_group.command("server-list")
+@click.pass_context
+def server_list(ctx):
+    """List saved server connections.
+
+    Show the current selection and effective TLS verification. This command
+    does not contact servers or refresh credentials.
+    """
+    from reana_client.auth.servers import list_servers
+
+    try:
+        servers = list_servers()
+        if not servers:
+            display_message("No saved REANA servers.")
+        for entry in servers:
+            marker = "*" if entry["active"] else " "
+            display_message(
+                f"{marker} {entry['server']}  TLS verification: {entry['tls_verification']}"
+            )
+    except (CredentialStoreError, ValueError, OSError) as error:
+        display_message(str(error), msg_type="error")
+        ctx.exit(1)
+
+
+@server_connection_group.command("server-use")
+@click.argument("url")
+@click.pass_context
+def server_use(ctx, url):
+    """Select a saved server without authenticating.
+
+    Credentials and TLS settings are retained. The next command refreshes
+    credentials or asks for login when necessary.
+    """
+    from reana_client.auth.servers import use_server
+
+    try:
+        server = use_server(url)
+        display_message(f"Selected REANA server: {server}")
+    except (CredentialStoreError, ValueError, OSError) as error:
+        display_message(str(error), msg_type="error")
+        ctx.exit(1)
+
+
+@server_connection_group.command("server-remove")
+@click.argument("url")
+@click.option(
+    "--local-only",
+    is_flag=True,
+    help="Remove locally without revoking credentials at the identity provider.",
+)
+@click.pass_context
+def server_remove(ctx, url, local_only):
+    """Revoke credentials and remove a saved server.
+
+    Revocation failure preserves the record. Use --local-only to forget an
+    unreachable server without revoking its tokens. Removing the selected
+    server leaves no selection; no other server is selected automatically.
+    """
+    from reana_client.auth.servers import remove_server
+
+    try:
+        server, unrevoked = remove_server(url, local_only)
+        if unrevoked:
+            click.echo("[WARNING] Remote credentials were not revoked.", err=True)
+        display_message(f"Removed saved REANA server: {server}")
+    except (AuthenticationError, CredentialStoreError, ValueError, OSError) as error:
+        display_message(str(error), msg_type="error")
+        ctx.exit(1)

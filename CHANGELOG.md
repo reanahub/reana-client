@@ -3,6 +3,54 @@
 
 # Changelog
 
+## [0.9.7](https://github.com/reanahub/reana-client/compare/0.9.6...0.9.7) (2026-09-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **client:** `REANA_SERVER_URL` and `REANA_SERVER_TLS_VERIFY` environment variables are no longer client inputs. Unset them and run `login --server URL`, adding `--no-tls-verify` for a self-signed development server when needed.
+* **auth:** Use this client with the OIDC-compatible REANA server and run reana-client login, or supply an issuer-issued JWT. Legacy opaque REANA tokens no longer authenticate. TLS certificate verification is enabled by default; configure REANA_SERVER_CA_CERTS for private certificates. Replace static-token automation with credentials whose refresh-token lifetime and rotation policy fit the job. For a legacy 0.95 alpha cluster, pin reana-client==0.95.0a5 and reana-commons==0.95.0a22.
+* **validation:** workflow creation now uploads a raw specification bundle instead of a client-serialized reana_specification JSON body. The lower-level create_workflow(reana_specification, ...) Python API is removed, and direct calls to the generated client.api.create_workflow(reana_specification=...) operation must migrate. Write a raw reana.yaml and call create_workflow_from_bundle().
+
+### Build
+
+* **python:** add support for Python 3.15 ([#781](https://github.com/reanahub/reana-client/issues/781)) ([18af026](https://github.com/reanahub/reana-client/commit/18af026b20df40f442b6b1fa4af545b40c3e37eb))
+
+
+### Features
+
+* **auth:** add OIDC login and credential management ([#777](https://github.com/reanahub/reana-client/issues/777)) ([fc63653](https://github.com/reanahub/reana-client/commit/fc63653a8c89d1d58a9925d6280e34836d8d77af))
+* **client:** manage saved REANA server connections ([#796](https://github.com/reanahub/reana-client/issues/796)) ([dd273d6](https://github.com/reanahub/reana-client/commit/dd273d62a5585c08bae3818e5d60361c642ec55b))
+* **client:** save server and TLS settings at login ([#793](https://github.com/reanahub/reana-client/issues/793)) ([15fbaa7](https://github.com/reanahub/reana-client/commit/15fbaa7335bdb63d84e623a020f2b4209aec4fb7))
+* **info:** display server-side quota period settings ([#772](https://github.com/reanahub/reana-client/issues/772)) ([3141bc0](https://github.com/reanahub/reana-client/commit/3141bc0349fe1ec928d5e8f0e901c1904e1f2641)), closes [#771](https://github.com/reanahub/reana-client/issues/771)
+* **quotas:** show quota period in quota-show ([#772](https://github.com/reanahub/reana-client/issues/772)) ([0cf2b53](https://github.com/reanahub/reana-client/commit/0cf2b53b076c496c3b4377b1bd0bf14f09b7ee22)), closes [#771](https://github.com/reanahub/reana-client/issues/771)
+* **utils:** show Dask service logs ([#769](https://github.com/reanahub/reana-client/issues/769)) ([36f23b2](https://github.com/reanahub/reana-client/commit/36f23b2c06141ffed87ec164ebff1b458c8a970a)), closes [#768](https://github.com/reanahub/reana-client/issues/768)
+* **validation:** add workflow image vetting to validate command ([#749](https://github.com/reanahub/reana-client/issues/749)) ([56ec5b0](https://github.com/reanahub/reana-client/commit/56ec5b0206a6ebe0d0be951749394e76e02be1a3))
+* **validation:** move workflow loading and validation to server ([#779](https://github.com/reanahub/reana-client/issues/779)) ([619acaf](https://github.com/reanahub/reana-client/commit/619acaf9f9cd1bb092c8059837996d4d5ab9088d))
+* **workflow:** add JSON output for sharing commands ([#750](https://github.com/reanahub/reana-client/issues/750)) ([eac1fb9](https://github.com/reanahub/reana-client/commit/eac1fb92284ce1a5fdf3eebba01daae629cbc89d)), closes [#712](https://github.com/reanahub/reana-client/issues/712)
+* **workflow:** guard deletion of restarted runs ([#759](https://github.com/reanahub/reana-client/issues/759)) ([9b298bf](https://github.com/reanahub/reana-client/commit/9b298bf14d1f2a7833b87f092a85d3b4d1c09401))
+
+
+### Bug fixes
+
+* **config:** use glob for egg-info in flake8 exclude ([#745](https://github.com/reanahub/reana-client/issues/745)) ([59059f6](https://github.com/reanahub/reana-client/commit/59059f6841cfea35194ec3ea3062974e700b535b))
+
+
+### Code refactoring
+
+* **pytest:** drop pytest-reana for reana-commons[tests] ([#770](https://github.com/reanahub/reana-client/issues/770)) ([50b45a1](https://github.com/reanahub/reana-client/commit/50b45a1881166b29523ba83dceafb3bb8e299fed))
+
+
+### Test suite
+
+* **snakemake:** cover container image validation ([#775](https://github.com/reanahub/reana-client/issues/775)) ([a381927](https://github.com/reanahub/reana-client/commit/a381927bf7439b96e160e3930af03394457d8e9a))
+
+
+### Continuous integration
+
+* **codecov:** fix matrix condition for Codecov Coverage ([#782](https://github.com/reanahub/reana-client/issues/782)) ([3158bf5](https://github.com/reanahub/reana-client/commit/3158bf5f4908a55488ab976b00fe188d86fcf13d))
+* **release-please:** upgrade action to v5 ([#784](https://github.com/reanahub/reana-client/issues/784)) ([8f20dee](https://github.com/reanahub/reana-client/commit/8f20dee9caa3d8240ae1d67e3a6915e9d435e059))
+
 ## [0.9.6](https://github.com/reanahub/reana-client/compare/0.9.5...0.9.6) (2026-03-25)
 
 ### Bug fixes

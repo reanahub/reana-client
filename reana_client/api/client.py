@@ -20,6 +20,7 @@ from urllib.parse import urljoin
 import requests
 import yaml
 from bravado.exception import BravadoConnectionError, BravadoTimeoutError, HTTPError
+from bravado_core.model import Model
 from reana_client.api.utils import get_content_disposition_filename
 from reana_client.config import ERROR_MESSAGES, tls_verify
 from reana_client.errors import FileDeletionError, FileUploadError
@@ -181,6 +182,19 @@ def _remaining_file_length(source):
 def _auth_request_options(access_token):
     """Return bravado request options carrying bearer authentication."""
     return {"headers": {"Authorization": "Bearer {}".format(access_token)}}
+
+
+def _as_dict(response):
+    """Return an operation response as a plain dictionary.
+
+    Bravado unmarshals responses whose schema references a named definition,
+    such as ``WorkflowSubmissionResponse``, into model objects. These support
+    ``response["key"]`` but neither ``response.get()`` nor ``isinstance(...,
+    dict)``, which is what callers of this module expect.
+    """
+    if isinstance(response, Model):
+        return response._as_dict()
+    return response
 
 
 def _auth_headers(access_token, extra_headers=None):
@@ -689,7 +703,7 @@ def start_workflow(workflow, access_token, parameters):
             parameters=parameters,
         ).result()
         if http_response.status_code == 200:
-            return response
+            return _as_dict(response)
         else:
             raise Exception(
                 "Expected status code 200 but replied with "
@@ -756,7 +770,7 @@ def restart_workflow(workflow, replacement, access_token, parameters):
                 http_response.status_code
             )
         )
-    return response
+    return _as_dict(response)
 
 
 def upload_file(workflow, file_, file_name, access_token):
@@ -1174,7 +1188,7 @@ def delete_workflow(workflow, all_runs: bool, workspace: bool, access_token: str
             parameters=parameters,
         ).result()
         if http_response.status_code == 200:
-            return response
+            return _as_dict(response)
         else:
             raise Exception(
                 "Expected status code 200 but replied with "

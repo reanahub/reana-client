@@ -41,10 +41,16 @@ from reana_client.config import (
     tls_verify_for_url,
 )
 from reana_client.auth.diagnostics import connection_error
+from reana_client.version import __version__
 
 DEFAULT_SCOPES = "openid profile email offline_access"
 EXPIRY_LEEWAY_SECONDS = 60
 DISCOVERY_PATH = "/api/.well-known/openid-configuration"
+PING_PATH = "/api/ping"
+MINIMUM_SERVER_VERSION = "0.95.0"
+"""Oldest REANA server release that supports OIDC login from this client."""
+LEGACY_SERVER_CLIENT_REQUIREMENT = "reana-client<0.95"
+"""pip requirement for a client that can talk to a pre-OIDC server."""
 PKCE_CODE_CHALLENGE_METHOD = "S256"
 REFRESH_LOCK_WAIT_SECONDS = 35
 """How long to wait for another process's in-flight refresh before failing.
@@ -294,6 +300,57 @@ def generate_pkce_pair() -> Dict[str, str]:
     }
 
 
+def _ping_server(server_url: str) -> Optional[Dict]:
+    """Return the unauthenticated ``/api/ping`` payload, or ``None`` on failure.
+
+    Every REANA server release answers with both ``message: "OK"`` and
+    ``status: "200"``; requiring both keeps a generic health check from
+    passing as REANA.
+    """
+    try:
+        response = requests.get(
+            urljoin(server_url + "/", PING_PATH.lstrip("/")),
+            timeout=30,
+            allow_redirects=False,
+            verify=tls_verify(server_url, warn=False),
+        )
+        payload = response.json() if 200 <= response.status_code < 300 else None
+    except (requests.RequestException, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("message") != "OK" or payload.get("status") != "200":
+        return None
+    return payload
+
+
+def _explain_missing_discovery(server_url: str, message: str) -> str:
+    """Explain a 404 from the discovery endpoint using the server's ping.
+
+    Servers that support OIDC login advertise ``api_capabilities`` on the
+    unauthenticated ping; released servers answer the ping without it and
+    do not expose their version before authentication.
+    """
+    ping = _ping_server(server_url)
+    if ping is None:
+        return f"{message}\nCheck that {server_url} is a REANA server."
+    if "api_capabilities" not in ping:
+        return (
+            f"{server_url} runs a REANA server release that predates OIDC login.\n"
+            f"This client (version {__version__}) requires REANA server "
+            f"{MINIMUM_SERVER_VERSION} or newer.\n"
+            "To use this server, install a matching client, e.g. "
+            f"pip install '{LEGACY_SERVER_CLIENT_REQUIREMENT}'."
+        )
+    server_version = ping.get("reana_server_version") or "unknown"
+    return (
+        f"{message}\n"
+        f"The REANA server (version {server_version}) supports OIDC login but "
+        "does not publish its authentication metadata. Please contact the "
+        "server administrators."
+    )
+
+
 def discover(server_url: str) -> Dict:
     """Discover OIDC endpoints relayed by REANA server."""
     normalized_url = normalize_server_url(server_url)
@@ -310,10 +367,13 @@ def discover(server_url: str) -> Dict:
         ) from exc
     _reject_redirect(response, "Authentication metadata discovery")
     if not response.ok:
-        raise AuthenticationError(
+        message = (
             "Could not discover authentication metadata from "
             f"{normalized_url}: HTTP {response.status_code}"
         )
+        if response.status_code == 404:
+            message = _explain_missing_discovery(normalized_url, message)
+        raise AuthenticationError(message)
     metadata = _response_json(response)
     required_fields = [
         "issuer",

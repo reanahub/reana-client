@@ -252,11 +252,14 @@ def _reject_redirect(response: requests.Response, description: str) -> None:
     3xx-redirect an HTTPS token/device/refresh/revocation POST to an
     attacker-controlled HTTP endpoint and have the client resend the
     authorization code, refresh token, or client credentials to it verbatim.
+
+    The error deliberately omits the ``Location`` header: a redirect target
+    may carry credentials or other sensitive query data, and the message is
+    shown in the terminal and in DEBUG logs.
     """
     if response.is_redirect:
-        location = response.headers.get("location", "<no Location header>")
         raise AuthenticationError(
-            f"{description} attempted to redirect to {location!r}. "
+            f"{description} failed with HTTP {response.status_code}. "
             "Refusing to follow a redirect on an authentication request."
         )
 

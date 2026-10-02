@@ -14,14 +14,14 @@ docker_build() {
 }
 
 docker_run() {
-    docker run --rm -v "$PWD"/tests:/home/reana/tests --entrypoint /bin/bash docker.io/reanahub/reana-client -c 'pytest tests'
+    docker run --rm -v "$PWD"/tests:/home/reana/tests -v "$PWD"/scripts:/home/reana/scripts --entrypoint /bin/bash docker.io/reanahub/reana-client -c 'pytest tests'
 }
 
 docs_cli_api() {
     cli_docs_url=https://raw.githubusercontent.com/reanahub/docs.reana.io/master/docs/reference/reana-client-cli-api/index.md
     docs_differ_error_msg='Current reana-client differs with the documentation. Please update http://docs.reana.io/reference/reana-client-cli-api/.'
-    python scripts/generate_cli_api.py >cli_api.md
-    (diff -q -w cli_api.md <(curl -s $cli_docs_url) || (echo "$docs_differ_error_msg" && exit 1))
+    curl -fsS "$cli_docs_url" -o cli_api.md
+    (python scripts/generate_cli_api.py --check cli_api.md || (echo "$docs_differ_error_msg" && exit 1))
     rm cli_api.md
 }
 

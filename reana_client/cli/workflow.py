@@ -1724,8 +1724,9 @@ def workflow_open_interactive_session(
             )
             if session_secret is None:
                 display_message(
-                    "Could not retrieve the session's access token; "
-                    "run `reana-client open` again to get the full URL.",
+                    "The interactive session started, but its access token "
+                    "could not be retrieved, so the URL below is incomplete. "
+                    "Run `reana-client list --sessions` to get the full URL.",
                     msg_type="warning",
                 )
             click.secho(

@@ -1401,6 +1401,180 @@ def test_store_token_response_preserves_rotated_refresh_token_on_rejection(
     assert entry.get("access_token") != "rejected-access"
 
 
+SERVER_A = "https://a.example.org"
+SERVER_B = "https://b.example.org"
+
+
+def _seed_active_a_and_known_b():
+    """Store credentials for A and B, leaving A as the active server."""
+    upsert_server_entry(
+        SERVER_B,
+        {
+            "issuer": METADATA["issuer"],
+            "client_id": METADATA["reana_cli_client_id"],
+            "token_endpoint": METADATA["token_endpoint"],
+            "access_token": "b-access",
+            "access_token_expires_at": "2999-01-01T00:00:00Z",
+            "refresh_token": "b-refresh",
+            "refresh_token_expires_at": "2999-01-01T00:00:00Z",
+            "tls": {"verify": True},
+        },
+    )
+    upsert_server_entry(SERVER_A, {"access_token": "a-access", "refresh_token": "a"})
+    assert get_active_server() == SERVER_A
+
+
+def _login_to_b(monkeypatch, flow, token_response, during_exchange=lambda: None):
+    """Run a full login to B whose token endpoint answers ``token_response``."""
+    monkeypatch.setattr(oidc, "discover", lambda server_url: dict(METADATA))
+
+    def fake_post(url, data, timeout, allow_redirects, verify):
+        if url == METADATA["device_authorization_endpoint"]:
+            return MockResponse(
+                {
+                    "device_code": "device-code",
+                    "verification_uri": "https://issuer.example.org/device",
+                    "user_code": "1234",
+                    "interval": 0,
+                    "expires_in": 600,
+                }
+            )
+        during_exchange()
+        return MockResponse(token_response)
+
+    monkeypatch.setattr(oidc.requests, "post", fake_post)
+    if flow == "device":
+        return oidc.login_with_device_flow(
+            SERVER_B, lambda prompt: None, sleep=lambda interval: None
+        )
+    captured = {}
+    monkeypatch.setattr(
+        oidc,
+        "_start_callback_server",
+        lambda: (FakeLoopbackServer(), "http://127.0.0.1:5555/callback"),
+    )
+    monkeypatch.setattr(
+        oidc,
+        "_wait_for_callback",
+        lambda httpd, timeout: {
+            "code": "auth-code",
+            "state": parse_qs(urlparse(captured["url"]).query)["state"][0],
+        },
+    )
+    return oidc.login_with_loopback(
+        SERVER_B,
+        lambda url: captured.__setitem__("url", url),
+        open_browser=lambda url: True,
+    )
+
+
+@pytest.mark.parametrize("flow", ["loopback", "device"])
+@pytest.mark.parametrize(
+    "rejected,error,refresh_expiry_known",
+    [
+        ({"refresh_expires_in": 60}, "access token", True),
+        ({"access_token": ""}, "access token", False),
+        ({"access_token": "rejected-access", "expires_in": True}, "expires_in", False),
+        (
+            {"access_token": "rejected-access", "refresh_expires_in": "soon"},
+            "refresh_expires_in",
+            False,
+        ),
+    ],
+)
+def test_rejected_login_keeps_active_server_and_existing_entry(
+    tmp_path, monkeypatch, flow, rejected, error, refresh_expiry_known
+):
+    """A failed login to B must not switch away from A nor degrade B's entry."""
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(tmp_path / "credentials.json"))
+    _seed_active_a_and_known_b()
+    entry_a = get_server_entry(SERVER_A)
+    entry_b = get_server_entry(SERVER_B)
+
+    with pytest.raises(oidc.AuthenticationError, match=error):
+        _login_to_b(monkeypatch, flow, {"refresh_token": "rotated", **rejected})
+
+    assert get_active_server() == SERVER_A
+    assert get_server_entry(SERVER_A) == entry_a
+    recovered = get_server_entry(SERVER_B)
+    assert recovered["refresh_token"] == "rotated"
+    # The stored expiry belonged to the replaced refresh token.
+    assert (recovered["refresh_token_expires_at"] is not None) is refresh_expiry_known
+    assert recovered["refresh_token_expires_at"] != entry_b["refresh_token_expires_at"]
+    for field in ("access_token", "access_token_expires_at", "tls"):
+        assert recovered[field] == entry_b[field]
+    # Concurrent refreshes started before the recovery write must lose.
+    assert (
+        recovered[storage.CREDENTIAL_EPOCH_FIELD]
+        == entry_b[storage.CREDENTIAL_EPOCH_FIELD] + 1
+    )
+
+
+@pytest.mark.parametrize("flow", ["loopback", "device"])
+@pytest.mark.parametrize(
+    "rejected",
+    [
+        {},
+        {"access_token": "rejected-access", "expires_in": -1},
+        {"access_token": "rejected-access", "refresh_token": ["not", "a", "string"]},
+    ],
+)
+def test_rejected_login_without_usable_refresh_token_changes_nothing(
+    tmp_path, monkeypatch, flow, rejected
+):
+    """With nothing to recover, a failed login leaves the store untouched."""
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(tmp_path / "credentials.json"))
+    _seed_active_a_and_known_b()
+    before = load_config()
+
+    with pytest.raises(oidc.AuthenticationError):
+        _login_to_b(monkeypatch, flow, rejected)
+
+    assert load_config() == before
+
+
+@pytest.mark.parametrize("flow", ["loopback", "device"])
+def test_rejected_first_login_to_new_server_keeps_active_server(
+    tmp_path, monkeypatch, flow
+):
+    """A failed first login to B keeps A active while retaining B's token."""
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(tmp_path / "credentials.json"))
+    upsert_server_entry(SERVER_A, {"access_token": "a-access"})
+
+    with pytest.raises(oidc.AuthenticationError, match="access token"):
+        _login_to_b(monkeypatch, flow, {"refresh_token": "rotated"})
+
+    assert get_active_server() == SERVER_A
+    recovered = get_server_entry(SERVER_B)
+    assert recovered["refresh_token"] == "rotated"
+    assert recovered["token_endpoint"] == METADATA["token_endpoint"]
+    assert "access_token" not in recovered
+
+
+@pytest.mark.parametrize("flow", ["loopback", "device"])
+def test_successful_login_switches_active_server_only_after_validation(
+    tmp_path, monkeypatch, flow
+):
+    """An accepted login to B makes B active, and not before its tokens arrive."""
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(tmp_path / "credentials.json"))
+    _seed_active_a_and_known_b()
+    active_during_exchange = []
+
+    _login_to_b(
+        monkeypatch,
+        flow,
+        {"access_token": "new-access", "refresh_token": "new", "expires_in": 3600},
+        during_exchange=lambda: active_during_exchange.append(get_active_server()),
+    )
+
+    assert active_during_exchange == [SERVER_A]
+    assert get_active_server() == SERVER_B
+    entry = get_server_entry(SERVER_B)
+    assert entry["access_token"] == "new-access"
+    assert entry["refresh_token"] == "new"
+    assert entry["tls"] == {"verify": True}
+
+
 def test_device_flow_stops_at_local_expiry(monkeypatch):
     """A provider cannot keep device polling alive past ``expires_in``."""
     monkeypatch.setattr(oidc, "discover", lambda server_url: dict(METADATA))

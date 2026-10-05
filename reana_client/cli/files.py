@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -17,6 +17,7 @@ from typing import List, Tuple
 
 import click
 import pathspec
+import requests
 
 from reana_commons.utils import click_table_printer
 
@@ -155,6 +156,8 @@ def get_files(
             else:
                 display_formatted_output(data, headers, _format, output_format)
 
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
@@ -180,7 +183,7 @@ def get_files(
 )
 @add_access_token_options
 @click.pass_context
-def download_files(
+def download_files(  # noqa: C901
     ctx, workflow, filenames, output_directory, access_token
 ):  # noqa: D301
     """Download workspace files.
@@ -219,6 +222,8 @@ def download_files(
             reana_spec = get_workflow_specification(workflow, access_token)[
                 "specification"
             ]
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(str(e), exc_info=True)
             display_message(
@@ -259,6 +264,9 @@ def download_files(
                         f"File {file_name} downloaded to {output_directory}.",
                         msg_type="success",
                     )
+            except requests.RequestException:
+                # A transport failure is an OSError too, so it has to come first.
+                raise
             except OSError as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
@@ -314,6 +322,8 @@ def upload_files(  # noqa: C901
             reana_spec = get_workflow_specification(workflow, access_token)[
                 "specification"
             ]
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(str(e), exc_info=True)
             display_message(
@@ -422,6 +432,8 @@ def upload_files(  # noqa: C901
                 msg_type="error",
             )
             upload_failed = True
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
@@ -480,6 +492,8 @@ def delete_files(ctx, workflow, filenames, access_token):  # noqa: D301
             except FileDeletionError as e:
                 display_message(str(e), msg_type="error")
                 delete_failed = True
+            except requests.RequestException:
+                raise
             except Exception as e:
                 logging.debug(traceback.format_exc())
                 logging.debug(str(e))
@@ -518,6 +532,8 @@ def move_files(ctx, source, target, workflow, access_token):  # noqa: D301
             "{} was successfully moved to {}.".format(source, target),
             msg_type="success",
         )
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -563,6 +579,8 @@ def prune_files(
             workflow, include_inputs, include_outputs, access_token
         )
         display_message(response["message"], msg_type="success")
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -626,6 +644,8 @@ def workflow_disk_usage(
                         ]
                     )
             click_table_printer(headers, [], data)
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2022 CERN.
+# Copyright (C) 2022, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -12,6 +12,7 @@ import sys
 from typing import Optional, Tuple
 
 import click
+import requests
 
 from reana_client.api.client import get_workflow_retention_rules
 from reana_client.cli.utils import (
@@ -61,6 +62,8 @@ def retention_rules_list(
         rules = get_workflow_retention_rules(workflow, access_token).get(
             "retention_rules", []
         )
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(e, exc_info=True)
         display_message(str(e), msg_type="error")

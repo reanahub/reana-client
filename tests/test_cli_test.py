@@ -35,7 +35,11 @@ failed_test = TestResult(
 )
 
 
-def test_test_workflow_not_found(client_config):
+@patch(
+    "reana_client.cli.test.get_workflow_status",
+    side_effect=Exception("Workflow myanalysis does not exist"),
+)
+def test_test_workflow_not_found(mock_get_workflow_status, client_config):
     """Test test command when workflow is not found."""
     env = client_config("localhost")
     runner = CliRunner(env=env)

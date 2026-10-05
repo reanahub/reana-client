@@ -19,11 +19,13 @@ from typing import Callable, NoReturn, Optional, List, Tuple, Union, Iterable
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import click
+import requests
 import tablib
 from click.core import ParameterSource
 
 from reana_commons.utils import click_table_printer
 
+from reana_client.auth.diagnostics import connection_error
 from reana_client.auth.oidc import AuthenticationError, get_access_token
 from reana_client.auth.storage import CredentialStoreError
 from reana_client.config import (
@@ -168,8 +170,34 @@ def access_token_check(
         sys.exit(1)
 
 
+def transport_error_message(error: requests.RequestException) -> str:
+    """Explain a failed request to the active server without exposing its details."""
+    from reana_client.utils import get_api_url
+
+    server = get_api_url()
+    return connection_error(server, server, error)
+
+
+def error_message(error: Exception) -> str:
+    """Return an error description that is safe to show for any failure."""
+    if isinstance(error, requests.RequestException):
+        return transport_error_message(error)
+    return str(error)
+
+
+def exit_on_transport_error(error: requests.RequestException) -> NoReturn:
+    """Report a transport failure consistently across commands and exit."""
+    display_message(transport_error_message(error), msg_type="error")
+    sys.exit(1)
+
+
 def check_connection(func):
-    """Check if connected to any REANA cluster."""
+    """Check if connected to any REANA cluster and report transport failures.
+
+    Commands re-raise ``requests.RequestException`` in front of their generic
+    error handling, so that certificate, DNS, refused-connection and timeout
+    failures are all explained here, in one place.
+    """
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -182,7 +210,10 @@ def check_connection(func):
                 msg_type="error",
             )
             sys.exit(1)
-        return func(*args, **kwargs)
+        try:
+            return func(*args, **kwargs)
+        except requests.RequestException as error:
+            exit_on_transport_error(error)
 
     return wrapper
 

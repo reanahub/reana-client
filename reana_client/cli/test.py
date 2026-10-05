@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2024 CERN.
+# Copyright (C) 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -9,6 +9,7 @@
 
 import sys
 import click
+import requests
 import logging
 import traceback
 import time
@@ -103,6 +104,8 @@ def test(ctx, workflow, test_files, access_token):
         )
         status = workflow_status["status"]
         workflow_name = workflow_status["name"]
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))

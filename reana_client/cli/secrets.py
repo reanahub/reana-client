@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2019, 2020, 2021, 2022, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -11,6 +11,7 @@ import logging
 import sys
 
 import click
+import requests
 
 from reana_client.cli.utils import (
     add_access_token_options,
@@ -82,6 +83,8 @@ def secrets_add(env, file, overwrite, access_token):  # noqa: D301
             msg_type="error",
         )
         sys.exit(1)
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         display_message(
@@ -118,6 +121,8 @@ def secrets_delete(secrets, access_token):  # noqa: D301
             msg_type="error",
         )
         sys.exit(1)
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         display_message(
@@ -151,6 +156,8 @@ def secrets_list(access_token):  # noqa: D301
             data.append(list(map(str, [secret_["name"], secret_["type"]])))
 
         click_table_printer(headers, headers, data)
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         display_message(

@@ -44,6 +44,10 @@ from reana_commons.specification_paths import (
 )
 from werkzeug.local import LocalProxy
 
+# Bravado logs every operation call at DEBUG level together with its arguments,
+# which carry the bearer token and request bodies such as secret values.
+logging.getLogger("bravado.client").setLevel(logging.INFO)
+
 FILE_TRANSFER_TIMEOUT = (30, 300)
 """Connect/read timeout used for potentially large workspace transfers."""
 
@@ -809,17 +813,9 @@ def upload_file(workflow, file_, file_name, access_token):
         if http_response.ok:
             return response
         raise Exception(response.get("message"))
-    except requests.exceptions.ConnectionError:
-        from reana_client.utils import get_api_url
-
-        logging.debug("File could not be uploaded.", exc_info=True)
-        raise Exception("Could not connect to the server {}".format(get_api_url()))
-    except requests.exceptions.Timeout:
-        logging.debug("Timeout while trying to establish connection.", exc_info=True)
-        raise Exception("The request to the server has timed out.")
-    except requests.exceptions.RequestException:
-        logging.debug("The request to the server failed.", exc_info=True)
-        raise Exception("The request to the server has failed.")
+    except requests.RequestException:
+        # Preserve transport failures for the caller's connection diagnostics.
+        raise
     except Exception as e:
         raise e
 
@@ -1078,6 +1074,8 @@ def upload_to_server(workflow, paths, access_token):
                     upload_file(workflow, f, save_path, access_token)
                     logging.info("File '{}' was successfully uploaded.".format(fname))
                     return [save_path]
+                except requests.RequestException:
+                    raise
                 except Exception as e:
                     logging.debug(traceback.format_exc())
                     logging.debug(str(e))

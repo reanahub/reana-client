@@ -14,7 +14,6 @@ import traceback
 
 import click
 import requests
-from reana_client.auth.diagnostics import connection_error
 from reana_client.auth.oidc import (
     AuthenticationError,
     login_with_device_flow,
@@ -192,14 +191,12 @@ def ping(ctx, access_token):  # noqa: D301
         logging.debug("Server response:\n{}".format(response))
         if error:
             sys.exit(1)
+    except requests.RequestException:
+        raise
     except Exception as e:
         from reana_client.config import server_description
 
-        server = get_api_url()
-        if isinstance(e, requests.RequestException):
-            message = connection_error(server, server, e)
-        else:
-            message = f"REANA server: {server_description(server)}\nCould not complete ping: {e}"
+        message = f"REANA server: {server_description(get_api_url())}\nCould not complete ping: {e}"
         display_message(message, msg_type="error")
         ctx.exit(1)
 
@@ -259,12 +256,8 @@ def info(ctx, access_token: str, output_format: str):  # noqa: D301
                 value = ", ".join(value) if isinstance(value, list) else value
                 display_message(f"{item.get('title')}: {value}")
 
-    except requests.RequestException as e:
-        from reana_client.utils import get_api_url
-
-        server = get_api_url()
-        display_message(connection_error(server, server, e), msg_type="error")
-        ctx.exit(1)
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))

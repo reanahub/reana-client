@@ -53,15 +53,55 @@ def test_ping_server_not_set(tmp_path, monkeypatch):
     assert message in result.output
 
 
+TRANSPORT_FAILURE_COMMANDS = [
+    ["ping"],
+    ["info"],
+    ["list"],
+    ["create", "-f", "REANA_YAML"],
+    ["validate", "-f", "REANA_YAML"],
+    ["run", "-f", "REANA_YAML"],
+    ["start", "-w", "wf"],
+    ["start", "-w", "wf", "-p", "x=1"],
+    ["restart", "-w", "wf"],
+    ["restart", "-w", "wf", "-p", "x=1"],
+    ["status", "-w", "wf"],
+    ["logs", "-w", "wf"],
+    ["logs", "-w", "wf", "--follow"],
+    ["stop", "-w", "wf", "--force"],
+    ["delete", "-w", "wf"],
+    ["delete", "-w", "wf", "--include-all-runs"],
+    ["diff", "wf.1", "wf.2"],
+    ["open", "-w", "wf"],
+    ["close", "-w", "wf"],
+    ["share-add", "-w", "wf", "-u", "jane@example.org"],
+    ["share-remove", "-w", "wf", "-u", "jane@example.org"],
+    ["share-status", "-w", "wf"],
+    ["ls", "-w", "wf"],
+    ["du", "-w", "wf"],
+    ["download", "-w", "wf"],
+    ["download", "-w", "wf", "results.txt"],
+    ["upload", "-w", "wf"],
+    ["upload", "-w", "wf", "REANA_YAML"],
+    ["rm", "-w", "wf", "results.txt"],
+    ["mv", "-w", "wf", "a.txt", "b.txt"],
+    ["prune", "-w", "wf"],
+    ["secrets-add", "--env", "NAME=value"],
+    ["secrets-delete", "NAME"],
+    ["secrets-list"],
+    ["quota-show", "--resources"],
+    ["retention-rules-list", "-w", "wf"],
+    ["test", "-w", "wf"],
+]
+
+
 @pytest.mark.parametrize(
-    "command, operation",
-    [("ping", "get_you"), ("list", "get_workflows"), ("info", "info")],
+    "arguments", TRANSPORT_FAILURE_COMMANDS, ids=lambda arguments: " ".join(arguments)
 )
 @pytest.mark.parametrize("failure", ["certificate", "dns", "refused", "timeout"])
 def test_commands_report_transport_failures(
-    command, operation, failure, client_config, monkeypatch, caplog
+    arguments, failure, client_config, monkeypatch, caplog, tmp_path
 ):
-    """Bravado transport failures reach the CLI with safe, actionable diagnostics."""
+    """Transport failures reach the CLI with safe, actionable diagnostics."""
     server = "https://reana.example.org"
     env = client_config(server)
     certificate = ssl.SSLCertVerificationError("secret-request-data")
@@ -88,11 +128,39 @@ def test_commands_report_transport_failures(
     monkeypatch.setattr(transport.session, "send", Mock(side_effect=error))
     future = transport.request({"method": "GET", "url": server + "/api?secret=query"})
     assert isinstance(future, HttpFuture)
+
+    class FailingOperations:
+        """Generated API whose every operation fails in the transport."""
+
+        def __getattr__(self, name):
+            operation = Mock(return_value=future)
+            operation.operation.path_name = "/api/" + name
+            return operation
+
+    reana_yaml = tmp_path / "reana.yaml"
+    reana_yaml.write_text(
+        "workflow:\n"
+        "  type: serial\n"
+        "  specification:\n"
+        "    steps:\n"
+        "      - environment: docker.io/library/python:3.12\n"
+        "        commands:\n"
+        "          - echo secret-request-data\n"
+    )
+    arguments = [
+        str(reana_yaml) if item == "REANA_YAML" else item for item in arguments
+    ]
+    arguments.insert(1, "-t")
+    arguments.insert(2, "synthetic.jwt.token")
     runner = CliRunner(env=env)
+    # Workspace uploads bypass the generated client.
+    monkeypatch.setattr(
+        "reana_client.api.client.requests.post", Mock(side_effect=error)
+    )
     with patch("reana_client.api.client.current_rs_api_client") as api_client:
-        getattr(api_client.api, operation).return_value = future
+        api_client.api = FailingOperations()
         with caplog.at_level("DEBUG"):
-            result = runner.invoke(cli, [command, "-t", "synthetic.jwt.token"])
+            result = runner.invoke(cli, arguments)
     assert result.exit_code == 1
     assert f"Could not connect to {server} (from saved login)" in result.output
     assert expected in result.output
@@ -101,11 +169,53 @@ def test_commands_report_transport_failures(
         "INVALID SERVER",
         "Authenticated as:",
         "REANA server version:",
+        "Something went wrong",
+        "Traceback",
         "secret-request-data",
         "secret=query",
         "synthetic.jwt.token",
     ):
         assert unwanted not in result.output + caplog.text
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [["status", "-w", "wf"], ["secrets-add", "--env", "NAME=secret-request-data"]],
+)
+def test_debug_logs_do_not_expose_credentials(
+    arguments, client_config, monkeypatch, caplog
+):
+    """The generated client's own DEBUG output stays free of tokens and bodies."""
+    env = client_config("https://reana.example.org")
+    monkeypatch.setattr(
+        "requests.Session.send",
+        Mock(side_effect=requests.exceptions.ConnectionError(ConnectionRefusedError())),
+    )
+    with caplog.at_level("DEBUG"):
+        result = CliRunner(env=env).invoke(
+            cli, ["-l", "DEBUG"] + arguments + ["-t", "synthetic.jwt.token"]
+        )
+    assert result.exit_code == 1
+    assert "connection was refused" in result.output
+    for unwanted in ("synthetic.jwt.token", "secret-request-data"):
+        assert unwanted not in result.output + caplog.text
+
+
+def test_cwl_runner_reports_transport_failures(client_config, monkeypatch, tmp_path):
+    """The CWL runner entrypoint explains a failed connection and exits non-zero."""
+    from reana_client.cli.cwl_runner import cwl_runner
+
+    env = client_config("https://reana.example.org")
+    monkeypatch.setattr(
+        "reana_client.cli.cwl_runner._create_cwl_workflow",
+        Mock(side_effect=requests.exceptions.ConnectionError(ConnectionRefusedError())),
+    )
+    result = CliRunner(env=env).invoke(
+        cwl_runner, ["-t", "synthetic.jwt.token", str(tmp_path / "workflow.cwl")]
+    )
+    assert result.exit_code == 1
+    assert "connection was refused" in result.output
+    assert "Traceback" not in result.output
 
 
 @pytest.mark.parametrize(

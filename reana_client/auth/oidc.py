@@ -340,6 +340,14 @@ def _store_token_response(
     ``True`` (the default) for user-initiated logins, but a background
     refresh write-back passes ``False`` so it can never undo a concurrent
     explicit ``login`` to a different server (see ``refresh_credentials``).
+
+    The active server only ever changes once the whole response has been
+    validated. A rejected response may still carry a replacement refresh
+    token worth keeping, but that recovery write never honours
+    ``make_active`` and only touches the fields describing that token, so a
+    failed login to one server cannot switch the CLI away from another or
+    drop anything else already stored for the server (TLS policy, a still
+    valid access token).
     """
     _validate_oidc_https_urls(metadata, required=("issuer", "token_endpoint"))
     refresh_token = token_response.get("refresh_token")
@@ -370,7 +378,20 @@ def _store_token_response(
             # another response field is malformed. Preserve the replacement
             # without accepting the rejected access token, so the next command
             # can retry instead of orphaning live issuer-side credentials.
-            upsert_server_entry(server_url, recovery_entry, make_active=False)
+            try:
+                refresh_token_expires_at = _refresh_token_expires_at(token_response)
+            except AuthenticationError:
+                refresh_token_expires_at = None
+            # The stored expiry describes the refresh token being replaced,
+            # so it is overwritten too, with ``None`` when unknown.
+            upsert_server_entry(
+                server_url,
+                {
+                    **recovery_entry,
+                    "refresh_token_expires_at": refresh_token_expires_at,
+                },
+                make_active=False,
+            )
         raise
     entry = {
         **recovery_entry,

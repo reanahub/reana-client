@@ -954,6 +954,109 @@ def test_discover_reports_network_failure_as_authentication_error(monkeypatch):
         oidc.discover("https://reana.example.org")
 
 
+class NonJSONResponse(MockResponse):
+    """Response double whose body is not JSON."""
+
+    def json(self):
+        """Fail like ``requests`` does on a non-JSON body."""
+        raise ValueError("not json")
+
+
+def _fake_discovery_404(ping_response):
+    """Return a ``requests.get`` double: discovery 404s, ping gives a response."""
+
+    def fake_get(url, timeout, allow_redirects, verify):
+        assert allow_redirects is False
+        if url.endswith(oidc.DISCOVERY_PATH):
+            return MockResponse({}, ok=False, status_code=404)
+        assert url == "https://reana.example.org/api/ping"
+        if isinstance(ping_response, Exception):
+            raise ping_response
+        return ping_response
+
+    return fake_get
+
+
+def test_discover_404_explains_legacy_server(monkeypatch):
+    """A released server answers ping without capabilities: name the fix."""
+    monkeypatch.setattr(
+        oidc.requests,
+        "get",
+        _fake_discovery_404(MockResponse({"message": "OK", "status": "200"})),
+    )
+
+    with pytest.raises(oidc.AuthenticationError) as excinfo:
+        oidc.discover("https://reana.example.org")
+
+    message = str(excinfo.value)
+    assert "predates OIDC login" in message
+    assert oidc.__version__ in message
+    assert oidc.MINIMUM_SERVER_VERSION in message
+    assert oidc.LEGACY_SERVER_CLIENT_REQUIREMENT in message
+    assert "HTTP 404" not in message
+
+
+def test_discover_404_on_current_server_reports_its_version(monkeypatch):
+    """A server advertising capabilities is not legacy; report its version."""
+    ping = {
+        "message": "OK",
+        "status": "200",
+        "reana_server_version": "0.95.0",
+        "api_capabilities": ["workflow-specification-bundles-v1"],
+    }
+    monkeypatch.setattr(oidc.requests, "get", _fake_discovery_404(MockResponse(ping)))
+
+    with pytest.raises(oidc.AuthenticationError) as excinfo:
+        oidc.discover("https://reana.example.org")
+
+    message = str(excinfo.value)
+    assert "HTTP 404" in message
+    assert "version 0.95.0" in message
+    assert "predates OIDC login" not in message
+
+
+@pytest.mark.parametrize(
+    "ping_response",
+    [
+        oidc.requests.ConnectionError("unavailable"),
+        MockResponse({}, ok=False, status_code=404),
+        NonJSONResponse("<html>not json</html>"),
+        MockResponse({"unrelated": "service"}),
+        MockResponse({"message": "OK"}),
+        MockResponse({"message": "OK", "status": "up"}),
+        MockResponse(
+            {}, status_code=302, headers={"location": "https://sso.example.org/"}
+        ),
+        MockResponse({"message": "OK", "status": "200"}, status_code=300),
+        MockResponse({"message": "OK", "status": "200"}, status_code=302),
+    ],
+)
+def test_discover_404_on_non_reana_server_stays_generic(ping_response, monkeypatch):
+    """Without a REANA ping, do not claim the server is a legacy release."""
+    monkeypatch.setattr(oidc.requests, "get", _fake_discovery_404(ping_response))
+
+    with pytest.raises(oidc.AuthenticationError) as excinfo:
+        oidc.discover("https://reana.example.org")
+
+    message = str(excinfo.value)
+    assert "HTTP 404" in message
+    assert "is a REANA server" in message
+    assert "predates OIDC login" not in message
+
+
+def test_discover_non_404_failure_does_not_ping(monkeypatch):
+    """Only a missing discovery endpoint suggests a legacy server."""
+
+    def fake_get(url, timeout, allow_redirects, verify):
+        assert url.endswith(oidc.DISCOVERY_PATH), "ping must not be called"
+        return MockResponse({}, ok=False, status_code=503)
+
+    monkeypatch.setattr(oidc.requests, "get", fake_get)
+
+    with pytest.raises(oidc.AuthenticationError, match=r"HTTP 503$"):
+        oidc.discover("https://reana.example.org")
+
+
 def test_tls_verify_defaults_to_enabled(monkeypatch):
     """Test TLS verification is enabled when no override is set."""
     monkeypatch.delenv(config.CA_CERTS_ENV, raising=False)

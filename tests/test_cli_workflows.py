@@ -1590,7 +1590,9 @@ def test_open_interactive_session_reports_success_when_secret_fetch_fails(
             assert result.exit_code == 0
             assert "Interactive session opened successfully" in result.output
             assert "?token=" not in result.output
-            assert "run `reana-client open` again" in result.output
+            assert "session started, but its access token" in result.output
+            assert "Run `reana-client list --sessions`" in result.output
+            assert "reana-client open" not in result.output
 
 
 def test_open_interactive_session_reports_success_when_info_fetch_fails(client_config):

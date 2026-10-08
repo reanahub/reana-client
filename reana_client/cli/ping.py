@@ -17,6 +17,7 @@ import requests
 from reana_client.auth.diagnostics import connection_error
 from reana_client.auth.oidc import (
     AuthenticationError,
+    check_retired_loopback_port_env,
     login_with_device_flow,
     login_with_loopback,
     logout as oidc_logout,
@@ -57,12 +58,27 @@ def configuration_group():
     help="Use device login instead of opening a local browser. "
     "Use this on machines without a browser (e.g. over SSH).",
 )
+@click.option(
+    "--callback-port",
+    type=click.IntRange(0, 65535),
+    default=None,
+    metavar="PORT",
+    help="Local port for the browser login callback. By default the port "
+    "advertised by the REANA server is used, if any, or else a free port "
+    "selected by the operating system. Use 0 to force a free port. The "
+    "identity provider must accept the resulting redirect URI.",
+)
 @click.pass_context
-def login(ctx, server_url, server, headless, tls_verify, no_tls_verify):  # noqa: D301
+def login(
+    ctx, server_url, server, headless, tls_verify, no_tls_verify, callback_port
+):  # noqa: D301
     """Authenticate against REANA server using OIDC.
 
     By default the browser-based loopback flow (authorization code with PKCE)
     is used. On headless machines pass ``--headless`` to use the device flow.
+
+    The browser-based flow receives the login result on a local callback
+    port. ``--callback-port`` applies to this login only and is not saved.
 
     TLS certificate verification is enabled by default. An explicit TLS flag
     applies during login and is saved only after success. Later logins inherit
@@ -84,6 +100,15 @@ def login(ctx, server_url, server, headless, tls_verify, no_tls_verify):  # noqa
             raise ValueError(
                 "--tls-verify and --no-tls-verify cannot be used together."
             )
+        if headless and callback_port is not None:
+            raise ValueError(
+                "--headless and --callback-port cannot be used together: "
+                "device login does not use a callback port."
+            )
+        if not headless:
+            # Fail before any network request, so that a stale export is
+            # reported even when the server cannot be reached.
+            check_retired_loopback_port_env()
         selected = server or server_url or get_active_server()
         if not selected:
             raise ValueError(NO_SERVER)
@@ -94,7 +119,7 @@ def login(ctx, server_url, server, headless, tls_verify, no_tls_verify):  # noqa
             if headless:
                 _device_login(selected)
             else:
-                _browser_login(selected)
+                _browser_login(selected, callback_port)
             display_message(
                 f"Logged in to {selected}\nTLS verification: {tls_status(selected)}"
             )
@@ -106,7 +131,7 @@ def login(ctx, server_url, server, headless, tls_verify, no_tls_verify):  # noqa
         ctx.exit(1)
 
 
-def _browser_login(server_url):
+def _browser_login(server_url, callback_port=None):
     """Run the loopback authorization-code + PKCE login flow."""
 
     def display_url(authorization_url):
@@ -115,7 +140,7 @@ def _browser_login(server_url):
             f"automatically, visit:\n{authorization_url}"
         )
 
-    login_with_loopback(server_url, display_url)
+    login_with_loopback(server_url, display_url, callback_port=callback_port)
 
 
 def _device_login(server_url):

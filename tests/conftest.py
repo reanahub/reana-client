@@ -332,6 +332,7 @@ def isolated_client_config(tmp_path, monkeypatch):
         "REANA_SERVER_TLS_VERIFY",
         "REANA_SERVER_CA_CERTS",
         "REANA_ACCESS_TOKEN",
+        "REANA_CLIENT_LOGIN_LOOPBACK_PORT",
     ):
         monkeypatch.delenv(name, raising=False)
 

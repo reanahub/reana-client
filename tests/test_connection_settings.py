@@ -45,7 +45,7 @@ def isolated_store(tmp_path, monkeypatch):
 def test_login_saves_tls_only_on_success(server_flag, monkeypatch):
     """The first request sees the override, which becomes the later default."""
 
-    def login(server):
+    def login(server, callback_port=None):
         assert config.tls_verify(server) is False
         return oidc._store_token_response(
             server, METADATA, {"access_token": "a.b.c", "refresh_token": "r"}
@@ -68,7 +68,7 @@ def test_failed_login_preserves_selection_and_tls_with_rotated_token(monkeypatch
     storage.upsert_server_entry(SERVER, {"tls": {"verify": False}})
     storage.upsert_server_entry(OTHER, {"tls": {"verify": True}}, make_active=False)
 
-    def fail(server):
+    def fail(server, callback_port=None):
         assert config.tls_verify(server) is False
         oidc._store_token_response(server, METADATA, {"refresh_token": "rotated"})
 
@@ -91,7 +91,7 @@ def test_failed_login_preserves_selection_and_tls_with_rotated_token(monkeypatch
 def test_conflicting_flags_do_not_start_login(args, monkeypatch):
     """Reject contradictory settings before opening a browser or writing a store."""
     monkeypatch.setattr(
-        commands, "_browser_login", lambda _: pytest.fail("unexpected login")
+        commands, "_browser_login", lambda *_: pytest.fail("unexpected login")
     )
     result = CliRunner().invoke(cli, ["login", *args])
     assert result.exit_code == 1

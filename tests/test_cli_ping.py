@@ -164,6 +164,125 @@ def test_login_reports_credential_lock_timeout(monkeypatch):
     assert "Traceback" not in result.output
 
 
+@pytest.mark.parametrize(
+    ("arguments", "expected"),
+    [
+        ([], None),
+        (["--callback-port", "8899"], 8899),
+        (["--callback-port", "0"], 0),
+        (["--callback-port", "65535"], 65535),
+    ],
+)
+def test_login_passes_callback_port_to_browser_login(monkeypatch, arguments, expected):
+    """The option reaches the port selection, and an omitted option is ``None``."""
+    monkeypatch.delenv("REANA_CLIENT_LOGIN_LOOPBACK_PORT", raising=False)
+    login_with_loopback = Mock()
+    monkeypatch.setattr(
+        "reana_client.cli.ping.login_with_loopback", login_with_loopback
+    )
+    result = CliRunner().invoke(
+        cli, ["login", "--server-url", "https://reana.example.org", *arguments]
+    )
+    assert result.exit_code == 0, result.output
+    assert login_with_loopback.call_args.kwargs["callback_port"] == expected
+    assert login_with_loopback.call_args.args[0] == "https://reana.example.org"
+
+
+@pytest.mark.parametrize("value", ["-1", "65536", "abc", "88.5"])
+def test_login_rejects_invalid_callback_port(monkeypatch, value):
+    """Values outside 0-65535 are a usage error."""
+    login_with_loopback = Mock()
+    monkeypatch.setattr(
+        "reana_client.cli.ping.login_with_loopback", login_with_loopback
+    )
+    result = CliRunner().invoke(
+        cli,
+        [
+            "login",
+            "--server-url",
+            "https://reana.example.org",
+            "--callback-port",
+            value,
+        ],
+    )
+    assert result.exit_code == 2
+    assert "--callback-port" in result.output
+    login_with_loopback.assert_not_called()
+
+
+@pytest.mark.parametrize("port", ["0", "8899"])
+def test_login_rejects_headless_with_callback_port(monkeypatch, port):
+    """Device login uses no callback, so an explicit port is refused early."""
+    device_login = Mock()
+    monkeypatch.setattr("reana_client.cli.ping._device_login", device_login)
+    monkeypatch.setattr(
+        "reana_client.cli.ping.connection_scope",
+        Mock(side_effect=AssertionError("the login was started")),
+    )
+    result = CliRunner().invoke(
+        cli,
+        [
+            "login",
+            "--server-url",
+            "https://reana.example.org",
+            "--headless",
+            "--callback-port",
+            port,
+        ],
+    )
+    assert result.exit_code == 1
+    assert "--headless and --callback-port cannot be used together" in result.output
+    device_login.assert_not_called()
+
+
+@pytest.mark.parametrize("arguments", [[], ["--callback-port", "8899"]])
+def test_browser_login_stops_on_retired_port_variable(monkeypatch, arguments):
+    """A stale export is reported, also together with ``--callback-port``."""
+    login_with_loopback = Mock()
+    monkeypatch.setattr(
+        "reana_client.cli.ping.login_with_loopback", login_with_loopback
+    )
+    result = CliRunner(env={"REANA_CLIENT_LOGIN_LOOPBACK_PORT": "8899"}).invoke(
+        cli, ["login", "--server-url", "https://reana.example.org", *arguments]
+    )
+    assert result.exit_code == 1
+    assert "REANA_CLIENT_LOGIN_LOOPBACK_PORT is no longer a client input" in (
+        result.output
+    )
+    assert "reana-client login --callback-port PORT" in result.output
+    login_with_loopback.assert_not_called()
+
+
+@pytest.mark.parametrize("value", ["", "   "])
+def test_blank_retired_port_variable_does_not_stop_browser_login(monkeypatch, value):
+    """Empty and whitespace-only values do not trigger the guidance."""
+    login_with_loopback = Mock()
+    monkeypatch.setattr(
+        "reana_client.cli.ping.login_with_loopback", login_with_loopback
+    )
+    result = CliRunner(env={"REANA_CLIENT_LOGIN_LOOPBACK_PORT": value}).invoke(
+        cli, ["login", "--server-url", "https://reana.example.org"]
+    )
+    assert result.exit_code == 0, result.output
+    login_with_loopback.assert_called_once()
+
+
+def test_retired_port_variable_does_not_affect_other_commands(monkeypatch):
+    """Device login and unrelated commands ignore a stale export."""
+    device_login = Mock()
+    monkeypatch.setattr("reana_client.cli.ping._device_login", device_login)
+    runner = CliRunner(env={"REANA_CLIENT_LOGIN_LOOPBACK_PORT": "8899"})
+    result = runner.invoke(
+        cli, ["login", "--server-url", "https://reana.example.org", "--headless"]
+    )
+    assert result.exit_code == 0, result.output
+    device_login.assert_called_once()
+
+    result = runner.invoke(cli, ["version"])
+    assert result.exit_code == 0, result.output
+    assert "REANA_CLIENT_LOGIN_LOOPBACK_PORT" not in result.output
+
+
 def test_logout_reports_credential_lock_timeout(monkeypatch):
     """Logout handles the same storage boundary consistently."""
     monkeypatch.setattr(

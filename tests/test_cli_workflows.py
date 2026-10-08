@@ -1760,6 +1760,34 @@ def test_share_add_workflow(client_config):
             assert response["message"] in result.output
 
 
+def test_share_add_workflow_shows_server_warnings(client_config):
+    """Test share-add reports warnings such as a notification email failure."""
+    warning = "The workflow was shared, but the notification email could not be sent."
+    response = {
+        "message": "The workflow has been shared with the user.",
+        "workflow_id": "string",
+        "workflow_name": "string",
+        "warnings": [{"code": "email_notification_failed", "message": warning}],
+    }
+    mock_http_response = Mock()
+    mock_http_response.status_code = 200
+    runner = CliRunner(env=client_config("localhost"))
+    args = ["share-add", "-t", "000000", "-w", "test-workflow.1", "-u", "bob@cern.ch"]
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(response, mock_http_response),
+        ):
+            result = runner.invoke(cli, args)
+            assert result.exit_code == 0
+            assert "is now read-only shared with bob@cern.ch" in result.output
+            assert f"bob@cern.ch: {warning}" in result.output
+
+            result = runner.invoke(cli, args + ["--json"])
+            assert result.exit_code == 0
+            assert f"bob@cern.ch: {warning}" in result.output
+
+
 def test_share_remove_workflow(client_config):
     """Test share-remove workflows."""
     status_code = 200

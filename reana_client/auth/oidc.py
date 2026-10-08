@@ -58,19 +58,22 @@ DEVICE_FLOW_MAX_SECONDS = 3600
 
 LOOPBACK_HOST = "127.0.0.1"
 LOOPBACK_PORT_ENV = "REANA_CLIENT_LOGIN_LOOPBACK_PORT"
-"""Overrides the loopback callback server's port; unset means OS-assigned.
+"""Overrides the loopback callback server's port; ``0`` means OS-assigned.
 
 RFC 8252 native-app guidance calls for binding an OS-assigned ephemeral port
-(0) so the authorization server is expected to match the redirect URI on
-scheme/host only. Not every identity provider supports that, though --
-CERN's Application Portal, for one, has no documented way to register a
-wildcard/any-port loopback redirect URI and requires an exact match. Setting
-this env var pins one fixed port so an administrator can register
-`http://127.0.0.1:<port>/callback` once. The trade-off: login fails outright
-if something else on the machine is already bound to that port, instead of
-the ephemeral default's automatic use of a fresh free port every time --
-which is why it stays opt-in rather than the default.
+so the authorization server is expected to match the complete redirect URI,
+including its path, while allowing only the port to vary. Not every identity
+provider supports that, though -- INDIGO IAM, for one, requires the redirect
+URI to match the registered one exactly, port included. Such deployments
+advertise the registered port through ``LOOPBACK_PORT_METADATA_FIELD``, so
+users do not normally need this variable. Setting it explicitly takes
+precedence over the advertised port, and ``0`` forces an OS-assigned port.
+The trade-off of a fixed port: login fails outright if something else on the
+machine is already bound to it, instead of the ephemeral default's automatic
+use of a fresh free port every time.
 """
+LOOPBACK_PORT_METADATA_FIELD = "reana_cli_loopback_port"
+"""Optional discovery field with the callback port fixed by the deployment."""
 LOOPBACK_CALLBACK_PATH = "/callback"
 LOOPBACK_TIMEOUT_SECONDS = 300
 
@@ -478,23 +481,55 @@ class _CallbackHandler(BaseHTTPRequestHandler):
         """Silence the default stderr request logging."""
 
 
-def _start_callback_server() -> Tuple[HTTPServer, str]:
+def _select_loopback_port(metadata: Optional[Dict] = None) -> Tuple[int, Optional[str]]:
+    """Select the callback port and name the source that fixed it, if any.
+
+    An explicit environment override wins, including ``0`` for an OS-assigned
+    port. Otherwise the port advertised by the REANA server is used, and an
+    OS-assigned port is the default. The advertised value is validated only
+    here, so malformed metadata cannot break device login or a valid override.
+    """
+    raw_port = (os.getenv(LOOPBACK_PORT_ENV) or "").strip()
+    if raw_port:
+        try:
+            requested_port = int(raw_port)
+        except ValueError:
+            raise AuthenticationError(
+                f"{LOOPBACK_PORT_ENV} must be an integer port number, "
+                f"got '{raw_port}'."
+            )
+        if not 0 <= requested_port <= 65535:
+            # A port outside 0-65535 reaches HTTPServer's bind() and raises
+            # OverflowError there, which is not an OSError subclass and so
+            # would otherwise skip the controlled handling entirely.
+            raise AuthenticationError(
+                f"{LOOPBACK_PORT_ENV} must be between 0 and 65535, "
+                f"got {requested_port}."
+            )
+        return requested_port, (LOOPBACK_PORT_ENV if requested_port else None)
+    if not metadata or LOOPBACK_PORT_METADATA_FIELD not in metadata:
+        return 0, None
+    advertised_port = metadata[LOOPBACK_PORT_METADATA_FIELD]
+    if (
+        isinstance(advertised_port, bool)
+        or not isinstance(advertised_port, int)
+        or not 1 <= advertised_port <= 65535
+    ):
+        raise AuthenticationError(
+            "The REANA server advertises an invalid login callback port "
+            f"({LOOPBACK_PORT_METADATA_FIELD}={advertised_port!r}); it must be "
+            "an integer between 1 and 65535. Please report this to the "
+            f"administrators of the REANA server, or set {LOOPBACK_PORT_ENV} "
+            "to the port registered with the identity provider."
+        )
+    return advertised_port, "the REANA server"
+
+
+def _start_callback_server(
+    metadata: Optional[Dict] = None,
+) -> Tuple[HTTPServer, str]:
     """Start a loopback HTTP server and return it with its redirect URI."""
-    raw_port = (os.getenv(LOOPBACK_PORT_ENV) or "").strip() or "0"
-    try:
-        requested_port = int(raw_port)
-    except ValueError:
-        raise AuthenticationError(
-            f"{LOOPBACK_PORT_ENV} must be an integer port number, " f"got '{raw_port}'."
-        )
-    if not 0 <= requested_port <= 65535:
-        # A port outside 0-65535 reaches HTTPServer's bind() and raises
-        # OverflowError there, which is not an OSError subclass and so
-        # would otherwise skip the controlled handling below entirely.
-        raise AuthenticationError(
-            f"{LOOPBACK_PORT_ENV} must be between 0 and 65535, "
-            f"got {requested_port}."
-        )
+    requested_port, source = _select_loopback_port(metadata)
     try:
         httpd = HTTPServer((LOOPBACK_HOST, requested_port), _CallbackHandler)
     except OSError as error:
@@ -502,12 +537,17 @@ def _start_callback_server() -> Tuple[HTTPServer, str]:
             f"Could not bind the login callback server to "
             f"{LOOPBACK_HOST}:{requested_port} ({error})."
         )
-        if requested_port:
+        if source:
+            # Never fall back to another port here: the identity provider
+            # would reject a redirect URI that is not the registered one.
             message += (
-                f" This port is fixed by {LOOPBACK_PORT_ENV} so it can be "
-                "registered as a redirect URI with the identity provider; "
-                "free it up (check what else is listening on it) and try "
-                "again."
+                f" This port is fixed by {source} so that it matches the "
+                "redirect URI registered with the identity provider; free "
+                "it up (check what else is listening on it) and try again. "
+                "Alternatively, 'reana-client login --headless' does not "
+                "need a callback port, provided that the identity provider "
+                "and the REANA CLI client registration support the "
+                "device-code grant."
             )
         raise AuthenticationError(message)
     httpd.callback_query = None
@@ -573,7 +613,7 @@ def login_with_loopback(
     pkce = generate_pkce_pair()
     state = secrets.token_urlsafe(32)
 
-    httpd, redirect_uri = _start_callback_server()
+    httpd, redirect_uri = _start_callback_server(metadata)
     try:
         authorization_url = _build_authorization_url(
             metadata, DEFAULT_SCOPES, pkce, state, redirect_uri

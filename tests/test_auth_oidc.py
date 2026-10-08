@@ -1156,6 +1156,212 @@ def test_start_callback_server_treats_empty_port_as_unset(monkeypatch, value):
         httpd.server_close()
 
 
+def _free_loopback_port():
+    """Return a loopback port that was free a moment ago."""
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind((oidc.LOOPBACK_HOST, 0))
+        return probe.getsockname()[1]
+
+
+def test_start_callback_server_uses_server_advertised_port(monkeypatch):
+    """The port advertised by the REANA server is used without any override."""
+    monkeypatch.delenv(oidc.LOOPBACK_PORT_ENV, raising=False)
+    port = _free_loopback_port()
+    httpd, redirect_uri = oidc._start_callback_server(
+        {**METADATA, oidc.LOOPBACK_PORT_METADATA_FIELD: port}
+    )
+    try:
+        assert redirect_uri == (
+            f"http://{oidc.LOOPBACK_HOST}:{port}{oidc.LOOPBACK_CALLBACK_PATH}"
+        )
+        assert httpd.server_address[0] == oidc.LOOPBACK_HOST
+    finally:
+        httpd.server_close()
+
+
+@pytest.mark.parametrize("metadata", [None, {}, dict(METADATA)])
+def test_start_callback_server_defaults_to_ephemeral_port(monkeypatch, metadata):
+    """Servers not advertising a port keep the OS-assigned default."""
+    monkeypatch.delenv(oidc.LOOPBACK_PORT_ENV, raising=False)
+    assert oidc._select_loopback_port(metadata) == (0, None)
+    httpd, redirect_uri = oidc._start_callback_server(metadata)
+    try:
+        assert httpd.server_address[1] != 0
+        assert redirect_uri.endswith(
+            f":{httpd.server_address[1]}{oidc.LOOPBACK_CALLBACK_PATH}"
+        )
+    finally:
+        httpd.server_close()
+
+
+def test_environment_port_overrides_server_advertised_port(monkeypatch):
+    """An explicit environment port takes precedence over the advertised one."""
+    port = _free_loopback_port()
+    monkeypatch.setenv(oidc.LOOPBACK_PORT_ENV, str(port))
+    metadata = {**METADATA, oidc.LOOPBACK_PORT_METADATA_FIELD: 8899}
+    assert oidc._select_loopback_port(metadata) == (port, oidc.LOOPBACK_PORT_ENV)
+
+
+def test_explicit_zero_overrides_server_advertised_port(monkeypatch):
+    """An explicit ``0`` forces an OS-assigned port despite the advertised one."""
+    blocker_port = _free_loopback_port()
+    monkeypatch.setenv(oidc.LOOPBACK_PORT_ENV, "0")
+    metadata = {**METADATA, oidc.LOOPBACK_PORT_METADATA_FIELD: blocker_port}
+    assert oidc._select_loopback_port(metadata) == (0, None)
+    httpd, _ = oidc._start_callback_server(metadata)
+    try:
+        assert httpd.server_address[1] not in (0, blocker_port)
+    finally:
+        httpd.server_close()
+
+
+@pytest.mark.parametrize(
+    "advertised",
+    ["8899", 8899.0, 88.5, None, True, False, 0, -1, 65536, [8899], {"port": 8899}],
+)
+def test_start_callback_server_rejects_invalid_advertised_port(monkeypatch, advertised):
+    """Selected malformed metadata is reported and never silently replaced."""
+    monkeypatch.delenv(oidc.LOOPBACK_PORT_ENV, raising=False)
+    metadata = {**METADATA, oidc.LOOPBACK_PORT_METADATA_FIELD: advertised}
+    with pytest.raises(
+        oidc.AuthenticationError, match=oidc.LOOPBACK_PORT_METADATA_FIELD
+    ) as excinfo:
+        oidc._start_callback_server(metadata)
+    assert oidc.LOOPBACK_PORT_ENV in str(excinfo.value)
+
+
+@pytest.mark.parametrize("override", ["0", "8898"])
+def test_valid_override_ignores_malformed_advertised_port(monkeypatch, override):
+    """Malformed unused metadata does not prevent a valid override."""
+    monkeypatch.setenv(oidc.LOOPBACK_PORT_ENV, override)
+    metadata = {**METADATA, oidc.LOOPBACK_PORT_METADATA_FIELD: "not-a-port"}
+    assert oidc._select_loopback_port(metadata)[0] == int(override)
+
+
+def test_start_callback_server_reports_advertised_port_conflict(monkeypatch):
+    """An occupied advertised port names its source and is not replaced."""
+    import socket
+
+    monkeypatch.delenv(oidc.LOOPBACK_PORT_ENV, raising=False)
+    blocker = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    blocker.bind((oidc.LOOPBACK_HOST, 0))
+    blocker.listen(1)
+    try:
+        taken_port = blocker.getsockname()[1]
+        metadata = {**METADATA, oidc.LOOPBACK_PORT_METADATA_FIELD: taken_port}
+        with pytest.raises(oidc.AuthenticationError) as excinfo:
+            oidc._start_callback_server(metadata)
+    finally:
+        blocker.close()
+    message = str(excinfo.value)
+    assert f"{oidc.LOOPBACK_HOST}:{taken_port}" in message
+    assert "fixed by the REANA server" in message
+    assert "--headless" in message
+    assert "device-code grant" in message
+
+
+def test_ephemeral_port_bind_failure_does_not_suggest_fixed_port(monkeypatch):
+    """A failure on the OS-assigned default does not blame a fixed port."""
+    monkeypatch.delenv(oidc.LOOPBACK_PORT_ENV, raising=False)
+
+    def fail_bind(*args, **kwargs):
+        raise OSError("no sockets left")
+
+    monkeypatch.setattr(oidc, "HTTPServer", fail_bind)
+    with pytest.raises(oidc.AuthenticationError) as excinfo:
+        oidc._start_callback_server(dict(METADATA))
+    assert "fixed by" not in str(excinfo.value)
+
+
+def test_device_flow_ignores_malformed_advertised_port(tmp_path, monkeypatch):
+    """Device login never reads the browser-login callback port."""
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(tmp_path / "reana-client.json"))
+    monkeypatch.delenv(oidc.LOOPBACK_PORT_ENV, raising=False)
+    metadata = {**METADATA, oidc.LOOPBACK_PORT_METADATA_FIELD: "not-a-port"}
+    monkeypatch.setattr(oidc, "discover", lambda server_url: dict(metadata))
+    monkeypatch.setattr(
+        oidc,
+        "_select_loopback_port",
+        lambda *args, **kwargs: pytest.fail("device login selected a callback port"),
+    )
+
+    def fake_post(url, data, timeout, allow_redirects, verify):
+        if url == METADATA["device_authorization_endpoint"]:
+            return MockResponse(
+                {
+                    "device_code": "device-code",
+                    "user_code": "USER-CODE",
+                    "verification_uri": "https://issuer.example.org/verify",
+                    "expires_in": 600,
+                    "interval": 1,
+                }
+            )
+        return MockResponse(
+            {"access_token": "access", "refresh_token": "refresh", "expires_in": 3600}
+        )
+
+    monkeypatch.setattr(oidc.requests, "post", fake_post)
+    monkeypatch.setattr(oidc.time, "sleep", lambda seconds: None)
+
+    oidc.login_with_device_flow("https://reana.example.org", lambda response: None)
+
+    assert get_server_entry("https://reana.example.org")["access_token"] == "access"
+
+
+def test_login_with_loopback_uses_advertised_port_for_both_requests(
+    tmp_path, monkeypatch
+):
+    """Authorisation and token exchange share the advertised redirect URI."""
+    import threading
+    import urllib.request
+
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(tmp_path / "reana-client.json"))
+    monkeypatch.delenv(oidc.LOOPBACK_PORT_ENV, raising=False)
+    port = _free_loopback_port()
+    expected_redirect_uri = (
+        f"http://{oidc.LOOPBACK_HOST}:{port}{oidc.LOOPBACK_CALLBACK_PATH}"
+    )
+    metadata = {**METADATA, oidc.LOOPBACK_PORT_METADATA_FIELD: port}
+    monkeypatch.setattr(oidc, "discover", lambda server_url: dict(metadata))
+    captured = {}
+
+    def fake_browser(authorization_url):
+        params = parse_qs(urlparse(authorization_url).query)
+        captured["authorization"] = params
+
+        def redirect():
+            urllib.request.urlopen(
+                f"{params['redirect_uri'][0]}?code=auth-code"
+                f"&state={params['state'][0]}",
+                timeout=5,
+            )
+
+        threading.Thread(target=redirect, daemon=True).start()
+        return True
+
+    def fake_post(url, data, timeout, allow_redirects, verify):
+        captured["token"] = data
+        return MockResponse(
+            {"access_token": "access", "refresh_token": "refresh", "expires_in": 3600}
+        )
+
+    monkeypatch.setattr(oidc.requests, "post", fake_post)
+
+    oidc.login_with_loopback(
+        "https://reana.example.org",
+        lambda url: None,
+        open_browser=fake_browser,
+        timeout=10,
+    )
+
+    assert captured["authorization"]["redirect_uri"] == [expected_redirect_uri]
+    assert captured["authorization"]["code_challenge_method"] == ["S256"]
+    assert captured["token"]["redirect_uri"] == expected_redirect_uri
+    assert captured["token"]["code_verifier"]
+
+
 def test_login_with_loopback_exchanges_code_with_pkce(tmp_path, monkeypatch):
     """Test the browser loopback flow exchanges the code using the verifier."""
     config_path = tmp_path / "reana-client.json"
@@ -1165,7 +1371,9 @@ def test_login_with_loopback_exchanges_code_with_pkce(tmp_path, monkeypatch):
 
     monkeypatch.setattr(oidc, "discover", lambda server_url: dict(METADATA))
     monkeypatch.setattr(
-        oidc, "_start_callback_server", lambda: (FakeLoopbackServer(), redirect_uri)
+        oidc,
+        "_start_callback_server",
+        lambda metadata=None: (FakeLoopbackServer(), redirect_uri),
     )
 
     def fake_wait(httpd, timeout):
@@ -1228,7 +1436,7 @@ def test_login_with_loopback_rejects_state_mismatch(tmp_path, monkeypatch):
     monkeypatch.setattr(
         oidc,
         "_start_callback_server",
-        lambda: (FakeLoopbackServer(), "http://127.0.0.1:5555/callback"),
+        lambda metadata=None: (FakeLoopbackServer(), "http://127.0.0.1:5555/callback"),
     )
     monkeypatch.setattr(
         oidc,

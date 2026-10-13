@@ -533,8 +533,7 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
     multiple=True,
     callback=key_value_to_dict,
     help="Additional operational options for the workflow execution. "
-    "E.g. CACHE=off. (workflow engine - serial) "
-    "E.g. --debug (workflow engine - cwl)",
+    "E.g. TARGET=gendata (workflow engine - serial).",
 )
 @click.option(
     "--follow",
@@ -552,13 +551,12 @@ def workflow_start(
     The ``start`` command allows to start previously created workflow. The
     workflow execution can be further influenced by passing input prameters
     using ``-p`` or ``--parameters`` flag and by setting additional operational
-    options using ``-o`` or ``--options``.  The input parameters and operational
-    options can be repetitive. For example, to disable caching for the Serial
-    workflow engine, you can set ``-o CACHE=off``.
+    options using ``-o`` or ``--options``. The input parameters and operational
+    options can be repetitive.
 
     Examples:\n
     \t $ reana-client start -w myanalysis.42 -p sleeptime=10 -p myparam=4\n
-    \t $ reana-client start -w myanalysis.42 -p myparam1=myvalue1 -o CACHE=off
+    \t $ reana-client start -w myanalysis.42 -p myparam1=myvalue1 -o TARGET=gendata
     """
     from reana_client.api.client import (
         get_workflow_parameters,
@@ -660,8 +658,7 @@ def workflow_start(
     multiple=True,
     callback=key_value_to_dict,
     help="Additional operational options for the workflow execution. "
-    "E.g. CACHE=off. (workflow engine - serial) "
-    "E.g. --debug (workflow engine - cwl)",
+    "E.g. TARGET=gendata (workflow engine - serial).",
 )
 @click.option(
     "-f",
@@ -1261,7 +1258,7 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
     multiple=True,
     callback=key_value_to_dict,
     help="Additional operational options for the workflow execution. "
-    "E.g. CACHE=off.",
+    "E.g. TARGET=gendata (workflow engine - serial).",
 )
 @click.option(
     "--follow",

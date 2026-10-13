@@ -118,7 +118,8 @@ class ReanaCLI(click.Group):
                         continue
                     command_help = command[1].get_short_help_str(limit)
                     item["rows"].append((command[0], command_help))
-                rows.append(item)
+                if item["rows"]:
+                    rows.append(item)
             for item in rows:
                 with formatter.section(item["group_help"]):
                     formatter.write_dl(item["rows"])

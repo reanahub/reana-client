@@ -1854,6 +1854,7 @@ def workflow_share_add(
     from reana_client.api.client import share_workflow
 
     share_errors = []
+    share_warnings = []
     shared_users = []
 
     if valid_until:
@@ -1862,7 +1863,7 @@ def workflow_share_add(
     for user in users:
         try:
             logging.info(f"Sharing workflow {workflow} with user {user}")
-            share_workflow(
+            response = share_workflow(
                 workflow,
                 user,
                 access_token,
@@ -1870,6 +1871,10 @@ def workflow_share_add(
                 valid_until=valid_until,
             )
             shared_users.append(user)
+            share_warnings += [
+                f"{user}: {warning['message']}"
+                for warning in (response or {}).get("warnings") or []
+            ]
         except Exception as e:
             share_errors.append(f"Failed to share {workflow} with {user}: {str(e)}")
             logging.debug(traceback.format_exc())
@@ -1878,6 +1883,7 @@ def workflow_share_add(
         result = {
             "workflow": workflow,
             "shared_with": shared_users,
+            "warnings": share_warnings,
             "errors": share_errors,
         }
         display_message(
@@ -1889,6 +1895,9 @@ def workflow_share_add(
                 f"{workflow} is now read-only shared with {', '.join(shared_users)}",
                 msg_type="success",
             )
+
+        for warning in share_warnings:
+            display_message(warning, msg_type="warning")
 
         for error in share_errors:
             display_message(error, msg_type="error")

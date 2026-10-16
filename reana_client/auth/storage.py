@@ -182,6 +182,14 @@ def _open_lock_file_safely(lock_path: str):
             raise CredentialStoreError(
                 "Credential lock path is not a regular file: {}".format(lock_path)
             )
+        problem = _lock_file_ownership_problem(opened)
+        if problem:
+            raise CredentialStoreError(
+                "Credential lock path {} {}. Remove it and retry, and keep the "
+                "client configuration in a private directory.".format(
+                    lock_path, problem
+                )
+            )
         # fchmod is not available on every platform (notably Windows). The
         # creation mode above remains the best available protection there.
         if hasattr(os, "fchmod"):
@@ -190,6 +198,22 @@ def _open_lock_file_safely(lock_path: str):
     except BaseException:
         os.close(fd)
         raise
+
+
+def _lock_file_ownership_problem(opened: os.stat_result) -> Optional[str]:
+    """Return why another path or another user can reach the lock file.
+
+    The ``fchmod`` would otherwise change the permissions of a file that is
+    also reachable through a hard link, or that another user owns. Platforms
+    without ``geteuid`` (notably Windows) keep the previous behaviour.
+    """
+    if not hasattr(os, "geteuid"):
+        return None
+    if opened.st_nlink != 1:
+        return "has multiple hard links"
+    if opened.st_uid != os.geteuid():
+        return "is owned by another user"
+    return None
 
 
 def _open_refresh_lock_file(server_url: str):

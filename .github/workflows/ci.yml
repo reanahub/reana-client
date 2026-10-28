@@ -270,12 +270,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -y
-          # Required to build lxml when no Python wheel is available.
-          sudo apt-get install libxml2-dev libxslt1-dev
-
       - name: Setup requirements builder
         run: |
           pip install --upgrade pip 'setuptools<81' py

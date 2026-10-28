@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -20,12 +20,39 @@ from time import sleep
 import click
 import yaml
 from bravado.exception import HTTPServerError
-from cwltool.load_tool import fetch_document
-from cwltool.main import printdeps
 
 from reana_client.cli.utils import add_access_token_options
 from reana_client.utils import is_regular_path
 from reana_client.version import __version__
+
+
+def _import_cwltool():
+    """Return the ``cwltool`` functions used for dependency discovery.
+
+    ``cwltool`` is an optional dependency installed by the ``cwl-runner``
+    extra, so that ``reana-client`` itself does not depend on any workflow
+    engine.
+
+    :returns: ``(fetch_document, printdeps)``.
+    :raises click.ClickException: if ``cwltool`` cannot be imported.
+    """
+    try:
+        from cwltool.load_tool import fetch_document
+        from cwltool.main import printdeps
+    except ImportError as error:
+        raise click.ClickException(
+            "reana-cwl-runner requires cwltool, which could not be imported "
+            "({}). Install it with `pip install 'reana-client[cwl-runner]'`. "
+            "Running CWL workflows with `reana-client run` does not need "
+            "it.".format(error)
+        ) from error
+    return fetch_document, printdeps
+
+
+def _require_cwltool(ctx, param, value):
+    """Fail early if ``cwltool`` is missing, before any server request."""
+    if not ctx.resilient_parsing:
+        _import_cwltool()
 
 
 def findfiles(wo, fn=None):
@@ -55,6 +82,7 @@ def get_file_dependencies_obj(cwl_obj, basedir):
     :param basedir: Workflow base dir.
     :returns: A dictionary composed of valid CWL file dependencies.
     """
+    fetch_document, printdeps = _import_cwltool()
     # Load the document
     # remove filename additions (e.g. 'v1.0/conflict-wf.cwl#collision')
     document = cwl_obj.split("#")[0]
@@ -200,6 +228,18 @@ def _create_cwl_workflow(processfile, jobfile, basedir, access_token):
     help="Output directory, defaults to the current directory",
 )
 @click.option("--basedir", type=click.Path(), help="Base directory.")
+# Declared before the access token option, whose callback may use or refresh a
+# stored login over the network. Click runs the callbacks of options missing
+# from the command line in declaration order, and an access token given on the
+# command line needs no network access, so a missing cwltool is reported before
+# contacting any server. The eager --help and --version options still win.
+@click.option(
+    "--require-cwltool",
+    is_flag=True,
+    expose_value=False,
+    hidden=True,
+    callback=_require_cwltool,
+)
 @add_access_token_options
 @click.argument("processfile")
 @click.argument("jobfile", required=False)

@@ -6,15 +6,55 @@
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
-"""Tests for containment-safe CWL bundle staging."""
+"""Tests for the CWL runner."""
 
 import os
+import sys
 
 import pytest
 import yaml
-from unittest.mock import patch
+from click.testing import CliRunner
+from unittest.mock import Mock, patch
 
-from reana_client.cli.cwl_runner import _create_cwl_workflow, _stage_cwl_member
+from reana_client.cli.cwl_runner import (
+    _create_cwl_workflow,
+    _stage_cwl_member,
+    cwl_runner,
+)
+
+
+@pytest.fixture
+def without_cwltool(monkeypatch):
+    """Make importing cwltool fail, whether it is installed or not."""
+    for module in ("cwltool", "cwltool.load_tool", "cwltool.main"):
+        monkeypatch.setitem(sys.modules, module, None)
+
+
+@pytest.mark.parametrize("token_options", [[], ["-t", "token"]])
+def test_cwl_runner_without_cwltool_fails_before_server_requests(
+    monkeypatch, tmp_path, without_cwltool, token_options
+):
+    """A missing cwltool is reported before using any stored login."""
+    get_access_token = Mock(return_value="token")
+    api_client = Mock()
+    monkeypatch.setattr("reana_client.cli.utils.get_access_token", get_access_token)
+    monkeypatch.setattr("reana_client.api.client.current_rs_api_client", api_client)
+    workflow = tmp_path / "workflow.cwl"
+    workflow.write_text("class: Workflow\n")
+
+    result = CliRunner().invoke(cwl_runner, token_options + [str(workflow)])
+
+    assert result.exit_code == 1
+    assert "pip install 'reana-client[cwl-runner]'" in result.output
+    get_access_token.assert_not_called()
+    assert api_client.mock_calls == []
+
+
+@pytest.mark.parametrize("option", ["--help", "--version"])
+def test_cwl_runner_help_and_version_without_cwltool(option, without_cwltool):
+    """Help and version remain available without cwltool."""
+    result = CliRunner().invoke(cwl_runner, [option])
+    assert result.exit_code == 0, result.output
 
 
 def test_stage_cwl_member_copies_regular_contained_file(tmp_path):

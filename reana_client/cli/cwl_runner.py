@@ -18,10 +18,11 @@ import traceback
 from time import sleep
 
 import click
+import requests
 import yaml
 from bravado.exception import HTTPServerError
 
-from reana_client.cli.utils import add_access_token_options
+from reana_client.cli.utils import add_access_token_options, exit_on_transport_error
 from reana_client.utils import is_regular_path
 from reana_client.version import __version__
 
@@ -315,6 +316,8 @@ def cwl_runner(ctx, quiet, outdir, basedir, processfile, jobfile, access_token):
         sys.stdout.write("\n")
         sys.stdout.flush()
 
+    except requests.RequestException as e:
+        exit_on_transport_error(e)
     except HTTPServerError as e:
         logging.error(traceback.print_exc())
         logging.error(e)

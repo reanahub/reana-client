@@ -11,6 +11,7 @@ import logging
 import sys
 
 import click
+import requests
 
 from reana_commons.config import REANA_RESOURCE_HEALTH_COLORS
 from reana_commons.utils import get_quota_resource_usage
@@ -130,6 +131,8 @@ def quota_show(
                 result = f"{result} in the period from {period_window}"
         return display_message(result)
 
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(str(e), exc_info=True)
         display_message(

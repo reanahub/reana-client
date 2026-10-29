@@ -16,7 +16,6 @@ import traceback
 
 import click
 import requests
-from reana_client.auth.diagnostics import connection_error
 from reana_client.cli.files import get_files, upload_files
 from reana_client.cli.utils import (
     add_access_token_options,
@@ -26,6 +25,8 @@ from reana_client.cli.utils import (
     access_token_check,
     check_connection,
     display_formatted_output,
+    error_message,
+    exit_on_transport_error,
     format_session_uri,
     get_formatted_progress,
     human_readable_or_raw_option,
@@ -407,12 +408,8 @@ def workflows_list(  # noqa: C901
 
         display_formatted_output(data, headers[type], _format, output_format)
 
-    except requests.RequestException as e:
-        from reana_client.utils import get_api_url
-
-        server = get_api_url()
-        display_message(connection_error(server, server, e), msg_type="error")
-        sys.exit(1)
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -499,6 +496,8 @@ def workflow_create(ctx, file, name, skip_validation, access_token):  # noqa: D3
         # check if command is called from wrapper command
         if "invoked_by_subcommand" in ctx.parent.__dict__:
             ctx.parent.workflow_name = workflow_name
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -595,6 +594,8 @@ def workflow_start(
             except REANAValidationError as e:
                 display_message(e.message, msg_type="error")
                 sys.exit(1)
+            except requests.RequestException:
+                raise
             except Exception as e:
                 display_message(
                     "Could not apply given input parameters: "
@@ -629,6 +630,8 @@ def workflow_start(
                             output_format="url",
                             human_readable_or_raw="raw",
                         )
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
@@ -746,6 +749,8 @@ def workflow_restart(
         except REANAValidationError as e:
             display_message(e.message, msg_type="error")
             sys.exit(1)
+        except requests.RequestException:
+            raise
         except Exception as e:
             display_message(
                 "Could not apply given input parameters: "
@@ -776,6 +781,8 @@ def workflow_restart(
             get_workflow_status_change_msg(workflow, current_status),
             msg_type="success",
         )
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -913,6 +920,8 @@ def workflow_status(  # noqa: C901
 
         display_formatted_output(data, headers, _format, output_format)
 
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -1047,6 +1056,8 @@ def workflow_logs(
                 page,
                 size,
             )
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -1126,6 +1137,8 @@ def workflow_validate(
         report = validate_workflow_spec_bundle(
             filename, access_token, environments=environments
         )
+    except requests.RequestException as e:
+        exit_on_transport_error(e)
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -1210,6 +1223,8 @@ def workflow_stop(ctx, workflow, force_stop, access_token):  # noqa: D301
                 get_workflow_status_change_msg(workflow, "stopped"),
                 msg_type="success",
             )
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
@@ -1478,6 +1493,10 @@ def workflow_delete(  # noqa: C901
                     try:
                         delete_workflow(workflow_id_or_name, False, True, access_token)
                         deleted_labels.append(format_run_number_label(full_name))
+                    except requests.RequestException as e:
+                        failed_deletions.append(
+                            (format_run_number_label(full_name), error_message(e))
+                        )
                     except Exception as e:
                         logging.debug(traceback.format_exc())
                         logging.debug(str(e))
@@ -1496,6 +1515,10 @@ def workflow_delete(  # noqa: C901
                         try:
                             delete_workflow(rid or rname, False, False, access_token)
                             deleted_labels.append(format_run_number_label(rname))
+                        except requests.RequestException as e:
+                            failed_deletions.append(
+                                (format_run_number_label(rname), error_message(e))
+                            )
                         except Exception as e:
                             logging.debug(traceback.format_exc())
                             logging.debug(str(e))
@@ -1546,6 +1569,8 @@ def workflow_delete(  # noqa: C901
                     msg_type="success",
                 )
 
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
@@ -1645,6 +1670,8 @@ def workflow_diff(
             )
             print_color_diff(workspace_diff)
 
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))
@@ -1713,6 +1740,9 @@ def workflow_open_interactive_session(
                 session_secret = get_interactive_session_secret(workflow, access_token)[
                     "session_secret"
                 ]
+            except requests.RequestException as secret_error:
+                logging.debug(error_message(secret_error))
+                session_secret = None
             except Exception as secret_error:
                 # The session was already created above; a transient failure
                 # fetching its secret must not be reported as a failed open.
@@ -1750,6 +1780,12 @@ def workflow_open_interactive_session(
                     display_message(
                         f"Please note that it will be automatically closed after {max_inactivity_days} days of inactivity."
                     )
+            except requests.RequestException as info_error:
+                logging.debug(error_message(info_error))
+                display_message(
+                    "Could not retrieve the interactive-session inactivity policy.",
+                    msg_type="warning",
+                )
             except Exception as info_error:
                 # The session is already open. Optional informational metadata
                 # must not turn that successful mutation into an exit failure.
@@ -1759,6 +1795,8 @@ def workflow_open_interactive_session(
                     "Could not retrieve the interactive-session inactivity policy.",
                     msg_type="warning",
                 )
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
@@ -1797,6 +1835,8 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
                 " was successfully closed".format(workflow),
                 msg_type="success",
             )
+        except requests.RequestException:
+            raise
         except Exception as e:
             logging.debug(traceback.format_exc())
             logging.debug(str(e))
@@ -1870,6 +1910,10 @@ def workflow_share_add(
                 valid_until=valid_until,
             )
             shared_users.append(user)
+        except requests.RequestException as e:
+            share_errors.append(
+                f"Failed to share {workflow} with {user}: {error_message(e)}"
+            )
         except Exception as e:
             share_errors.append(f"Failed to share {workflow} with {user}: {str(e)}")
             logging.debug(traceback.format_exc())
@@ -1938,6 +1982,10 @@ def share_workflow_remove(
             logging.info(f"Unsharing workflow {workflow} with user {user}")
             unshare_workflow(workflow, user, access_token)
             unshared_users.append(user)
+        except requests.RequestException as e:
+            unshare_errors.append(
+                f"Failed to unshare {workflow} with {user}: {error_message(e)}"
+            )
         except Exception as e:
             unshare_errors.append(f"Failed to unshare {workflow} with {user}: {str(e)}")
             logging.debug(traceback.format_exc())
@@ -2000,6 +2048,8 @@ def share_workflow_status(
 
     try:
         sharing_status = get_workflow_sharing_status(workflow, access_token)
+    except requests.RequestException:
+        raise
     except Exception as e:
         logging.debug(traceback.format_exc())
         logging.debug(str(e))

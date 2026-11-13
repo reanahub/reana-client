@@ -1721,7 +1721,7 @@ def share_workflow(
     :param user_email_to_share_with: user to share the workflow with.
     :param access_token: access token of the current user.
     :param message: Optional message to include when sharing the workflow.
-    :param valid_until: Specify the date when access to the workflow will expire (format: YYYY-MM-DD).
+    :param valid_until: Last day of access to the workflow (format: YYYY-MM-DD). Access ends at the end of this day (UTC).
 
     :return: a dictionary containing the ``workflow_id``, ``workflow_name``, and
              a ``message`` key with the result of the operation.

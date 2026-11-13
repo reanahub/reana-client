@@ -1829,7 +1829,7 @@ def workflow_close_interactive_session(workflow, access_token):  # noqa: D301
 @click.option(
     "--valid-until",
     type=click.DateTime(formats=["%Y-%m-%d"]),
-    help="Optional date when access to the workflow will expire for the given user(s) (format: YYYY-MM-DD).",
+    help="Optional last day of access to the workflow for the given user(s) (format: YYYY-MM-DD). Access ends at the end of this day (UTC).",
 )
 @click.option(
     "--json",
@@ -1845,7 +1845,9 @@ def workflow_share_add(
     """Share a workflow with other users (read-only).
 
     The `share-add` command allows sharing a workflow with other users. The
-    users will be able to view the workflow but not modify it.
+    users will be able to view the workflow but not modify it. With
+    `--valid-until`, the users keep access until the end of the given day
+    (UTC).
 
     Examples:\n
     \t $ reana-client share-add -w myanalysis.42 --user bob@example.org\n
@@ -2013,16 +2015,19 @@ def share_workflow_status(
 
     shared_with = sharing_status.get("shared_with", [])
     if shared_with:
-        headers = ["user_email", "valid_until"]
+        headers = ["user_email", "valid_until", "expired"]
+        # Older servers do not return `expired`.
         if output_format == JSON:
             data = [
-                [entry["user_email"], entry["valid_until"]] for entry in shared_with
+                [entry["user_email"], entry["valid_until"], entry.get("expired")]
+                for entry in shared_with
             ]
         else:
             data = [
                 [
                     entry["user_email"],
                     (entry["valid_until"] if entry["valid_until"] is not None else "-"),
+                    {True: "yes", False: "no"}.get(entry.get("expired"), "-"),
                 ]
                 for entry in shared_with
             ]

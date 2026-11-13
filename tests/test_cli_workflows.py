@@ -2026,8 +2026,12 @@ def test_share_status_workflow_json_success(client_config):
     status_code = 200
     response = {
         "shared_with": [
-            {"user_email": "bob@example.org", "valid_until": "2025-12-31"},
-            {"user_email": "alice@example.org", "valid_until": None},
+            {
+                "user_email": "bob@example.org",
+                "valid_until": "2025-12-31",
+                "expired": True,
+            },
+            {"user_email": "alice@example.org", "valid_until": None, "expired": False},
         ]
     }
     env = client_config("localhost")
@@ -2058,6 +2062,42 @@ def test_share_status_workflow_json_success(client_config):
             by_email = {row["user_email"]: row for row in parsed}
             assert by_email["bob@example.org"]["valid_until"] == "2025-12-31"
             assert by_email["alice@example.org"]["valid_until"] is None
+            assert by_email["bob@example.org"]["expired"] is True
+            assert by_email["alice@example.org"]["expired"] is False
+
+
+def test_share_status_workflow_marks_expired_shares(client_config):
+    """Test share-status shows whether each share has expired."""
+    response = {
+        "shared_with": [
+            {
+                "user_email": "bob@example.org",
+                "valid_until": "2025-12-31T00:00:00",
+                "expired": True,
+            },
+            {"user_email": "alice@example.org", "valid_until": None, "expired": False},
+            {"user_email": "cecile@example.org", "valid_until": None},
+        ]
+    }
+    env = client_config("localhost")
+    mock_http_response = Mock()
+    mock_http_response.status_code = 200
+    runner = CliRunner(env=env)
+    with runner.isolation():
+        with patch(
+            "reana_client.api.client.current_rs_api_client",
+            make_mock_api_client("reana-server")(response, mock_http_response),
+        ):
+            result = runner.invoke(
+                cli,
+                ["share-status", "-t", "000000", "--workflow", "test-workflow.1"],
+            )
+            assert result.exit_code == 0
+            rows = [line.split() for line in result.output.splitlines()]
+            assert rows[0] == ["USER_EMAIL", "VALID_UNTIL", "EXPIRED"]
+            assert ["bob@example.org", "2025-12-31T00:00:00", "yes"] in rows
+            assert ["alice@example.org", "-", "no"] in rows
+            assert ["cecile@example.org", "-", "-"] in rows
 
 
 def test_share_status_workflow_json_empty(client_config):

@@ -67,7 +67,6 @@ from reana_commons.config import (
     REANA_COMPUTE_BACKENDS,
 )
 from reana_commons.errors import REANAValidationError
-from reana_commons.specification_paths import load_raw_reana_spec
 from reana_commons.validation.operational_options import validate_operational_options
 
 
@@ -670,7 +669,7 @@ def workflow_start(
     help="REANA specification file with the replacement *specification* "
     "(input parameters, operational options, workflow type/definition "
     "metadata). Workflow source files (Snakefiles, CWL, rules) are reused "
-    "from the existing workspace and are not re-uploaded. [default=reana.yaml]",
+    "from the existing workspace and are not re-uploaded.",
 )
 @click.pass_context
 def workflow_restart(
@@ -679,11 +678,18 @@ def workflow_restart(
     """Restart previously run workflow.
 
     The ``restart`` command allows to restart a previous workflow on the same
-    workspace.
+    workspace. It reloads and validates the current workspace workflow sources
+    and parameter files. Upload changed files before restarting; an unchanged
+    reana.yaml does not need to be resubmitted.
 
     Note that workflow restarting can be used in a combination with operational
     options ``FROM`` and ``TARGET``. You can also pass a modified workflow
     specification with ``-f`` or ``--file`` flag.
+
+    Changing ``workflow.type`` or ``workflow.file`` requires ``-f``, even after
+    uploading a changed reana.yaml. Workspaces missing raw YAML also need ``-f``
+    to restore source reloading; self-contained Serial workflows can reuse their
+    stored steps with a warning.
 
     The ``-f``/``--file`` flag replaces only the *specification* (input
     parameters, operational options, and workflow type/definition metadata).
@@ -693,10 +699,11 @@ def workflow_restart(
     those files to the workspace first; otherwise validation fails naming the
     missing file.
 
-    You can furthermore use modified input prameters using ``-p`` or
-    ``--parameters`` flag and by setting additional operational options using
-    ``-o`` or ``--options``.  The input parameters and operational options can be
-    repetitive.
+    Explicit input parameters (``-p``/``--parameter``) and operational options
+    (``-o``/``--option``) override values loaded from the workspace. These flags
+    can be repeated and apply only to this run. Unknown parameter names are
+    rejected by the server. Parameter-file values are overlaid by inline
+    ``inputs.parameters``, then by ``-p`` values.
 
     Examples:\n
     \t $ reana-client restart -w myanalysis.42 -p sleeptime=10 -p myparam=4\n
@@ -705,7 +712,6 @@ def workflow_restart(
     \t $ reana-client restart -w myanalysis.42 -o FROM=fitdata
     """
     from reana_client.api.client import (
-        get_workflow_parameters,
         get_workflow_status,
         restart_workflow,
         start_workflow,
@@ -721,39 +727,9 @@ def workflow_restart(
     }
     specification_filename = click.format_filename(file) if file else None
 
-    if parameters or options:
-        try:
-            if file:
-                # This parse is only a local convenience for validating CLI
-                # overrides. The server remains the authoritative validator.
-                replacement_specification = load_raw_reana_spec(specification_filename)
-                workflow_type = replacement_specification["workflow"]["type"]
-                original_parameters = replacement_specification.get("inputs", {}).get(
-                    "parameters", {}
-                )
-            else:
-                response = get_workflow_parameters(workflow, access_token)
-                workflow_type = response["type"]
-                original_parameters = response["parameters"]
-
-            parsed_parameters["operational_options"] = validate_operational_options(
-                workflow_type, parsed_parameters["operational_options"]
-            )
-            parsed_parameters["input_parameters"] = validate_input_parameters(
-                parsed_parameters["input_parameters"], original_parameters
-            )
-
-        except REANAValidationError as e:
-            display_message(e.message, msg_type="error")
-            sys.exit(1)
-        except Exception as e:
-            display_message(
-                "Could not apply given input parameters: "
-                "{0} \n{1}".format(parameters, str(e)),
-                msg_type="error",
-            )
-            sys.exit(1)
-
+    # Only the server can validate overrides against the current workspace
+    # sources. Stored parameters can be stale, and referenced parameter files
+    # need not exist locally when a replacement specification is supplied.
     try:
         logging.info("Connecting to {0}".format(get_api_url()))
         if file:

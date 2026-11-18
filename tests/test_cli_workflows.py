@@ -106,18 +106,28 @@ def test_restart_posts_noncanonical_spec_atomically(
     )
 
 
-def test_restart_override_uses_bounded_specification_loader(tmp_path, client_config):
-    """Replacement override parsing uses the shared bounded secure loader."""
+@pytest.mark.parametrize("replacement_specification", [False, True])
+def test_restart_sends_overrides_for_workspace_validation(
+    tmp_path, client_config, replacement_specification
+):
+    """Overrides absent from stored/local parameters reach server validation."""
     replacement = tmp_path / "replacement.yaml"
-    replacement.write_text("workflow: {type: serial}\n")
+    replacement.write_text(
+        "workflow: {type: cwl, file: workflow.cwl, parameters: {file: params.yaml}}\n"
+    )
     runner = CliRunner(env=client_config("localhost"))
 
     with patch(
-        "reana_client.cli.workflow.load_raw_reana_spec",
-        side_effect=REANAValidationError("specification exceeds the byte limit"),
-    ) as load_specification, patch(
-        "reana_client.api.client.restart_workflow"
-    ) as restart_workflow_mock:
+        "reana_client.api.client.get_workflow_parameters"
+    ) as stored_parameters, patch(
+        "reana_client.api.client.restart_workflow",
+        return_value={"workflow_name": "test", "run_number": "1.1"},
+    ) as restart_workflow_mock, patch(
+        "reana_client.api.client.start_workflow",
+        return_value={"workflow_name": "test", "run_number": "1.1"},
+    ) as start_workflow_mock, patch(
+        "reana_client.api.client.get_workflow_status", return_value={"status": "queued"}
+    ):
         result = runner.invoke(
             cli,
             [
@@ -126,17 +136,30 @@ def test_restart_override_uses_bounded_specification_loader(tmp_path, client_con
                 "000000",
                 "-w",
                 "test.1",
-                "-f",
-                str(replacement),
                 "-p",
                 "value=2",
-            ],
+                "-o",
+                "TARGET=result",
+            ]
+            + (["-f", str(replacement)] if replacement_specification else []),
         )
 
-    assert result.exit_code == 1
-    assert "specification exceeds the byte limit" in result.output
-    load_specification.assert_called_once_with(str(replacement))
-    restart_workflow_mock.assert_not_called()
+    assert result.exit_code == 0
+    stored_parameters.assert_not_called()
+    parameters = {
+        "input_parameters": {"value": "2"},
+        "operational_options": {"TARGET": "result"},
+    }
+    if replacement_specification:
+        restart_workflow_mock.assert_called_once_with(
+            "test.1", str(replacement), "000000", parameters
+        )
+        start_workflow_mock.assert_not_called()
+    else:
+        start_workflow_mock.assert_called_once_with(
+            "test.1", "000000", dict(parameters, restart=True)
+        )
+        restart_workflow_mock.assert_not_called()
 
 
 def test_restart_api_uses_generated_multipart_operation(

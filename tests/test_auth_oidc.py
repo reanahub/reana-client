@@ -898,13 +898,20 @@ def test_discover_rejects_redirect_response(status_code, monkeypatch):
         return MockResponse(
             {},
             status_code=status_code,
-            headers={"location": "http://attacker.example.org/"},
+            headers={"location": "http://attacker.example.org/?code=secret"},
         )
 
     monkeypatch.setattr(oidc.requests, "get", fake_get)
 
-    with pytest.raises(oidc.AuthenticationError, match="redirect"):
+    with pytest.raises(oidc.AuthenticationError) as exc_info:
         oidc.discover("https://reana.example.org")
+    message = str(exc_info.value)
+    assert f"Authentication metadata discovery failed with HTTP {status_code}" in (
+        message
+    )
+    assert "Refusing to follow a redirect" in message
+    assert "attacker.example.org" not in message
+    assert "secret" not in message
 
 
 def test_refresh_credentials_rejects_redirect_response(tmp_path, monkeypatch):
@@ -931,13 +938,18 @@ def test_refresh_credentials_rejects_redirect_response(tmp_path, monkeypatch):
         return MockResponse(
             {},
             status_code=307,
-            headers={"location": "http://attacker.example.org/token"},
+            headers={"location": "http://attacker.example.org/token?secret=leak"},
         )
 
     monkeypatch.setattr(oidc.requests, "post", fake_post)
 
-    with pytest.raises(oidc.AuthenticationError, match="redirect"):
+    with pytest.raises(oidc.AuthenticationError) as exc_info:
         oidc.refresh_credentials("https://reana.example.org")
+    message = str(exc_info.value)
+    assert "Token refresh failed with HTTP 307" in message
+    assert "Refusing to follow a redirect" in message
+    assert "attacker.example.org" not in message
+    assert "leak" not in message
 
 
 def test_discover_reports_network_failure_as_authentication_error(monkeypatch):

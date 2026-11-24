@@ -8,6 +8,7 @@
 
 """REANA client ping tests."""
 
+import logging
 import socket
 import ssl
 
@@ -148,6 +149,30 @@ def test_ping_ok(client_config):
             assert message in result.output
             message = "Connected"
             assert message in result.output
+
+
+def test_login_redirect_error_omits_location(caplog, monkeypatch):
+    """A refused authentication redirect never reveals its destination."""
+    caplog.set_level(logging.DEBUG)
+    monkeypatch.setattr(
+        "reana_client.auth.oidc.requests.get",
+        Mock(
+            return_value=Mock(
+                is_redirect=True,
+                status_code=302,
+                headers={"location": "https://evil.example/cb?token=secret"},
+            )
+        ),
+    )
+    result = CliRunner().invoke(
+        cli, ["--loglevel", "DEBUG", "login", "--server", "https://reana.example.org"]
+    )
+    assert result.exit_code == 1
+    assert "failed with HTTP 302" in result.output
+    assert "Refusing to follow a redirect" in result.output
+    for leaked in ("evil.example", "secret"):
+        assert leaked not in result.output
+        assert leaked not in caplog.text
 
 
 def test_login_reports_credential_lock_timeout(monkeypatch):

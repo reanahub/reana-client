@@ -9,8 +9,10 @@
 
 import logging
 import os
+import stat
 import time
 from datetime import timedelta
+from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -1980,6 +1982,58 @@ def test_refresh_lock_file_refuses_to_follow_a_symlink(tmp_path, monkeypatch):
 
     with pytest.raises((OSError, storage.CredentialStoreError)):
         storage.try_acquire_refresh_lock(server_url)
+
+
+def test_credential_store_lock_refuses_a_hard_link(tmp_path, monkeypatch):
+    """A hard link at the lock path is refused before its mode changes."""
+    config_path = tmp_path / "reana-client.json"
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
+    outside_target = tmp_path / "outside-target"
+    outside_target.write_text("not a lock file")
+    outside_target.chmod(0o644)
+    os.link(outside_target, tmp_path / "reana-client.json.lock")
+
+    with pytest.raises(storage.CredentialStoreError, match="multiple hard links"):
+        with storage.credential_store_lock():
+            pass
+    assert stat.S_IMODE(outside_target.stat().st_mode) == 0o644
+
+
+def test_refresh_lock_file_refuses_a_hard_link(tmp_path, monkeypatch):
+    """The refresh lock refuses a hard link at its path too."""
+    config_path = tmp_path / "reana-client.json"
+    monkeypatch.setenv("REANA_CLIENT_CONFIG", str(config_path))
+    server_url = "https://reana.example.org"
+    outside_target = tmp_path / "outside-target"
+    outside_target.write_text("not a lock file")
+    os.link(outside_target, storage._refresh_lock_path(server_url))
+
+    with pytest.raises(storage.CredentialStoreError, match="private directory"):
+        storage.try_acquire_refresh_lock(server_url)
+
+
+@pytest.mark.parametrize(
+    "st_nlink, uid_offset, problem",
+    [
+        (1, 0, None),
+        (2, 0, "has multiple hard links"),
+        (1, 1, "is owned by another user"),
+    ],
+)
+def test_lock_file_ownership_problem(monkeypatch, st_nlink, uid_offset, problem):
+    """A lock file must have one link and belong to the current user."""
+    monkeypatch.setattr(storage.os, "geteuid", lambda: 1000, raising=False)
+    opened = SimpleNamespace(st_nlink=st_nlink, st_uid=1000 + uid_offset)
+
+    assert storage._lock_file_ownership_problem(opened) == problem
+
+
+def test_lock_file_ownership_is_not_checked_without_geteuid(monkeypatch):
+    """Platforms without ``geteuid`` (for example Windows) keep working."""
+    monkeypatch.delattr(storage.os, "geteuid", raising=False)
+    opened = SimpleNamespace(st_nlink=2, st_uid=0)
+
+    assert storage._lock_file_ownership_problem(opened) is None
 
 
 def test_tls_verify_strict_ignores_saved_bypass(monkeypatch, client_config):

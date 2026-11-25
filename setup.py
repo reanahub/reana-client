@@ -45,7 +45,7 @@ install_requires = [
     "pathspec>=0.9.0 ; python_version>='3.9'",
     "reana-commons>=0.95.0a28,<0.96.0",
     "requests>=2.31.0",
-    "tablib>=0.12.1,<0.13",
+    "tablib>=3.6.0,<4",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
     "werkzeug>=0.15.0 ; python_version>='3.10'",
 ]

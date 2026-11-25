@@ -20,7 +20,7 @@ history = open("CHANGELOG.md").read()
 
 extras_require = {
     "cwl-runner": [
-        "reana-commons[cwl]>=0.95.0a28,<0.96.0",
+        "reana-commons[cwl]>=0.95.0a29,<0.96.0",
     ],
     "docs": [
         "myst-parser",
@@ -29,7 +29,7 @@ extras_require = {
         "sphinx-click>=1.0.4",
     ],
     "tests": [
-        "reana-commons[kubernetes,tests]>=0.95.0a28,<0.96.0",
+        "reana-commons[kubernetes,tests]>=0.95.0a29,<0.96.0",
     ],
 }
 
@@ -43,7 +43,7 @@ install_requires = [
     "click>=8",
     "pathspec>=0.9.0,<1.0 ; python_version<'3.9'",
     "pathspec>=0.9.0 ; python_version>='3.9'",
-    "reana-commons>=0.95.0a28,<0.96.0",
+    "reana-commons>=0.95.0a29,<0.96.0",
     "requests>=2.31.0",
     "tablib>=3.6.0,<4",
     "werkzeug>=0.14.1 ; python_version<'3.10'",
